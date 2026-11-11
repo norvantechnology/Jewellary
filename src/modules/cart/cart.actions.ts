@@ -3,15 +3,21 @@
 import { revalidatePath } from "next/cache";
 import {
   addToCartSchema,
+  estimateCartSchema,
   removeCartItemSchema,
+  saveForLaterSchema,
   updateCartItemSchema,
 } from "@/modules/cart/cart.schemas";
 import {
   addCartItemForOwner,
+  getCurrentCartSummary,
   mergeGuestCartToUser,
   resolveCurrentCartOwner,
+  saveCartItemForLater,
   updateCartItemQtyForOwner,
 } from "@/modules/cart/cart.service";
+import { calculateCheckoutQuote } from "@/modules/orders/checkout-quote";
+import { getAllShippingZones, getPublicStoreSettings } from "@/modules/settings/settings.service";
 import { createAction } from "@/server/create-action";
 import { getOptionalSession } from "@/server/dal";
 import { ValidationError } from "@/server/errors";
@@ -65,6 +71,58 @@ export const removeCartItemAction = createAction(
     const cart = await updateCartItemQtyForOwner(owner, variantId, 0);
     revalidatePath("/cart");
     return { itemCount: cart.itemCount, subtotal: cart.subtotal };
+  },
+);
+
+export const saveCartItemForLaterAction = createAction(
+  {
+    name: "cart.saveForLater",
+    schema: saveForLaterSchema,
+    auth: "public",
+  },
+  async ({ variantId }) => {
+    const owner = await resolveCurrentCartOwner(false);
+    if (!owner) {
+      throw new ValidationError("Your shopping bag session has expired.");
+    }
+    const wishlistVariantIds = await saveCartItemForLater(owner, variantId);
+    const cart = await getCurrentCartSummary();
+    revalidatePath("/cart");
+    revalidatePath("/wishlist");
+    return {
+      cart,
+      wishlistVariantIds,
+      wishlistCount: wishlistVariantIds.length,
+    };
+  },
+);
+
+export const estimateCartQuoteAction = createAction(
+  {
+    name: "cart.estimate",
+    schema: estimateCartSchema,
+    auth: "public",
+  },
+  async ({ shippingCountry, shippingZoneId }) => {
+    const [cart, settings, zones] = await Promise.all([
+      getCurrentCartSummary(),
+      getPublicStoreSettings(),
+      getAllShippingZones(true),
+    ]);
+
+    const result = calculateCheckoutQuote({
+      items: cart.items,
+      shippingCountry,
+      shippingZoneId,
+      zones,
+      settings,
+    });
+
+    if (!result.ok) {
+      throw new ValidationError(result.message);
+    }
+
+    return result.quote;
   },
 );
 

@@ -20,6 +20,25 @@ export const removeCartItemSchema = z
   })
   .strict();
 
+export const saveForLaterSchema = z
+  .object({
+    variantId: z.string().trim().min(4).max(64),
+  })
+  .strict();
+
+export const estimateCartSchema = z
+  .object({
+    shippingCountry: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z]{2}$/, "Valid destination country code required."),
+    shippingZoneId: z.string().trim().min(2).max(64).optional().nullable(),
+  })
+  .strict();
+
 export type AddToCartInput = z.infer<typeof addToCartSchema>;
 export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>;
 export type RemoveCartItemInput = z.infer<typeof removeCartItemSchema>;
+export type SaveForLaterInput = z.infer<typeof saveForLaterSchema>;
+export type EstimateCartInput = z.infer<typeof estimateCartSchema>;

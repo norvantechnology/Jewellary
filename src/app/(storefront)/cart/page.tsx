@@ -4,6 +4,8 @@ import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Container, Section } from "@/components/shared/primitives";
 import { CartPageClient } from "@/components/storefront/CartPageClient";
 import { getCurrentCartSummary } from "@/modules/cart/cart.service";
+import { calculateCheckoutQuote } from "@/modules/orders/checkout-quote";
+import { getAllShippingZones, getPublicStoreSettings } from "@/modules/settings/settings.service";
 
 export const metadata: Metadata = {
   title: "Shopping Bag",
@@ -12,7 +14,21 @@ export const metadata: Metadata = {
 };
 
 async function CartPageBody() {
-  const cart = await getCurrentCartSummary();
+  const [cart, settings, zones] = await Promise.all([
+    getCurrentCartSummary(),
+    getPublicStoreSettings(),
+    getAllShippingZones(true),
+  ]);
+
+  const quoteRes =
+    cart.items.length > 0
+      ? calculateCheckoutQuote({
+          items: cart.items,
+          shippingCountry: settings.defaultCountry,
+          zones,
+          settings,
+        })
+      : null;
 
   return (
     <Section spacing="sm">
@@ -26,7 +42,11 @@ async function CartPageBody() {
           </h1>
         </header>
 
-        <CartPageClient initialCart={cart} />
+        <CartPageClient
+          initialCart={cart}
+          initialQuote={quoteRes?.ok ? quoteRes.quote : null}
+          supportedCountries={settings.supportedCountries}
+        />
       </Container>
     </Section>
   );

@@ -23,6 +23,7 @@ export interface CartItemDTO {
   imageUrl: string | null;
   imageAltText: string | null;
   hasPriceChanged: boolean;
+  hasStockIssue: boolean;
 }
 
 export interface CartSummaryDTO {
@@ -120,8 +121,9 @@ function mapCartToSummary(
     const liveUnitPrice = toDecimal((row.variant.priceOverride ?? product.basePrice).toString());
     const snapshotPrice = toDecimal(row.unitPriceSnapshot.toString());
     const availableStock = Math.max(0, row.variant.stockQty - row.variant.reservedQty);
-    const clampedQty = Math.min(row.quantity, Math.max(availableStock, 1));
-    const lineTotal = multiplyMoney(liveUnitPrice, clampedQty);
+    const hasStockIssue = availableStock < row.quantity;
+    const effectiveQty = availableStock > 0 ? Math.min(row.quantity, availableStock) : 0;
+    const lineTotal = multiplyMoney(liveUnitPrice, effectiveQty);
 
     items.push({
       id: row.id,
@@ -144,6 +146,7 @@ function mapCartToSummary(
         null,
       imageAltText: product.images[0]?.altText ?? null,
       hasPriceChanged: !liveUnitPrice.eq(snapshotPrice),
+      hasStockIssue,
     });
   }
 
@@ -410,4 +413,42 @@ export async function getCurrentCartSummary(): Promise<CartSummaryDTO> {
     };
   }
   return getCartForOwner(owner);
+}
+
+export async function saveCartItemForLater(owner: CartOwner, variantId: string) {
+  return db.$transaction(async (tx) => {
+    const cart = await tx.cart.findFirst({
+      where: owner.kind === "user" ? { userId: owner.userId } : { guestToken: owner.guestToken },
+      select: { id: true },
+    });
+
+    if (cart) {
+      await tx.cartItem.deleteMany({ where: { cartId: cart.id, variantId } });
+    }
+
+    let wishlist = await tx.wishlist.findFirst({
+      where: owner.kind === "user" ? { userId: owner.userId } : { guestToken: owner.guestToken },
+      select: { id: true },
+    });
+
+    if (!wishlist) {
+      wishlist = await tx.wishlist.create({
+        data: owner.kind === "user" ? { userId: owner.userId } : { guestToken: owner.guestToken },
+        select: { id: true },
+      });
+    }
+
+    await tx.wishlistItem.createMany({
+      data: [{ wishlistId: wishlist.id, variantId }],
+      skipDuplicates: true,
+    });
+
+    const wishlistRows = await tx.wishlistItem.findMany({
+      where: { wishlistId: wishlist.id },
+      select: { variantId: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return wishlistRows.map((r) => r.variantId);
+  });
 }
