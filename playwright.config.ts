@@ -33,7 +33,7 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_NO_SERVER
     ? undefined
     : {
-        command: "npm run start",
+        command: "ENABLE_DEV_UI=true npm run start",
         url: `${BASE_URL}/api/health`,
         reuseExistingServer: !process.env.CI,
         timeout: 120000,

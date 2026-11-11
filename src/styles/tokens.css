@@ -1,0 +1,69 @@
+/* Raw design primitives — referenced by theme.css, never used directly in components */
+:root {
+  /* Warm neutral & luxury palette */
+  --ivory-50: #faf7f0;
+  --ivory-100: #fffdf8;
+  --beige-100: #f1eadc;
+  --champagne-200: #eadfc8;
+  --champagne-300: #e6d3a8;
+  --border-light: #e3d8c4;
+  --input-light: #d9ccb4;
+
+  --charcoal-950: #15110e;
+  --charcoal-900: #1a1511;
+  --charcoal-850: #1d1814;
+  --charcoal-800: #261f1a;
+  --charcoal-750: #2a2522;
+  --charcoal-700: #2e261f;
+  --charcoal-600: #3b322a;
+  --charcoal-500: #483d33;
+  --taupe-500: #6a5f55;
+  --taupe-300: #b8ab98;
+  --ivory-200: #f4ecdd;
+
+  /* Gold & Bronze accents */
+  --gold-300: #d9bc82;
+  --gold-400: #c9a46a;
+  --gold-500: #a8844a;
+  --gold-700: #8a6a3b;
+  --bronze-300: #d9b67e;
+  --bronze-700: #7a5a2e;
+
+  /* Warm semantic status tones */
+  --terracotta-300: #e07a66;
+  --terracotta-700: #a8402f;
+  --olive-300: #9db88a;
+  --olive-700: #4f6b3f;
+  --amber-300: #d9a441;
+  --amber-700: #83570b;
+
+  /* Typography fluid scale */
+  --text-xs: clamp(0.75rem, 0.73rem + 0.1vw, 0.8125rem);
+  --text-sm: clamp(0.875rem, 0.85rem + 0.12vw, 0.9375rem);
+  --text-base: clamp(1rem, 0.98rem + 0.12vw, 1.0625rem);
+  --text-lg: clamp(1.125rem, 1.08rem + 0.2vw, 1.25rem);
+  --text-xl: clamp(1.25rem, 1.18rem + 0.35vw, 1.5rem);
+  --text-2xl: clamp(1.5rem, 1.35rem + 0.75vw, 1.875rem);
+  --text-3xl: clamp(1.875rem, 1.65rem + 1.1vw, 2.375rem);
+  --text-4xl: clamp(2.25rem, 1.9rem + 1.75vw, 3rem);
+  --text-5xl: clamp(2.75rem, 2.2rem + 2.75vw, 3.75rem);
+  --text-6xl: clamp(3.25rem, 2.5rem + 3.5vw, 4.5rem);
+
+  /* Radii & elevation */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-pill: 9999px;
+
+  /* Motion */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+  --ease-luxury: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Z-index layers */
+  --z-sticky: 30;
+  --z-header: 40;
+  --z-drawer: 50;
+  --z-modal: 60;
+  --z-toast: 70;
+}
