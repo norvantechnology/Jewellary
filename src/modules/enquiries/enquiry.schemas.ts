@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const ENQUIRY_TYPE_VALUES = ["BESPOKE", "PRODUCT", "GENERAL"] as const;
+export const ENQUIRY_STATUS_VALUES = ["NEW", "IN_PROGRESS", "RESOLVED"] as const;
 
 export const createEnquirySchema = z
   .object({
@@ -33,4 +34,29 @@ export const createEnquirySchema = z
   })
   .strict();
 
+export const adminUpdateEnquirySchema = z
+  .object({
+    enquiryId: z.string().trim().min(2).max(64),
+    status: z.enum(ENQUIRY_STATUS_VALUES),
+    staffNote: z
+      .string()
+      .trim()
+      .max(2000)
+      .optional()
+      .nullable()
+      .transform((val) => (val && val.length > 0 ? val : null)),
+  })
+  .strict();
+
+export const adminReplyEnquirySchema = z
+  .object({
+    enquiryId: z.string().trim().min(2).max(64),
+    subject: z.string().trim().min(3, "Subject is required.").max(180),
+    replyMessage: z.string().trim().min(5, "Reply message is required.").max(4000),
+    nextStatus: z.enum(["IN_PROGRESS", "RESOLVED"]).default("RESOLVED"),
+  })
+  .strict();
+
 export type CreateEnquiryInput = z.infer<typeof createEnquirySchema>;
+export type AdminUpdateEnquiryInput = z.infer<typeof adminUpdateEnquirySchema>;
+export type AdminReplyEnquiryInput = z.infer<typeof adminReplyEnquirySchema>;

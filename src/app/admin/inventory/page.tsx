@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { CsvExportLink } from "@/components/admin/CsvExportLink";
 import { InventoryManager } from "@/components/admin/InventoryManager";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listAdminInventory, listInventoryTransactions } from "@/modules/catalog/catalog.service";
@@ -24,15 +25,20 @@ async function InventoryContent({
   ]);
 
   return (
-    <InventoryManager
-      variants={inventory.items}
-      transactions={transactions}
-      total={inventory.total}
-      page={inventory.page}
-      totalPages={inventory.totalPages}
-      initialSearch={search}
-      initialLowStock={onlyLowStock}
-    />
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <CsvExportLink resource="inventory" label="Export Inventory CSV" />
+      </div>
+      <InventoryManager
+        variants={inventory.items}
+        transactions={transactions}
+        total={inventory.total}
+        page={inventory.page}
+        totalPages={inventory.totalPages}
+        initialSearch={search}
+        initialLowStock={onlyLowStock}
+      />
+    </div>
   );
 }
 

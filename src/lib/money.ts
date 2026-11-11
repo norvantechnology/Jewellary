@@ -23,6 +23,10 @@ export function sumMoney(values: MoneyInput[]): Decimal {
     .toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 }
 
+export function subtractMoney(a: MoneyInput, b: MoneyInput): Decimal {
+  return toDecimal(a).minus(toDecimal(b)).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+}
+
 /**
  * Computes unitPrice * quantity rounded to 2 decimal places.
  */

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Edit2, Gem, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { CsvExportLink } from "@/components/admin/CsvExportLink";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
@@ -200,12 +201,15 @@ export function ProductsManager({
           </p>
         </div>
 
-        <Button asChild className="gap-1.5">
-          <Link href="/admin/products/new">
-            <Plus className="size-4" aria-hidden="true" />
-            <span>Add Product</span>
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <CsvExportLink resource="products" label="Export CSV" />
+          <Button asChild className="gap-1.5">
+            <Link href="/admin/products/new">
+              <Plus className="size-4" aria-hidden="true" />
+              <span>Add Product</span>
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

@@ -112,6 +112,11 @@ export function Footer({ config }: FooterProps) {
                 </Link>
               </li>
               <li>
+                <Link href="/orders/track" className="hover:text-foreground">
+                  Track an Order
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact" className="hover:text-foreground">
                   Private Concierge
                 </Link>

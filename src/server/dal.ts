@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { hasPermission, roleAtLeast, type Permission, type UserRole } from "@/lib/permissions";
 import { auth } from "@/server/auth";
 import { db } from "@/server/db";
@@ -72,6 +73,19 @@ export async function requireUser(): Promise<AuthenticatedContext> {
   const ctx = await getOptionalSession();
   if (!ctx) {
     throw new UnauthorizedError("Authentication is required.");
+  }
+  return ctx;
+}
+
+/**
+ * Page-level session guard that performs a clean Next.js redirect when
+ * unauthenticated instead of throwing during parallel RSC layout/page renders
+ * or background `<Link>` prefetches.
+ */
+export async function requirePageUser(nextPath = "/account"): Promise<AuthenticatedContext> {
+  const ctx = await getOptionalSession();
+  if (!ctx) {
+    redirect(`/login?next=${encodeURIComponent(nextPath)}`);
   }
   return ctx;
 }

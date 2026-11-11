@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Jost } from "next/font/google";
 import { ConsentAnalytics } from "@/components/layout/ConsentAnalytics";
@@ -58,7 +59,9 @@ export default function RootLayout({
         </a>
         <ThemeProvider>
           {children}
-          <CookieBanner />
+          <Suspense fallback={null}>
+            <CookieBanner />
+          </Suspense>
           <Toaster />
           <ConsentAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
         </ThemeProvider>

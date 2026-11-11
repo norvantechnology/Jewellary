@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Boxes,
   ExternalLink,
@@ -12,13 +12,20 @@ import {
   Image as ImageIcon,
   LayoutDashboard,
   Menu,
+  MessageSquare,
+  ScrollText,
+  Search,
   Settings,
+  ShoppingBag,
   SlidersHorizontal,
+  Users,
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
 import { Logo } from "@/components/shared/Logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   Sheet,
   SheetContent,
@@ -61,6 +68,14 @@ const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         icon: LayoutDashboard,
         permission: "admin:dashboard",
         exact: true,
+      },
+      { label: "Orders", href: "/admin/orders", icon: ShoppingBag, permission: "orders:read" },
+      { label: "Customers", href: "/admin/customers", icon: Users, permission: "customers:read" },
+      {
+        label: "Enquiries",
+        href: "/admin/enquiries",
+        icon: MessageSquare,
+        permission: "enquiries:manage",
       },
     ],
   },
@@ -108,6 +123,12 @@ const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         href: "/admin/settings",
         icon: Settings,
         permission: "settings:manage",
+      },
+      {
+        label: "Audit Log",
+        href: "/admin/audit-log",
+        icon: ScrollText,
+        permission: "audit:read",
       },
     ],
   },
@@ -177,7 +198,22 @@ export function AdminShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [quickScope, setQuickScope] = React.useState<"orders" | "products" | "customers">("orders");
+  const [quickQuery, setQuickQuery] = React.useState("");
+
+  function handleQuickSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = quickQuery.trim();
+    const targetPath =
+      quickScope === "products"
+        ? "/admin/products"
+        : quickScope === "customers"
+          ? "/admin/customers"
+          : "/admin/orders";
+    router.push(q ? `${targetPath}?q=${encodeURIComponent(q)}` : targetPath);
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground lg:flex-row">
@@ -276,6 +312,40 @@ export function AdminShell({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            <form
+              onSubmit={handleQuickSearch}
+              role="search"
+              aria-label="Quick studio search"
+              className="hidden items-center gap-1.5 md:flex"
+            >
+              <NativeSelect
+                aria-label="Search target"
+                value={quickScope}
+                onChange={(e) =>
+                  setQuickScope(e.target.value as "orders" | "products" | "customers")
+                }
+                className="h-9 min-h-9 w-28 text-xs"
+              >
+                <option value="orders">Orders</option>
+                {hasPermission(user.role, "catalog:write") && (
+                  <option value="products">Products</option>
+                )}
+                {hasPermission(user.role, "customers:read") && (
+                  <option value="customers">Clients</option>
+                )}
+              </NativeSelect>
+              <Input
+                type="search"
+                value={quickQuery}
+                onChange={(e) => setQuickQuery(e.target.value)}
+                placeholder="Search studio..."
+                aria-label="Search studio query"
+                className="h-9 w-44 text-xs"
+              />
+              <Button type="submit" size="sm" variant="outline" aria-label="Execute studio search">
+                <Search className="size-3.5" aria-hidden="true" />
+              </Button>
+            </form>
             <Badge variant="primary" className="hidden sm:inline-flex">
               {user.role}
             </Badge>
@@ -289,7 +359,7 @@ export function AdminShell({
         </header>
 
         <main id="admin-main-content" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          <div className="mx-auto w-full max-w-6xl">{children}</div>
+          <div className="mx-auto w-full max-w-6xl min-w-0">{children}</div>
         </main>
       </div>
     </div>

@@ -2,6 +2,7 @@ import "server-only";
 import type * as React from "react";
 import { render } from "@react-email/render";
 import { EnquiryNotificationEmail } from "@/emails/EnquiryNotificationEmail";
+import { EnquiryReplyEmail } from "@/emails/EnquiryReplyEmail";
 import {
   OrderConfirmationEmail,
   type OrderConfirmationLine,
@@ -180,4 +181,27 @@ export async function sendEnquiryNotificationEmails(input: {
       }),
     }),
   ]);
+}
+
+export async function sendEnquiryReplyEmail(input: {
+  to: string;
+  recipientName: string;
+  subject: string;
+  enquiryType: string;
+  replyMessage: string;
+  productName?: string | null;
+}) {
+  return sendTemplate({
+    to: input.to,
+    subject: input.subject,
+    tag: "enquiry-reply",
+    element: EnquiryReplyEmail({
+      siteName: env.NEXT_PUBLIC_SITE_NAME,
+      recipientName: input.recipientName,
+      enquiryType: input.enquiryType,
+      replyMessage: input.replyMessage,
+      productName: input.productName,
+      contactEmail: env.EMAIL_FROM,
+    }),
+  });
 }

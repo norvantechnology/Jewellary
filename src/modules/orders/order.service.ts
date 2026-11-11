@@ -65,6 +65,50 @@ export function verifyGuestOrderToken(
   return crypto.timingSafeEqual(candidate, expected);
 }
 
+export function createOrderTrackToken(orderNumber: string, ttlSeconds = 2 * 60 * 60): string {
+  const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
+  const payload = `${orderNumber.toUpperCase()}.${expiresAt}`;
+  const sig = crypto
+    .createHmac("sha256", env.BETTER_AUTH_SECRET)
+    .update(`track_order:${payload}`)
+    .digest("hex");
+  return `trk_${expiresAt}.${sig}`;
+}
+
+export function verifyOrderTrackToken(
+  orderNumber: string,
+  rawToken: string | null | undefined,
+): boolean {
+  if (!rawToken || !rawToken.startsWith("trk_")) return false;
+  const rest = rawToken.slice(4);
+  const dotIdx = rest.indexOf(".");
+  if (dotIdx <= 0) return false;
+  const expStr = rest.slice(0, dotIdx);
+  const sig = rest.slice(dotIdx + 1);
+  const exp = Number(expStr);
+  if (!Number.isInteger(exp) || exp < Math.floor(Date.now() / 1000)) {
+    return false;
+  }
+  const expectedSig = crypto
+    .createHmac("sha256", env.BETTER_AUTH_SECRET)
+    .update(`track_order:${orderNumber.toUpperCase()}.${exp}`)
+    .digest("hex");
+  const candBuf = Buffer.from(sig, "utf8");
+  const expBuf = Buffer.from(expectedSig, "utf8");
+  if (candBuf.length !== expBuf.length) return false;
+  return crypto.timingSafeEqual(candBuf, expBuf);
+}
+
+export function hasValidGuestOrderAccess(
+  orderNumber: string,
+  guestToken: string | null | undefined,
+  storedHash: string | null | undefined,
+): boolean {
+  return (
+    verifyGuestOrderToken(guestToken, storedHash) || verifyOrderTrackToken(orderNumber, guestToken)
+  );
+}
+
 export interface SavedAddressDTO {
   id: string;
   label: string | null;
@@ -123,6 +167,8 @@ export interface OrderConfirmationDTO {
   taxAmount: string;
   discountAmount: string;
   total: string;
+  refundedAmount: string;
+  refundedAt: string | null;
   shippingMethodName: string;
   shippingAddress: CheckoutAddressInput;
   billingAddress: CheckoutAddressInput;
@@ -777,7 +823,7 @@ export async function retryOrderPayment(
 
   const authorized =
     (currentUserId && order.userId === currentUserId) ||
-    verifyGuestOrderToken(input.guestToken, order.guestLookupTokenHash);
+    hasValidGuestOrderAccess(order.orderNumber, input.guestToken, order.guestLookupTokenHash);
   if (!authorized) {
     throw new ForbiddenError("You are not authorized to retry payment for this order.");
   }
@@ -1182,7 +1228,7 @@ export async function confirmSandboxOrderPayment(
 
   const authorized =
     (currentUserId && order.userId === currentUserId) ||
-    verifyGuestOrderToken(input.guestToken, order.guestLookupTokenHash);
+    hasValidGuestOrderAccess(order.orderNumber, input.guestToken, order.guestLookupTokenHash);
   if (!authorized) {
     throw new ForbiddenError("You are not authorized to confirm this order.");
   }
@@ -1275,6 +1321,67 @@ export async function releaseExpiredOrderReservations(batchSize = 50): Promise<{
   };
 }
 
+type ConfirmationOrderRow = Prisma.OrderGetPayload<{
+  include: {
+    items: true;
+    events: { orderBy: { createdAt: "asc" } };
+    payments: { orderBy: { createdAt: "desc" }; take: 1 };
+  };
+}>;
+
+export function mapOrderRecordToConfirmationDTO(
+  order: ConfirmationOrderRow,
+  contactEmail: string,
+): OrderConfirmationDTO {
+  return {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    status: order.status,
+    currency: order.currency,
+    subtotal: order.subtotal.toFixed(2),
+    shippingCost: order.shippingCost.toFixed(2),
+    taxAmount: order.taxAmount.toFixed(2),
+    discountAmount: order.discountAmount.toFixed(2),
+    total: order.total.toFixed(2),
+    refundedAmount: order.refundedAmount.toFixed(2),
+    refundedAt: order.refundedAt?.toISOString() ?? null,
+    shippingMethodName: order.shippingMethodName,
+    shippingAddress: order.shippingAddress as unknown as CheckoutAddressInput,
+    billingAddress: order.billingAddress as unknown as CheckoutAddressInput,
+    giftNote: order.giftNote,
+    signatureRequired: order.signatureRequired,
+    reservedUntil: order.reservedUntil?.toISOString() ?? null,
+    paidAt: order.paidAt?.toISOString() ?? null,
+    shippedAt: order.shippedAt?.toISOString() ?? null,
+    deliveredAt: order.deliveredAt?.toISOString() ?? null,
+    trackingNumber: order.trackingNumber,
+    carrier: order.carrier,
+    trackingUrl: order.trackingUrl,
+    createdAt: order.createdAt.toISOString(),
+    contactEmail,
+    sandboxMode: env.PAYMENT_TEST_SANDBOX === "true",
+    paymentProvider: order.payments[0]?.provider ?? null,
+    items: order.items.map((item) => ({
+      id: item.id,
+      productId: item.productId,
+      variantId: item.variantId,
+      skuSnapshot: item.skuSnapshot,
+      titleSnapshot: item.titleSnapshot,
+      variantTitleSnapshot: item.variantTitleSnapshot,
+      imageUrlSnapshot: item.imageUrlSnapshot,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice.toFixed(2),
+      lineTotal: item.lineTotal.toFixed(2),
+    })),
+    events: order.events.map((evt) => ({
+      id: evt.id,
+      toStatus: evt.toStatus,
+      note: evt.note,
+      createdAt: evt.createdAt.toISOString(),
+    })),
+  };
+}
+
 export async function getOrderConfirmation(
   orderNumber: string,
   guestToken: string | null | undefined,
@@ -1298,7 +1405,11 @@ export async function getOrderConfirmation(
 
   const isOwner = Boolean(session?.user && order.userId && order.userId === session.user.id);
   const isStaff = session?.user.role === "ADMIN" || session?.user.role === "STAFF";
-  const hasValidToken = verifyGuestOrderToken(guestToken, order.guestLookupTokenHash);
+  const hasValidToken = hasValidGuestOrderAccess(
+    order.orderNumber,
+    guestToken,
+    order.guestLookupTokenHash,
+  );
 
   if (!isOwner && !isStaff && !hasValidToken) {
     throw new ForbiddenError(
@@ -1306,51 +1417,7 @@ export async function getOrderConfirmation(
     );
   }
 
-  return {
-    id: order.id,
-    orderNumber: order.orderNumber,
-    status: order.status,
-    currency: order.currency,
-    subtotal: order.subtotal.toFixed(2),
-    shippingCost: order.shippingCost.toFixed(2),
-    taxAmount: order.taxAmount.toFixed(2),
-    discountAmount: order.discountAmount.toFixed(2),
-    total: order.total.toFixed(2),
-    shippingMethodName: order.shippingMethodName,
-    shippingAddress: order.shippingAddress as unknown as CheckoutAddressInput,
-    billingAddress: order.billingAddress as unknown as CheckoutAddressInput,
-    giftNote: order.giftNote,
-    signatureRequired: order.signatureRequired,
-    reservedUntil: order.reservedUntil?.toISOString() ?? null,
-    paidAt: order.paidAt?.toISOString() ?? null,
-    shippedAt: order.shippedAt?.toISOString() ?? null,
-    deliveredAt: order.deliveredAt?.toISOString() ?? null,
-    trackingNumber: order.trackingNumber,
-    carrier: order.carrier,
-    trackingUrl: order.trackingUrl,
-    createdAt: order.createdAt.toISOString(),
-    contactEmail: settings.contactEmail,
-    sandboxMode: env.PAYMENT_TEST_SANDBOX === "true",
-    paymentProvider: order.payments[0]?.provider ?? null,
-    items: order.items.map((item) => ({
-      id: item.id,
-      productId: item.productId,
-      variantId: item.variantId,
-      skuSnapshot: item.skuSnapshot,
-      titleSnapshot: item.titleSnapshot,
-      variantTitleSnapshot: item.variantTitleSnapshot,
-      imageUrlSnapshot: item.imageUrlSnapshot,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice.toFixed(2),
-      lineTotal: item.lineTotal.toFixed(2),
-    })),
-    events: order.events.map((evt) => ({
-      id: evt.id,
-      toStatus: evt.toStatus,
-      note: evt.note,
-      createdAt: evt.createdAt.toISOString(),
-    })),
-  };
+  return mapOrderRecordToConfirmationDTO(order, settings.contactEmail);
 }
 
 export async function resolveCheckoutActorsForAction() {

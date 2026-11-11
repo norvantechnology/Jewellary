@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { CONSENT_COOKIE_NAME } from "@/lib/constants";
@@ -50,6 +51,7 @@ function writeConsentCookie(state: ConsentState) {
 }
 
 export function CookieBanner() {
+  const pathname = usePathname();
   const visible = React.useSyncExternalStore(
     subscribeConsent,
     getConsentVisibilitySnapshot,
@@ -58,7 +60,7 @@ export function CookieBanner() {
   const [showPreferences, setShowPreferences] = React.useState(false);
   const [analyticsEnabled, setAnalyticsEnabled] = React.useState(false);
 
-  if (!visible) return null;
+  if (!visible || pathname?.startsWith("/admin")) return null;
 
   const saveConsent = (analytics: boolean) => {
     writeConsentCookie({
@@ -71,7 +73,7 @@ export function CookieBanner() {
   return (
     <aside
       aria-label="Cookie preferences"
-      className="fixed right-4 bottom-4 left-4 z-50 mx-auto max-w-2xl rounded-md border border-border bg-card p-5 shadow-soft sm:left-auto sm:w-full"
+      className="fixed right-4 bottom-4 left-4 z-50 mx-auto max-w-md rounded-md border border-border bg-card p-4 shadow-soft sm:left-auto sm:w-full sm:max-w-sm"
     >
       <div className="flex flex-col gap-3">
         <div>
