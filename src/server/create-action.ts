@@ -51,7 +51,7 @@ export interface CreateActionConfig<TSchema extends z.ZodTypeAny, TOutput> {
 }
 
 export function createAction<TSchema extends z.ZodTypeAny, TOutput>(
-  config: CreateActionConfig<TSchema, TOutput>,
+  config: CreateActionConfig<TSchema, NoInfer<TOutput>>,
   handler: (input: z.infer<TSchema>, ctx: ActionContext) => Promise<TOutput>,
 ): (rawInput: z.input<TSchema>) => Promise<ActionResult<TOutput>> {
   return async (rawInput: z.input<TSchema>): Promise<ActionResult<TOutput>> => {

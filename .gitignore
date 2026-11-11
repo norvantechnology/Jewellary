@@ -32,3 +32,8 @@ src/generated/prisma/
 # Sentry
 .sentryclirc
 
+# Temporary media upload staging
+.tmp-uploads/
+public/uploads/
+
+

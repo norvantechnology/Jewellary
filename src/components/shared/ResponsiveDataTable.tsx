@@ -78,15 +78,17 @@ export function ResponsiveDataTable<T>({
                 {mobileTitle(item)}
               </div>
             )}
-            <dl className="grid gap-2 text-sm">
+            <dl className="grid min-w-0 gap-2 text-sm">
               {columns
                 .filter((col) => !col.hideOnMobileCard)
                 .map((col) => (
-                  <div key={col.key} className="flex items-start justify-between gap-4">
+                  <div key={col.key} className="flex min-w-0 items-start justify-between gap-4">
                     <dt className="shrink-0 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                       {col.header}
                     </dt>
-                    <dd className="text-right text-foreground">{col.cell(item)}</dd>
+                    <dd className="min-w-0 flex-1 text-right break-words text-foreground">
+                      {col.cell(item)}
+                    </dd>
                   </div>
                 ))}
             </dl>

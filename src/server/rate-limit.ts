@@ -76,15 +76,19 @@ function checkMemoryRateLimit(key: string, rule: TierRule): RateLimitResult {
 }
 
 let cachedRedis: Redis | null | undefined;
+let upstashCooldownUntil = 0;
 const upstashLimiters = new Map<RateLimitTier, Ratelimit>();
 
 function getUpstashLimiter(tier: RateLimitTier): Ratelimit | null {
   if (env.NODE_ENV === "test") return null;
+  if (Date.now() < upstashCooldownUntil) return null;
   if (cachedRedis === undefined) {
     if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
       cachedRedis = new Redis({
         url: env.UPSTASH_REDIS_REST_URL,
         token: env.UPSTASH_REDIS_REST_TOKEN,
+        retry: { retries: 0 },
+        signal: () => AbortSignal.timeout(500),
       });
     } else {
       cachedRedis = null;
@@ -145,9 +149,10 @@ export async function checkRateLimit(
         reset: res.reset,
       };
     } catch (error) {
+      upstashCooldownUntil = Date.now() + 60_000;
       logger.warn(
         { tier, err: error instanceof Error ? error.message : "unknown" },
-        "Upstash Redis rate limit unavailable; falling back to local memory bucket",
+        "Upstash Redis rate limit unavailable; falling back to local memory bucket for 60s",
       );
     }
   }

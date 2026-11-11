@@ -28,3 +28,12 @@ Tracking phase-by-phase execution against `PROJECT_REQUIREMENTS.md`.
 - **Requirement IDs covered:** SEC-01 to SEC-06, SEC-14, SEC-15, CW-63 to CW-67, SEED-01 to SEED-07, §8 schema & constraints.
 - **Gate passed:** `prisma migrate deploy`, idempotent `db:seed`, `tsc --noEmit`, `eslint .`, `prettier --check`, `vitest` (5 files / 23 unit & integration tests), `next build`, Playwright E2E `auth.spec.ts` & `design-system.spec.ts` (6/6 passing).
 - **Next:** Phase 3 — Media Upload Pipeline, Admin Shell, Catalogue, Facets, Inventory Ledger, Banners, Articles & Settings.
+
+---
+
+## Phase 3 — Admin Studio, Media Pipeline, Settings, Content & Catalogue (Completed)
+
+- **Built:** Signed media upload pipeline (`src/server/storage.ts`, `/api/uploads/sign`, `/api/uploads/local`, `/api/uploads/confirm`, `src/components/shared/ImageUploadField.tsx`) with `file-type` magic-byte enforcement and `sharp` EXIF stripping + full/medium/thumb WebP generation; sanitized Markdown renderer (`src/lib/markdown.ts`); Settings & Shipping Zones module (`src/modules/settings/*`), Banners (`src/modules/banners/*`), Editorial Articles (`src/modules/articles/*`), and Catalogue + Inventory Ledger (`src/modules/catalog/*`) with hierarchical category path cascading, automatic `SlugRedirect` records, non-empty category delete guards, live stock preservation during product edits, and `SELECT ... FOR UPDATE` atomic stock adjustments with reservation guards; responsive Admin Studio shell (`src/components/admin/AdminShell.tsx`, `src/app/admin/layout.tsx`) and full Admin CRUD interfaces (`/admin`, `/admin/products`, `/admin/products/new`, `/admin/products/[id]` 7-tab editor with live SERP preview, `/admin/categories`, `/admin/attributes`, `/admin/inventory`, `/admin/banners`, `/admin/articles`, and `ADMIN`-restricted `/admin/settings`).
+- **Requirement IDs covered:** AD-01 to AD-13, AD-17, AD-18, AD-24 to AD-30, MED-01 to MED-05, SEC-09, SEC-11.
+- **Gate passed:** `tsc --noEmit`, `eslint .`, `prettier --check`, `vitest` (7 files / 32 unit & integration tests), `next build` (24 routes built cleanly with `cacheComponents` + PPR), Playwright E2E Chromium suite (9/9 passing across `design-system.spec.ts`, `auth.spec.ts`, and `admin-catalogue.spec.ts` covering 360px/1440px responsive layout, WCAG 2.2 AA axe-core scans, STAFF settings restriction, PNG upload -> WebP processing, product creation, stock ledger adjustment, and archive).
+- **Next:** Phase 4 — Customer Storefront: Home, Collections/Filters, Search, Product Detail, Wishlist, Static Pages & Guides.
