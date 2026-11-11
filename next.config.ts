@@ -51,6 +51,8 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   reactCompiler: true,
   poweredByHeader: false,
+  htmlLimitedBots:
+    /[\w-]+-Google|Google-[\w-]+|Google-Extended|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight|GPTBot|OAI-SearchBot|ChatGPT-User|ClaudeBot|Claude-Web|PerplexityBot|CCBot/i,
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: buildRemotePatterns(),

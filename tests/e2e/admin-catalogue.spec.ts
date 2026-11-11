@@ -116,7 +116,12 @@ test.describe("Phase 3 — Admin Studio, Catalogue, Uploads, Inventory & RBAC", 
 
     // 3. Adjust Stock in Inventory Ledger
     await page.goto(`/admin/inventory?q=${encodeURIComponent(`${skuPrefix}-V1`)}`);
-    await page.getByRole("button", { name: "Adjust Stock" }).first().click();
+    await expect(async () => {
+      if (!(await page.getByLabel(/Quantity Delta/i).isVisible())) {
+        await page.getByRole("button", { name: "Adjust Stock" }).first().click();
+      }
+      await expect(page.getByLabel(/Quantity Delta/i)).toBeVisible({ timeout: 1500 });
+    }).toPass({ timeout: 15000 });
     await page.getByLabel(/Quantity Delta/i).fill("3");
     await page.getByLabel(/Audit Reference Note/i).fill(`E2E intake ${runId}`);
     await page.getByRole("button", { name: "Commit Ledger Entry" }).click();

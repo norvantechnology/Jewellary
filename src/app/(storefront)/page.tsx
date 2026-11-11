@@ -69,6 +69,7 @@ export default async function HomePage() {
                     alt={heroBanner.altText}
                     fill
                     preload
+                    fetchPriority="high"
                     sizes="(max-width: 1024px) 100vw, 48vw"
                     className="object-cover"
                   />

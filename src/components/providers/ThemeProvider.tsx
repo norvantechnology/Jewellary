@@ -1,5 +1,6 @@
 "use client";
 
+import "@/lib/zod-csp";
 import * as React from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";

@@ -10,6 +10,7 @@ interface ProductCardProps {
   product: PublicProductCardDTO;
   currency?: string;
   priority?: boolean;
+  preload?: boolean;
   className?: string;
 }
 
@@ -17,6 +18,7 @@ export function ProductCard({
   product,
   currency = "USD",
   priority = false,
+  preload = false,
   className,
 }: ProductCardProps) {
   const href = `/products/${product.slug}`;
@@ -56,7 +58,8 @@ export function ProductCard({
                 src={primary.mediumUrl ?? primary.url}
                 alt={primary.altText}
                 fill
-                fetchPriority={priority ? "high" : undefined}
+                preload={preload}
+                fetchPriority={priority || preload ? "high" : undefined}
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className={cn(
                   "object-cover transition-all duration-500 group-hover:scale-[1.03]",

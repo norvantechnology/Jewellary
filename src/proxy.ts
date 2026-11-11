@@ -7,20 +7,63 @@ function hasSessionCookie(request: NextRequest): boolean {
   return SESSION_COOKIE_NAMES.some((name) => Boolean(request.cookies.get(name)?.value));
 }
 
-function buildReportOnlyCsp(nonce: string): string {
+function buildImgSrc(): string {
+  const sources = ["'self'", "blob:", "data:", "https:"];
+  const s3Url = process.env.S3_ENDPOINT;
+  if (s3Url) {
+    try {
+      const origin = new URL(s3Url).origin;
+      if (!sources.includes(origin)) sources.push(origin);
+    } catch {
+      // Ignore invalid S3_ENDPOINT format
+    }
+  }
+  const cdnUrl = process.env.NEXT_PUBLIC_IMAGE_CDN_URL;
+  if (cdnUrl) {
+    try {
+      const origin = new URL(cdnUrl).origin;
+      if (!sources.includes(origin)) sources.push(origin);
+    } catch {
+      // Ignore invalid CDN URL format
+    }
+  }
+  return `img-src ${sources.join(" ")}`;
+}
+
+function buildEnforcedCsp(isHttps: boolean): string {
   const isDev = process.env.NODE_ENV !== "production";
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""} https://js.stripe.com https://checkout.razorpay.com https://www.googletagmanager.com`,
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://js.stripe.com https://checkout.razorpay.com https://www.googletagmanager.com`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' blob: data: https:",
+    buildImgSrc(),
     "font-src 'self' data:",
-    "connect-src 'self' https://api.stripe.com https://api.razorpay.com https://lumberjack.razorpay.com https://www.google-analytics.com",
+    "connect-src 'self' https://api.stripe.com https://api.razorpay.com https://lumberjack.razorpay.com https://www.google-analytics.com https://*.ingest.sentry.io",
     "frame-src https://js.stripe.com https://api.razorpay.com https://checkout.razorpay.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
+    ...(isHttps ? ["upgrade-insecure-requests"] : []),
+  ];
+  return directives.join("; ");
+}
+
+function buildReportOnlyCsp(nonce: string, isHttps: boolean): string {
+  const isDev = process.env.NODE_ENV !== "production";
+  const directives = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""} https://js.stripe.com https://checkout.razorpay.com https://www.googletagmanager.com`,
+    "style-src 'self' 'unsafe-inline'",
+    buildImgSrc(),
+    "font-src 'self' data:",
+    "connect-src 'self' https://api.stripe.com https://api.razorpay.com https://lumberjack.razorpay.com https://www.google-analytics.com https://*.ingest.sentry.io",
+    "frame-src https://js.stripe.com https://api.razorpay.com https://checkout.razorpay.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    ...(isHttps ? ["upgrade-insecure-requests"] : []),
   ];
   return directives.join("; ");
 }
@@ -39,6 +82,8 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  const isHttps =
+    request.nextUrl.protocol === "https:" || request.headers.get("x-forwarded-proto") === "https";
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
@@ -49,7 +94,8 @@ export function proxy(request: NextRequest) {
     },
   });
 
-  response.headers.set("Content-Security-Policy-Report-Only", buildReportOnlyCsp(nonce));
+  response.headers.set("Content-Security-Policy", buildEnforcedCsp(isHttps));
+  response.headers.set("Content-Security-Policy-Report-Only", buildReportOnlyCsp(nonce, isHttps));
   return response;
 }
 

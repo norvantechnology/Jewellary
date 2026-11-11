@@ -1,4 +1,17 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { expect, test } from "@playwright/test";
+import dotenv from "dotenv";
+
+function resolveMerchantFeedToken(): string {
+  if (process.env.MERCHANT_FEED_TOKEN) return process.env.MERCHANT_FEED_TOKEN;
+  const envPath = path.join(process.cwd(), ".env");
+  if (existsSync(envPath)) {
+    const parsed = dotenv.parse(readFileSync(envPath, "utf8"));
+    if (parsed.MERCHANT_FEED_TOKEN) return parsed.MERCHANT_FEED_TOKEN;
+  }
+  return "dev_merchant_feed_token";
+}
 
 test.describe("Phase 7 E2E — Technical SEO, JSON-LD, Sitemaps, Feeds & AI Crawlers", () => {
   test("serves robots.txt, segmented sitemaps, llms.txt, OG images, and Merchant Center XML feed", async ({
@@ -37,7 +50,7 @@ test.describe("Phase 7 E2E — Technical SEO, JSON-LD, Sitemaps, Feeds & AI Craw
     const unauthFeed = await request.get("/feeds/google-merchant.xml");
     expect(unauthFeed.status()).toBe(401);
 
-    const token = process.env.MERCHANT_FEED_TOKEN ?? "local-dev-merchant-feed-token-please-change";
+    const token = resolveMerchantFeedToken();
     const feedRes = await request.get(
       `/feeds/google-merchant.xml?token=${encodeURIComponent(token)}`,
     );

@@ -1,35 +1,44 @@
 "use client";
 
 import * as React from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2 } from "lucide-react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { subscribeNewsletterAction } from "@/modules/newsletter/newsletter.actions";
-import {
-  subscribeNewsletterSchema,
-  type SubscribeNewsletterInput,
-} from "@/modules/newsletter/newsletter.schemas";
+
+const SIMPLE_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function FooterNewsletterForm() {
+  const [email, setEmail] = React.useState("");
+  const [website, setWebsite] = React.useState("");
+  const [emailError, setEmailError] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
-  const form = useForm({
-    resolver: zodResolver(subscribeNewsletterSchema),
-    defaultValues: {
-      email: "",
-      source: "footer",
-      website: "",
-    },
-  });
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const onSubmit = form.handleSubmit(async (rawValues) => {
-    const values = rawValues as SubscribeNewsletterInput;
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const normalized = email.trim().toLowerCase();
+    if (!SIMPLE_EMAIL_PATTERN.test(normalized) || normalized.length > 180) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
+
+    setEmailError(null);
     setStatusMessage(null);
-    const result = await subscribeNewsletterAction(values);
+    setIsSubmitting(true);
+
+    const result = await subscribeNewsletterAction({
+      email: normalized,
+      source: "footer",
+      website,
+    });
+
+    setIsSubmitting(false);
 
     if (!result.ok) {
+      const msg = result.error.fieldErrors?.email?.[0] ?? result.error.message;
+      setEmailError(msg);
       toast.error(result.error.message);
       return;
     }
@@ -40,10 +49,11 @@ export function FooterNewsletterForm() {
       return;
     }
 
-    form.reset({ email: "", source: "footer", website: "" });
+    setEmail("");
+    setWebsite("");
     setStatusMessage("Welcome to the Maison list. You will receive seasonal collection previews.");
     toast.success("Subscribed to atelier previews.");
-  });
+  }
 
   return (
     <div className="mt-6 max-w-sm">
@@ -58,28 +68,35 @@ export function FooterNewsletterForm() {
         </label>
         <Input
           id="footer-newsletter-email"
+          name="email"
           type="email"
           autoComplete="email"
           placeholder="you@example.com"
-          aria-invalid={Boolean(form.formState.errors.email)}
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (emailError) setEmailError(null);
+          }}
+          aria-invalid={Boolean(emailError)}
           className="h-11 min-w-0 flex-1 bg-card"
-          {...form.register("email")}
         />
         <input
           type="text"
+          name="website"
           tabIndex={-1}
           aria-hidden="true"
           autoComplete="off"
           className="sr-only"
-          {...form.register("website")}
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
         />
-        <Button type="submit" disabled={form.formState.isSubmitting} className="shrink-0">
-          {form.formState.isSubmitting ? "Joining…" : "Subscribe"}
+        <Button type="submit" disabled={isSubmitting} className="shrink-0">
+          {isSubmitting ? "Joining…" : "Subscribe"}
         </Button>
       </form>
-      {form.formState.errors.email?.message && (
+      {emailError && (
         <p className="mt-1.5 text-xs text-destructive" role="alert">
-          {form.formState.errors.email.message}
+          {emailError}
         </p>
       )}
       {statusMessage && (

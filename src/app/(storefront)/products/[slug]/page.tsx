@@ -267,7 +267,22 @@ export default function ProductPage(props: ProductPageProps) {
       fallback={
         <Section spacing="sm">
           <Container>
-            <div className="py-12 text-sm text-muted-foreground">Loading piece dossier…</div>
+            <div
+              role="status"
+              className="min-h-[120vh] space-y-6 py-4"
+              aria-busy="true"
+              aria-label="Loading piece dossier"
+            >
+              <div className="h-5 w-56 animate-pulse rounded bg-muted" />
+              <div className="grid gap-10 lg:grid-cols-12">
+                <div className="aspect-[4/5] animate-pulse rounded-md bg-muted lg:col-span-7" />
+                <div className="space-y-4 lg:col-span-5">
+                  <div className="h-9 w-3/4 animate-pulse rounded bg-muted" />
+                  <div className="h-6 w-1/3 animate-pulse rounded bg-muted" />
+                  <div className="h-32 w-full animate-pulse rounded bg-muted" />
+                </div>
+              </div>
+            </div>
           </Container>
         </Section>
       }

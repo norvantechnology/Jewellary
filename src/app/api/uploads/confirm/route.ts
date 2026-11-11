@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePermission } from "@/server/dal";
 import { AppError } from "@/server/errors";
+import { enforceRateLimit } from "@/server/rate-limit";
 import { processAndPersistImageUpload } from "@/server/storage";
 
 const confirmUploadSchema = z
@@ -14,7 +15,8 @@ const confirmUploadSchema = z
 
 export async function POST(request: Request) {
   try {
-    await requirePermission("catalog:write");
+    const actor = await requirePermission("catalog:write");
+    await enforceRateLimit("uploadSign", actor.user.id);
 
     const json = await request.json();
     const parsed = confirmUploadSchema.safeParse(json);

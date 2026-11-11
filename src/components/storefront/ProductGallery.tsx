@@ -60,6 +60,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                   alt={image.altText}
                   fill
                   preload={idx === 0}
+                  fetchPriority={idx === 0 ? "high" : undefined}
                   sizes="(max-width: 1024px) 100vw, 52vw"
                   className="object-cover"
                 />
