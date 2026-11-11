@@ -1,11 +1,12 @@
 import "server-only";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import matter from "gray-matter";
 import type { Metadata } from "next";
 import { cacheLife, cacheTag } from "next/cache";
 import { formatMoney } from "@/lib/money";
 import { renderSafeMarkdown } from "@/lib/markdown";
+import { INDEXABLE_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 import { CACHE_TAGS } from "@/server/cache-tags";
 
@@ -65,9 +66,31 @@ export async function getEditorialContentPage(slug: string): Promise<StaticEdito
 }
 
 export async function getEditorialMetadata(slug: string): Promise<Metadata> {
-  const page = await getEditorialContentPage(slug);
-  return {
+  const [page, settings] = await Promise.all([
+    getEditorialContentPage(slug),
+    getPublicStoreSettings(),
+  ]);
+  return buildMetadata({
     title: page.title,
     description: page.description,
-  };
+    pathname: `/${page.slug}`,
+    storeName: settings.storeName,
+    siteDefaultOgImage: settings.defaultOgImageUrl,
+    robots: INDEXABLE_ROBOTS,
+  });
+}
+
+export async function getEditorialLastModified(slug: string): Promise<string> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.settings);
+
+  const safeSlug = slug.replace(/[^a-z0-9-]/gi, "");
+  const filePath = path.join(CONTENT_DIR, `${safeSlug}.md`);
+  try {
+    const info = await stat(filePath);
+    return info.mtime.toISOString();
+  } catch {
+    return "2026-01-01T00:00:00.000Z";
+  }
 }

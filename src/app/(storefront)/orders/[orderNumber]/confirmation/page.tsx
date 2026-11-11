@@ -11,15 +11,18 @@ import { Button } from "@/components/ui/button";
 import { formatCountryName } from "@/lib/countries";
 import { formatDate } from "@/lib/dates";
 import { formatMoneyExact } from "@/lib/money";
+import { NOINDEX_NOFOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { getOrderConfirmation, type OrderConfirmationDTO } from "@/modules/orders/order.service";
 import { ORDER_STATUS_META, isCancellableBeforeSettlement } from "@/modules/orders/state-machine";
 import { AppError } from "@/server/errors";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Order Confirmation",
   description: "Private confirmation receipt and vault status for your commission.",
-  robots: { index: false, follow: false },
-};
+  pathname: "/orders",
+  canonical: "/orders",
+  robots: NOINDEX_NOFOLLOW_ROBOTS,
+});
 
 async function ConfirmationBody({
   params,

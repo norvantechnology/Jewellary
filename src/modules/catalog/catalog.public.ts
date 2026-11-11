@@ -395,6 +395,17 @@ export async function resolveCategoryByPath(pathStr: string): Promise<CategoryRe
     if (redirect) {
       return { kind: "redirect", newPath: redirect.newSlug };
     }
+
+    if (!normalized.includes("/")) {
+      const leafMatch = await db.category.findFirst({
+        where: { slug: normalized, isActive: true },
+        select: { path: true },
+      });
+      if (leafMatch && leafMatch.path !== normalized) {
+        return { kind: "redirect", newPath: leafMatch.path };
+      }
+    }
+
     return null;
   }
 
@@ -642,6 +653,7 @@ export type PublicProductResolutionResult =
       relatedProducts: PublicProductCardDTO[];
     }
   | { kind: "redirect"; newSlug: string }
+  | { kind: "redirect-category"; categoryPath: string }
   | null;
 
 export async function getPublicProductBySlug(slug: string): Promise<PublicProductResolutionResult> {
@@ -778,6 +790,15 @@ export async function getPublicProductBySlug(slug: string): Promise<PublicProduc
     if (redirect) {
       return { kind: "redirect", newSlug: redirect.newSlug };
     }
+
+    const archived = await db.product.findFirst({
+      where: { slug, status: "ARCHIVED", deletedAt: null },
+      select: { category: { select: { path: true } } },
+    });
+    if (archived?.category?.path) {
+      return { kind: "redirect-category", categoryPath: archived.category.path };
+    }
+
     return null;
   }
 
@@ -947,4 +968,223 @@ export async function getHomepagePayload(): Promise<HomepagePayloadDTO> {
     bestsellers: bestsellerRows.map(mapProductRowToCardDTO),
     articles: articles.slice(0, 3),
   };
+}
+
+export interface SitemapCategoryItem {
+  path: string;
+  imageUrl: string | null;
+  updatedAt: Date;
+}
+
+export async function getSitemapCategories(): Promise<SitemapCategoryItem[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.categories);
+
+  const rows = await db.category.findMany({
+    where: { isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      path: true,
+      imageUrl: true,
+      updatedAt: true,
+    },
+  });
+
+  return rows;
+}
+
+export interface SitemapProductItem {
+  slug: string;
+  updatedAt: Date;
+  images: string[];
+}
+
+export async function getSitemapProducts(skip = 0, take = 50000): Promise<SitemapProductItem[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.products);
+
+  const rows = await db.product.findMany({
+    where: {
+      status: "ACTIVE",
+      deletedAt: null,
+      noindex: false,
+      OR: [{ canonicalOverride: null }, { canonicalOverride: "" }],
+    },
+    orderBy: [{ updatedAt: "desc" }],
+    skip,
+    take,
+    select: {
+      slug: true,
+      updatedAt: true,
+      images: {
+        orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+        select: { url: true },
+      },
+    },
+  });
+
+  return rows.map((row) => ({
+    slug: row.slug,
+    updatedAt: row.updatedAt,
+    images: row.images.map((i) => i.url),
+  }));
+}
+
+export async function getActiveIndexableProductCount(): Promise<number> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.products);
+
+  return db.product.count({
+    where: {
+      status: "ACTIVE",
+      deletedAt: null,
+      noindex: false,
+      OR: [{ canonicalOverride: null }, { canonicalOverride: "" }],
+    },
+  });
+}
+
+export interface MerchantFeedItemDTO {
+  id: string;
+  itemGroupId: string;
+  title: string;
+  description: string;
+  slug: string;
+  imageUrl: string | null;
+  additionalImageUrls: string[];
+  availability: "in_stock" | "out_of_stock" | "preorder";
+  price: string;
+  gtin: string | null;
+  mpn: string | null;
+  googleProductCategory: string;
+  productType: string;
+  material: string | null;
+  color: string | null;
+  size: string | null;
+  shippingWeightGrams: string | null;
+}
+
+export async function getMerchantFeedItems(): Promise<MerchantFeedItemDTO[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.products, CACHE_TAGS.categories, CACHE_TAGS.settings);
+
+  const products = await db.product.findMany({
+    where: {
+      status: "ACTIVE",
+      deletedAt: null,
+      noindex: false,
+      priceMode: "FIXED",
+    },
+    orderBy: [{ updatedAt: "desc" }],
+    select: {
+      id: true,
+      sku: true,
+      name: true,
+      slug: true,
+      subtitle: true,
+      description: true,
+      basePrice: true,
+      metalType: true,
+      metalPurity: true,
+      metalColor: true,
+      metalWeightGrams: true,
+      gtin: true,
+      mpn: true,
+      googleProductCategory: true,
+      leadTimeDays: true,
+      category: { select: { name: true, path: true } },
+      images: {
+        orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+        select: { url: true },
+      },
+      variants: {
+        where: { isActive: true },
+        orderBy: [{ isDefault: "desc" }, { sortOrder: "asc" }],
+        select: {
+          sku: true,
+          title: true,
+          size: true,
+          metal: true,
+          priceOverride: true,
+          stockQty: true,
+          reservedQty: true,
+          weightGrams: true,
+        },
+      },
+    },
+  });
+
+  const items: MerchantFeedItemDTO[] = [];
+
+  for (const product of products) {
+    const primaryImage = product.images[0]?.url ?? null;
+    const additionalImageUrls = product.images.slice(1, 10).map((img) => img.url);
+    const description =
+      product.description ??
+      product.subtitle ??
+      `${product.name} — independently certified fine jewellery crafted to heirloom tolerances.`;
+    const defaultMaterial =
+      [product.metalPurity, product.metalType].filter(Boolean).join(" ") || null;
+    const googleCategory = product.googleProductCategory ?? "Apparel & Accessories > Jewelry";
+
+    if (product.variants.length === 0) {
+      items.push({
+        id: product.sku,
+        itemGroupId: product.sku,
+        title: product.name,
+        description,
+        slug: product.slug,
+        imageUrl: primaryImage,
+        additionalImageUrls,
+        availability: "out_of_stock",
+        price: product.basePrice.toString(),
+        gtin: product.gtin,
+        mpn: product.mpn ?? product.sku,
+        googleProductCategory: googleCategory,
+        productType: product.category.name,
+        material: defaultMaterial,
+        color: product.metalColor,
+        size: null,
+        shippingWeightGrams: product.metalWeightGrams?.toString() ?? null,
+      });
+      continue;
+    }
+
+    for (const variant of product.variants) {
+      const availQty = Math.max(0, variant.stockQty - variant.reservedQty);
+      const availability: MerchantFeedItemDTO["availability"] =
+        availQty > 0
+          ? "in_stock"
+          : product.leadTimeDays && product.leadTimeDays > 0
+            ? "preorder"
+            : "out_of_stock";
+
+      items.push({
+        id: variant.sku,
+        itemGroupId: product.sku,
+        title: variant.title ? `${product.name} — ${variant.title}` : product.name,
+        description,
+        slug: product.slug,
+        imageUrl: primaryImage,
+        additionalImageUrls,
+        availability,
+        price: (variant.priceOverride ?? product.basePrice).toString(),
+        gtin: product.gtin,
+        mpn: product.mpn ?? variant.sku,
+        googleProductCategory: googleCategory,
+        productType: product.category.name,
+        material: variant.metal ?? defaultMaterial,
+        color: product.metalColor,
+        size: variant.size,
+        shippingWeightGrams:
+          variant.weightGrams?.toString() ?? product.metalWeightGrams?.toString() ?? null,
+      });
+    }
+  }
+
+  return items;
 }

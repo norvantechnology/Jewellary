@@ -1,12 +1,20 @@
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { Container, Section } from "@/components/shared/primitives";
 import { getEditorialContentPage } from "@/lib/content";
+import { buildBreadcrumbListJsonLd } from "@/lib/seo/jsonld";
 
 export async function EditorialContentView({ slug }: { slug: string }) {
   const page = await getEditorialContentPage(slug);
 
   return (
     <Section spacing="md">
+      <JsonLd
+        data={buildBreadcrumbListJsonLd([
+          { name: "Home", path: "/" },
+          { name: page.title, path: `/${page.slug}` },
+        ])}
+      />
       <Container>
         <div className="mx-auto max-w-3xl">
           <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: page.title }]} />

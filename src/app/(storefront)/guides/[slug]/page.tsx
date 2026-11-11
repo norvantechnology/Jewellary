@@ -5,31 +5,62 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { Container, Section } from "@/components/shared/primitives";
+import { ProductCard } from "@/components/storefront/ProductCard";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/dates";
 import { renderSafeMarkdown } from "@/lib/markdown";
+import { buildArticleJsonLd, buildBreadcrumbListJsonLd } from "@/lib/seo/jsonld";
+import { INDEXABLE_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { resolvePublishedArticleBySlug } from "@/modules/articles/article.service";
+import { queryCollectionProducts, resolveCategoryByPath } from "@/modules/catalog/catalog.public";
+import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
 interface GuideDetailPageProps {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: GuideDetailPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const [{ slug }, settings] = await Promise.all([params, getPublicStoreSettings()]);
   const resolved = await resolvePublishedArticleBySlug(slug);
   if (!resolved || resolved.kind !== "article") {
-    return { title: "Diamond Guide" };
+    return buildMetadata({
+      title: "Diamond Buying Guide",
+      description: "Independent gemological guidance and fine jewellery education.",
+      pathname: "/guides",
+      storeName: settings.storeName,
+      siteDefaultOgImage: settings.defaultOgImageUrl,
+    });
   }
 
-  return {
-    title: resolved.article.seoTitle ?? resolved.article.title,
-    description: resolved.article.seoDescription ?? resolved.article.excerpt,
-  };
+  const { article } = resolved;
+  return buildMetadata({
+    title: article.seoTitle ?? article.title,
+    description: article.seoDescription ?? article.excerpt,
+    pathname: `/guides/${article.slug}`,
+    canonical: `/guides/${article.slug}`,
+    storeName: settings.storeName,
+    siteDefaultOgImage: settings.defaultOgImageUrl,
+    type: "article",
+    publishedTime: article.publishedAt ?? article.updatedAt,
+    modifiedTime: article.updatedAt,
+    authors: [article.authorName],
+    images: article.coverImageUrl
+      ? [
+          {
+            url: article.coverImageUrl,
+            alt: article.coverAltText ?? article.title,
+          },
+        ]
+      : undefined,
+    useSegmentOgImage: true,
+    robots: INDEXABLE_ROBOTS,
+  });
 }
 
 async function GuideArticleBody({ params }: GuideDetailPageProps) {
-  const { slug } = await params;
+  const [{ slug }, settings] = await Promise.all([params, getPublicStoreSettings()]);
   const resolved = await resolvePublishedArticleBySlug(slug);
 
   if (!resolved) {
@@ -40,10 +71,47 @@ async function GuideArticleBody({ params }: GuideDetailPageProps) {
   }
 
   const { article } = resolved;
-  const bodyHtml = await renderSafeMarkdown(article.bodyMarkdown);
+  const [bodyHtml, initialRelatedCategory] = await Promise.all([
+    renderSafeMarkdown(article.bodyMarkdown),
+    article.relatedCategorySlug
+      ? resolveCategoryByPath(article.relatedCategorySlug)
+      : Promise.resolve(null),
+  ]);
+
+  const resolvedRelatedPath =
+    initialRelatedCategory?.kind === "category"
+      ? initialRelatedCategory.category.path
+      : initialRelatedCategory?.kind === "redirect"
+        ? initialRelatedCategory.newPath
+        : null;
+
+  const relatedCategory =
+    initialRelatedCategory?.kind === "category"
+      ? initialRelatedCategory
+      : resolvedRelatedPath
+        ? await resolveCategoryByPath(resolvedRelatedPath)
+        : null;
+
+  const relatedProductsResult =
+    relatedCategory && relatedCategory.kind === "category"
+      ? await queryCollectionProducts({
+          categoryPath: relatedCategory.category.path,
+          categoryIds: relatedCategory.category.descendantIds,
+          pageSize: 3,
+        })
+      : null;
+
+  const articleJsonLd = buildArticleJsonLd({ article, settings });
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd([
+    { name: "Home", path: "/" },
+    { name: "Guides", path: "/guides" },
+    { name: article.title, path: `/guides/${article.slug}` },
+  ]);
 
   return (
     <Section spacing="sm">
+      <JsonLd data={articleJsonLd} />
+      <JsonLd data={breadcrumbJsonLd} />
       <Container>
         <div className="mx-auto max-w-3xl">
           <Breadcrumbs
@@ -67,9 +135,16 @@ async function GuideArticleBody({ params }: GuideDetailPageProps) {
               {article.publishedAt && (
                 <>
                   <span>·</span>
-                  <time dateTime={article.publishedAt}>{formatDate(article.publishedAt)}</time>
+                  <span>
+                    Published{" "}
+                    <time dateTime={article.publishedAt}>{formatDate(article.publishedAt)}</time>
+                  </span>
                 </>
               )}
+              <span>·</span>
+              <span>
+                Updated <time dateTime={article.updatedAt}>{formatDate(article.updatedAt)}</time>
+              </span>
             </div>
           </header>
 
@@ -79,7 +154,7 @@ async function GuideArticleBody({ params }: GuideDetailPageProps) {
                 src={article.coverImageUrl}
                 alt={article.coverAltText ?? article.title}
                 fill
-                priority
+                preload
                 sizes="(max-width: 768px) 100vw, 768px"
                 className="object-cover"
               />
@@ -102,9 +177,9 @@ async function GuideArticleBody({ params }: GuideDetailPageProps) {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              {article.relatedCategorySlug && (
+              {resolvedRelatedPath && (
                 <Button asChild>
-                  <Link href={`/collections/${article.relatedCategorySlug}`} className="gap-1.5">
+                  <Link href={`/collections/${resolvedRelatedPath}`} className="gap-1.5">
                     <span>Shop Collection</span>
                     <ArrowRight className="size-4" aria-hidden="true" />
                   </Link>
@@ -115,6 +190,34 @@ async function GuideArticleBody({ params }: GuideDetailPageProps) {
               </Button>
             </div>
           </div>
+
+          {relatedProductsResult && relatedProductsResult.items.length > 0 && (
+            <div className="mt-12 border-t border-border pt-10">
+              <div className="mb-6 flex items-end justify-between gap-4">
+                <div>
+                  <p className="font-sans text-editorial-label text-accent-text">
+                    Featured in This Guide
+                  </p>
+                  <h2 className="mt-1 font-display text-2xl font-medium text-foreground">
+                    Corresponding Atelier Creations
+                  </h2>
+                </div>
+                {resolvedRelatedPath && (
+                  <Link
+                    href={`/collections/${resolvedRelatedPath}`}
+                    className="text-xs font-medium tracking-wider text-accent-text uppercase hover:underline"
+                  >
+                    View All
+                  </Link>
+                )}
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {relatedProductsResult.items.map((product) => (
+                  <ProductCard key={product.id} product={product} currency={settings.currency} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </Container>
     </Section>

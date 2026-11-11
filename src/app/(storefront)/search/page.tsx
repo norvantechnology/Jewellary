@@ -13,14 +13,17 @@ import {
   parseCatalogFilterParams,
   type RawSearchParams,
 } from "@/lib/search-params";
+import { NOINDEX_FOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { searchProducts } from "@/modules/search/search.service";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Search Fine Jewellery",
   description: "Search certified diamond rings, necklaces, earrings, bracelets, metals, and SKUs.",
-  robots: { index: false, follow: true },
-};
+  pathname: "/search",
+  canonical: "/search",
+  robots: NOINDEX_FOLLOW_ROBOTS,
+});
 
 async function SearchPageBody({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   const [rawSearch, settings] = await Promise.all([searchParams, getPublicStoreSettings()]);

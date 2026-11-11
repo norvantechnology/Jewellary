@@ -3,22 +3,39 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BookOpen } from "lucide-react";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Container, Section } from "@/components/shared/primitives";
 import { formatDate } from "@/lib/dates";
+import { buildBreadcrumbListJsonLd } from "@/lib/seo/jsonld";
+import { INDEXABLE_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { getPublishedArticles } from "@/modules/articles/article.service";
+import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
-export const metadata: Metadata = {
-  title: "Diamond & Fine Jewellery Buying Guides",
-  description:
-    "Independent gemological guidance on diamond proportions, 4Cs clarity grading, 18K vs platinum alloys, and ring sizing.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getPublicStoreSettings();
+  return buildMetadata({
+    title: "Diamond & Fine Jewellery Buying Guides",
+    description:
+      "Independent gemological guidance on diamond proportions, 4Cs clarity grading, 18K gold vs platinum alloys, and ring sizing.",
+    pathname: "/guides",
+    canonical: "/guides",
+    storeName: settings.storeName,
+    siteDefaultOgImage: settings.defaultOgImageUrl,
+    robots: INDEXABLE_ROBOTS,
+  });
+}
 
 export default async function GuidesIndexPage() {
   const articles = await getPublishedArticles();
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd([
+    { name: "Home", path: "/" },
+    { name: "Guides", path: "/guides" },
+  ]);
 
   return (
     <Section spacing="sm">
+      <JsonLd data={breadcrumbJsonLd} />
       <Container>
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Guides" }]} />
 

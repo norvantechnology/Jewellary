@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BookOpen, ShieldCheck, Sparkles, Truck } from "lucide-react";
@@ -6,8 +7,24 @@ import { ProductCard } from "@/components/storefront/ProductCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
+import { INDEXABLE_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { getHomepagePayload } from "@/modules/catalog/catalog.public";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getPublicStoreSettings();
+  return buildMetadata({
+    absoluteTitle: `${settings.storeName} — Certified Diamonds & Fine Jewellery`,
+    description:
+      settings.seoDefaultDescription ??
+      settings.tagline ??
+      "Discover GIA and IGI certified diamonds, engagement rings, and heirloom 18K gold jewellery crafted with full grading transparency.",
+    pathname: "/",
+    storeName: settings.storeName,
+    siteDefaultOgImage: settings.defaultOgImageUrl,
+    robots: INDEXABLE_ROBOTS,
+  });
+}
 
 export default async function HomePage() {
   const [payload, settings] = await Promise.all([getHomepagePayload(), getPublicStoreSettings()]);
@@ -51,7 +68,7 @@ export default async function HomePage() {
                     src={heroBanner.imageUrl}
                     alt={heroBanner.altText}
                     fill
-                    priority
+                    preload
                     sizes="(max-width: 1024px) 100vw, 48vw"
                     className="object-cover"
                   />

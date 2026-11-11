@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/layout/Breadcrumbs";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
 import { Container, Grid, Section } from "@/components/shared/primitives";
@@ -13,6 +14,14 @@ import {
   parseCatalogFilterParams,
   type RawSearchParams,
 } from "@/lib/search-params";
+import { buildBreadcrumbListJsonLd, buildCollectionJsonLd } from "@/lib/seo/jsonld";
+import {
+  INDEXABLE_ROBOTS,
+  NOINDEX_FOLLOW_ROBOTS,
+  buildCollectionCanonicalPath,
+  buildMetadata,
+} from "@/lib/seo/metadata";
+import { getPublishedArticles } from "@/modules/articles/article.service";
 import {
   getAllActiveCategoriesTree,
   queryCollectionProducts,
@@ -25,30 +34,63 @@ interface CollectionsPageProps {
   searchParams: Promise<RawSearchParams>;
 }
 
-export async function generateMetadata({ params }: CollectionsPageProps): Promise<Metadata> {
-  const { slug } = await params;
+export async function generateMetadata({
+  params,
+  searchParams,
+}: CollectionsPageProps): Promise<Metadata> {
+  const [{ slug }, rawSearch, settings] = await Promise.all([
+    params,
+    searchParams,
+    getPublicStoreSettings(),
+  ]);
   const pathStr = slug?.join("/") ?? "";
+  const basePath = pathStr ? `/collections/${pathStr}` : "/collections";
+  const { canonicalPath, isFiltered } = buildCollectionCanonicalPath(basePath, rawSearch);
+  const rawPage = Array.isArray(rawSearch.page) ? rawSearch.page[0] : rawSearch.page;
+  const pageNum = !isFiltered && rawPage && Number(rawPage) > 1 ? Number(rawPage) : 1;
 
   if (!pathStr) {
-    return {
-      title: "All Fine Jewellery Collections",
+    const titleBase = "All Fine Jewellery Collections";
+    return buildMetadata({
+      title: pageNum > 1 ? `${titleBase} — Page ${pageNum}` : titleBase,
       description:
-        "Browse GIA and IGI certified engagement rings, wedding bands, diamond pendants, earrings, and tennis bracelets.",
-    };
+        "Browse GIA and IGI certified engagement rings, wedding bands, diamond pendants, earrings, and tennis bracelets crafted in 18K recycled gold and platinum.",
+      pathname: canonicalPath,
+      canonical: canonicalPath,
+      storeName: settings.storeName,
+      siteDefaultOgImage: settings.defaultOgImageUrl,
+      robots: isFiltered ? NOINDEX_FOLLOW_ROBOTS : INDEXABLE_ROBOTS,
+    });
   }
 
   const resolved = await resolveCategoryByPath(pathStr);
   if (!resolved || resolved.kind !== "category") {
-    return { title: "Collection" };
+    return buildMetadata({
+      title: "Collection",
+      description: `Explore fine jewellery crafted in 18K recycled gold and platinum by ${settings.storeName}.`,
+      pathname: basePath,
+      storeName: settings.storeName,
+      siteDefaultOgImage: settings.defaultOgImageUrl,
+      robots: NOINDEX_FOLLOW_ROBOTS,
+    });
   }
 
-  return {
-    title: resolved.category.seoTitle ?? resolved.category.name,
+  const baseTitle = resolved.category.seoTitle ?? resolved.category.name;
+  return buildMetadata({
+    title: pageNum > 1 ? `${baseTitle} — Page ${pageNum}` : baseTitle,
     description:
       resolved.category.seoDescription ??
       resolved.category.description ??
-      `Explore ${resolved.category.name} crafted in 18K recycled gold and platinum.`,
-  };
+      `Explore ${resolved.category.name} crafted in 18K recycled gold and platinum with insured delivery and ${settings.returnWindowDays}-day returns.`,
+    pathname: canonicalPath,
+    canonical: canonicalPath,
+    storeName: settings.storeName,
+    siteDefaultOgImage: settings.defaultOgImageUrl,
+    images: resolved.category.imageUrl
+      ? [{ url: resolved.category.imageUrl, alt: resolved.category.name }]
+      : undefined,
+    robots: isFiltered ? NOINDEX_FOLLOW_ROBOTS : INDEXABLE_ROBOTS,
+  });
 }
 
 async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
@@ -83,13 +125,52 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
   }
 
   const filters = parseCatalogFilterParams(rawSearch);
-  const result = await queryCollectionProducts({
-    ...filters,
-    categoryPath: pathStr || null,
-    categoryIds: resolvedCategory?.descendantIds,
-  });
+  const [result, articles] = await Promise.all([
+    queryCollectionProducts({
+      ...filters,
+      categoryPath: pathStr || null,
+      categoryIds: resolvedCategory?.descendantIds,
+    }),
+    getPublishedArticles(),
+  ]);
 
   const basePath = pathStr ? `/collections/${pathStr}` : "/collections";
+  const relevantArticles = articles
+    .filter(
+      (a) =>
+        !pathStr ||
+        a.relatedCategorySlug === resolvedCategory?.slug ||
+        a.relatedCategorySlug === pathStr,
+    )
+    .slice(0, 3);
+  const displayArticles = relevantArticles.length > 0 ? relevantArticles : articles.slice(0, 3);
+
+  const collectionTitle = resolvedCategory?.name ?? "All Fine Jewellery Collections";
+  const collectionDescription =
+    resolvedCategory?.description ??
+    "Explore certified diamond solitaires, 18K gold bands, pendants, studs, and bracelets crafted for heirloom permanence.";
+
+  const jsonLdBreadcrumbs = [{ name: "Home", path: "/" }];
+  if (resolvedCategory) {
+    jsonLdBreadcrumbs.push({ name: "Collections", path: "/collections" });
+    for (const crumb of resolvedCategory.breadcrumbs) {
+      jsonLdBreadcrumbs.push({
+        name: crumb.name,
+        path: `/collections/${crumb.path}`,
+      });
+    }
+  } else {
+    jsonLdBreadcrumbs.push({ name: "Collections", path: "/collections" });
+  }
+
+  const collectionJsonLd = buildCollectionJsonLd({
+    name: collectionTitle,
+    description: collectionDescription,
+    path: basePath,
+    items: result.items.map((p) => ({ name: p.name, slug: p.slug })),
+  });
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd(jsonLdBreadcrumbs);
+
   const breadcrumbs: BreadcrumbItem[] = [{ label: "Home", href: "/" }];
   if (resolvedCategory) {
     breadcrumbs.push({ label: "Collections", href: "/collections" });
@@ -113,6 +194,8 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
 
   return (
     <Section spacing="sm">
+      <JsonLd data={collectionJsonLd} />
+      <JsonLd data={breadcrumbJsonLd} />
       <Container>
         <Breadcrumbs items={breadcrumbs} />
 
@@ -181,6 +264,54 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
             </>
           )}
         </CollectionFilters>
+
+        <section
+          aria-labelledby="collection-guidance-heading"
+          className="mt-16 rounded-md border border-border bg-card p-6 sm:p-8"
+        >
+          <div className="grid gap-8 lg:grid-cols-12">
+            <div className="lg:col-span-6">
+              <p className="font-sans text-editorial-label text-accent-text">
+                Gemological Provenance &amp; Craftsmanship
+              </p>
+              <h2
+                id="collection-guidance-heading"
+                className="mt-2 font-display text-2xl font-medium text-foreground"
+              >
+                Selecting Your {resolvedCategory?.name ?? "Fine Jewellery Piece"}
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                Every {resolvedCategory ? resolvedCategory.name.toLowerCase() : "creation"} in the{" "}
+                {settings.storeName} collection is hallmarked for 18K recycled gold or 950 platinum
+                purity, independently graded where applicable by GIA or IGI laboratories, and
+                dispatched with signature-required courier insurance and a{" "}
+                {settings.returnWindowDays}-day return guarantee.
+              </p>
+            </div>
+            {displayArticles.length > 0 && (
+              <div className="lg:col-span-6">
+                <p className="font-sans text-editorial-label text-accent-text">
+                  Recommended Reading
+                </p>
+                <ul className="mt-3 space-y-2.5 text-sm">
+                  {displayArticles.map((guide) => (
+                    <li key={guide.id}>
+                      <Link
+                        href={`/guides/${guide.slug}`}
+                        className="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-accent-text hover:decoration-accent"
+                      >
+                        {guide.title}
+                      </Link>
+                      <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                        {guide.excerpt}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </section>
       </Container>
     </Section>
   );

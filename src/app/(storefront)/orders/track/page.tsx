@@ -3,13 +3,16 @@ import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Container, Section } from "@/components/shared/primitives";
 import { GuestOrderTrackClient } from "@/components/storefront/GuestOrderTrackClient";
+import { NOINDEX_NOFOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Track an Order",
   description:
     "Verify your order number and checkout email to inspect status and insured tracking.",
-  robots: { index: false, follow: false },
-};
+  pathname: "/orders/track",
+  canonical: "/orders/track",
+  robots: NOINDEX_NOFOLLOW_ROBOTS,
+});
 
 async function TrackBody({ searchParams }: { searchParams: Promise<{ orderNumber?: string }> }) {
   const { orderNumber } = await searchParams;

@@ -59,7 +59,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                   src={image.url}
                   alt={image.altText}
                   fill
-                  priority={idx === 0}
+                  preload={idx === 0}
                   sizes="(max-width: 1024px) 100vw, 52vw"
                   className="object-cover"
                 />

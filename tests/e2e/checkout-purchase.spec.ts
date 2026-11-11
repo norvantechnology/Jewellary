@@ -89,6 +89,7 @@ test.describe("Phase 5 E2E — Cart Estimator, Atomic Checkout, Sandbox Payment 
 
     await page.getByRole("link", { name: "Proceed to Checkout" }).click();
     await page.waitForURL(/\/checkout$/);
+    await expect(page.getByRole("heading", { level: 1, name: /Secure Checkout/i })).toBeVisible();
 
     // Accessibility check on /checkout
     const checkoutAxe = await new AxeBuilder({ page })

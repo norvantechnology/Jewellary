@@ -3,15 +3,18 @@ import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Container, Section } from "@/components/shared/primitives";
 import { WishlistPageClient } from "@/components/storefront/WishlistPageClient";
+import { NOINDEX_FOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 import { getCurrentWishlistState } from "@/modules/wishlist/wishlist.service";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Saved Pieces & Wishlist",
   description:
     "Review your saved jewellery pieces and move selections directly to your shopping bag.",
-  robots: { index: false, follow: true },
-};
+  pathname: "/wishlist",
+  canonical: "/wishlist",
+  robots: NOINDEX_FOLLOW_ROBOTS,
+});
 
 async function WishlistBody() {
   const [wishlist, settings] = await Promise.all([

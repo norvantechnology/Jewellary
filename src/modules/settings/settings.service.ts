@@ -39,6 +39,7 @@ export interface PublicStoreSettings {
   seoDefaultTitlePattern: string | null;
   seoDefaultDescription: string | null;
   defaultOgImageUrl: string | null;
+  updatedAt?: string;
 }
 
 export interface ShippingZoneDTO {
@@ -86,6 +87,7 @@ export async function getPublicStoreSettings(): Promise<PublicStoreSettings> {
       seoDefaultTitlePattern: `%s | ${env.NEXT_PUBLIC_SITE_NAME}`,
       seoDefaultDescription: null,
       defaultOgImageUrl: null,
+      updatedAt: "2026-01-01T00:00:00.000Z",
     };
   }
 
@@ -119,6 +121,7 @@ export async function getPublicStoreSettings(): Promise<PublicStoreSettings> {
     seoDefaultTitlePattern: row.seoDefaultTitlePattern,
     seoDefaultDescription: row.seoDefaultDescription,
     defaultOgImageUrl: row.defaultOgImageUrl,
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 

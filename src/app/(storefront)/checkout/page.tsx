@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Container, Section } from "@/components/shared/primitives";
 import { CheckoutClient } from "@/components/storefront/CheckoutClient";
+import { NOINDEX_NOFOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import {
   getCheckoutBootstrapData,
   getOrderConfirmation,
@@ -10,11 +11,13 @@ import {
 } from "@/modules/orders/order.service";
 import { isCancellableBeforeSettlement } from "@/modules/orders/state-machine";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Checkout",
   description: "Complete your insured jewellery commission cleanly and securely.",
-  robots: { index: false, follow: false },
-};
+  pathname: "/checkout",
+  canonical: "/checkout",
+  robots: NOINDEX_NOFOLLOW_ROBOTS,
+});
 
 async function CheckoutBody({
   searchParams,

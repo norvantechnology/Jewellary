@@ -3,15 +3,18 @@ import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Container, Section } from "@/components/shared/primitives";
 import { CartPageClient } from "@/components/storefront/CartPageClient";
+import { NOINDEX_NOFOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { getCurrentCartSummary } from "@/modules/cart/cart.service";
 import { calculateCheckoutQuote } from "@/modules/orders/checkout-quote";
 import { getAllShippingZones, getPublicStoreSettings } from "@/modules/settings/settings.service";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Shopping Bag",
   description: "Review the jewellery creations in your shopping bag.",
-  robots: { index: false, follow: false },
-};
+  pathname: "/cart",
+  canonical: "/cart",
+  robots: NOINDEX_NOFOLLOW_ROBOTS,
+});
 
 async function CartPageBody() {
   const [cart, settings, zones] = await Promise.all([

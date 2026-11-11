@@ -1172,7 +1172,7 @@ async function seedDemoCatalogue(ctx: Awaited<ReturnType<typeof seedProductionBa
       excerpt:
         "How cut proportions govern brilliance more than any other characteristic, and how to balance color and clarity for natural luminance.",
       authorName: "Claire Moreau, GG (GIA)",
-      relatedCategorySlug: "engagement-rings",
+      relatedCategorySlug: "rings/engagement-rings",
       bodyMarkdown: `## Why Cut Governs Light Performance\n\nAmong the four grading pillars—Cut, Color, Clarity, and Carat—**Cut** is the only human craft variable. Even a D-Flawless stone appears dull if cut too deep or too shallow.\n\n### Recommended Maison Balance\n\n- **Cut Grade:** Prioritize Ideal or GIA Excellent.\n- **Color:** D–F appears icy colorless against platinum; G–H harmonizes warmly with 18K yellow gold.\n- **Clarity:** VS1–VS2 delivers complete eye-clean purity without paying collector premiums for VVS inclusions visible only under 10x loupe magnification.`,
     },
     {
@@ -1181,7 +1181,7 @@ async function seedDemoCatalogue(ctx: Awaited<ReturnType<typeof seedProductionBa
       excerpt:
         "An objective gemological comparison of crystal structure, grading transparency, and heirloom considerations.",
       authorName: "Dr. Henri Vance, Senior Gemologist",
-      relatedCategorySlug: "pendants",
+      relatedCategorySlug: "necklaces/pendants",
       bodyMarkdown: `## Identical Optics, Distinct Provenance\n\nBoth natural and lab-grown diamonds share pure carbon crystal lattice structure, hardness (10 Mohs), and refractive index.\n\n- **Natural Mined Diamonds:** Formed over billions of years beneath Earth's mantle; selected by our atelier exclusively under Kimberley Process compliance and GIA grading.\n- **Lab-Grown Diamonds:** Grown via CVD or HPHT in controlled chambers and independently graded by IGI or GIA with laser inscription.`,
     },
     {
@@ -1190,7 +1190,7 @@ async function seedDemoCatalogue(ctx: Awaited<ReturnType<typeof seedProductionBa
       excerpt:
         "Simple home care rituals and annual prong inspection schedules to preserve mirror brilliance for generations.",
       authorName: "Atelier Bench Team",
-      relatedCategorySlug: "wedding-bands",
+      relatedCategorySlug: "rings/wedding-bands",
       bodyMarkdown: `## Restoring Everyday Radiance\n\nLotions, soaps, and natural skin oils gently film underneath the pavilion facets of a diamond, muting its fire.\n\n1. Soak for 15 minutes in lukewarm water with two drops of mild dish soap.\n2. Gently sweep behind the basket with a soft-bristled baby toothbrush.\n3. Rinse thoroughly in clear water over a closed drain and buff dry with a lint-free chamois cloth.`,
     },
   ];
@@ -1202,6 +1202,7 @@ async function seedDemoCatalogue(ctx: Awaited<ReturnType<typeof seedProductionBa
         title: article.title,
         excerpt: article.excerpt,
         bodyMarkdown: article.bodyMarkdown,
+        relatedCategorySlug: article.relatedCategorySlug,
         isPublished: true,
         publishedAt: new Date("2026-09-15T10:00:00Z"),
       },

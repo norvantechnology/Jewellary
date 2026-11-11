@@ -2,16 +2,31 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Clock, Mail, MapPin, Phone } from "lucide-react";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { Container, Section } from "@/components/shared/primitives";
 import { EnquiryForm } from "@/components/storefront/EnquiryForm";
+import {
+  buildBreadcrumbListJsonLd,
+  buildJewelryStoreJsonLd,
+  buildWebPageJsonLd,
+} from "@/lib/seo/jsonld";
+import { INDEXABLE_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { ENQUIRY_TYPE_VALUES } from "@/modules/enquiries/enquiry.schemas";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
-export const metadata: Metadata = {
-  title: "Private Concierge & Bespoke Enquiries",
-  description:
-    "Connect with our gemology specialists for bespoke designs, diamond inspection, sizing guidance, or salon appointments.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getPublicStoreSettings();
+  return buildMetadata({
+    title: "Private Concierge & Bespoke Enquiries",
+    description:
+      "Connect with our gemology specialists for bespoke designs, diamond inspection, sizing guidance, or salon appointments.",
+    pathname: "/contact",
+    canonical: "/contact",
+    storeName: settings.storeName,
+    siteDefaultOgImage: settings.defaultOgImageUrl,
+    robots: INDEXABLE_ROBOTS,
+  });
+}
 
 interface ContactPageProps {
   searchParams: Promise<{ type?: string; product?: string }>;
@@ -26,9 +41,25 @@ async function ContactPageBody({ searchParams }: ContactPageProps) {
     : "GENERAL";
 
   const productHint = rawSearch.product?.trim() || null;
+  const contactJsonLd = buildWebPageJsonLd({
+    type: "ContactPage",
+    name: `Private Concierge | ${settings.storeName}`,
+    description:
+      "Connect with our gemology specialists for bespoke designs, diamond inspection, sizing guidance, or salon appointments.",
+    path: "/contact",
+    settings,
+  });
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd([
+    { name: "Home", path: "/" },
+    { name: "Private Concierge", path: "/contact" },
+  ]);
+  const jewelryStoreJsonLd = buildJewelryStoreJsonLd(settings);
 
   return (
     <Section spacing="sm">
+      <JsonLd data={contactJsonLd} />
+      <JsonLd data={breadcrumbJsonLd} />
+      {jewelryStoreJsonLd && <JsonLd data={jewelryStoreJsonLd} />}
       <Container>
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Private Concierge" }]} />
 

@@ -5,6 +5,7 @@ import { ConsentAnalytics } from "@/components/layout/ConsentAnalytics";
 import { CookieBanner } from "@/components/layout/CookieBanner";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
+import { INDEXABLE_ROBOTS, SITE_LOCALE, getSiteUrl } from "@/lib/seo/metadata";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -21,7 +22,7 @@ const jost = Jost({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const siteUrl = getSiteUrl();
 const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "Maison Aurelia";
 
 export const metadata: Metadata = {
@@ -32,6 +33,23 @@ export const metadata: Metadata = {
   },
   description:
     "Discover GIA-certified diamonds, bespoke engagement rings, and 18K fine jewellery crafted with transparent provenance and insured delivery.",
+  openGraph: {
+    type: "website",
+    locale: SITE_LOCALE,
+    siteName,
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  robots: INDEXABLE_ROBOTS,
+  verification: {
+    ...(process.env.GOOGLE_SITE_VERIFICATION
+      ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+      : {}),
+    ...(process.env.BING_SITE_VERIFICATION
+      ? { other: { "msvalidate.01": process.env.BING_SITE_VERIFICATION } }
+      : {}),
+  },
 };
 
 export const viewport: Viewport = {
