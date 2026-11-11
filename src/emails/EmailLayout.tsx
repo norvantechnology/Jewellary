@@ -1,0 +1,119 @@
+import * as React from "react";
+import {
+  Body,
+  Container,
+  Head,
+  Heading,
+  Hr,
+  Html,
+  Preview,
+  Section,
+  Text,
+} from "@react-email/components";
+
+interface EmailLayoutProps {
+  siteName: string;
+  previewText: string;
+  heading: string;
+  children: React.ReactNode;
+  contactEmail?: string;
+}
+
+const STYLES = {
+  body: {
+    backgroundColor: "#FAF7F2",
+    color: "#221E1A",
+    fontFamily: "Georgia, 'Times New Roman', serif",
+    margin: "0",
+    padding: "32px 16px",
+  },
+  container: {
+    backgroundColor: "#FFFFFF",
+    border: "1px solid #E5DCCB",
+    borderRadius: "4px",
+    margin: "0 auto",
+    maxWidth: "580px",
+    padding: "40px 36px",
+  },
+  brandHeader: {
+    fontSize: "13px",
+    letterSpacing: "0.22em",
+    textTransform: "uppercase" as const,
+    color: "#8C6D3F",
+    margin: "0 0 12px 0",
+    fontFamily: "Helvetica, Arial, sans-serif",
+  },
+  heading: {
+    fontSize: "26px",
+    lineHeight: "1.25",
+    fontWeight: "500",
+    color: "#221E1A",
+    margin: "0 0 20px 0",
+  },
+  hr: {
+    borderColor: "#E5DCCB",
+    margin: "28px 0 20px 0",
+  },
+  footer: {
+    fontSize: "12px",
+    lineHeight: "1.6",
+    color: "#73685A",
+    fontFamily: "Helvetica, Arial, sans-serif",
+    margin: "0",
+  },
+};
+
+export function EmailLayout({
+  siteName,
+  previewText,
+  heading,
+  children,
+  contactEmail = "concierge@example.com",
+}: EmailLayoutProps) {
+  return (
+    <Html lang="en">
+      <Head />
+      <Preview>{previewText}</Preview>
+      <Body style={STYLES.body}>
+        <Container style={STYLES.container}>
+          <Section>
+            <Text style={STYLES.brandHeader}>{siteName}</Text>
+            <Heading style={STYLES.heading}>{heading}</Heading>
+            {children}
+          </Section>
+          <Hr style={STYLES.hr} />
+          <Section>
+            <Text style={STYLES.footer}>
+              {siteName} Private Concierge &bull; Need assistance? Reply to{" "}
+              <a href={`mailto:${contactEmail}`} style={{ color: "#8C6D3F" }}>
+                {contactEmail}
+              </a>
+            </Text>
+          </Section>
+        </Container>
+      </Body>
+    </Html>
+  );
+}
+
+export const EMAIL_BUTTON_STYLE = {
+  backgroundColor: "#221E1A",
+  color: "#FAF7F2",
+  borderRadius: "4px",
+  fontSize: "13px",
+  letterSpacing: "0.08em",
+  textTransform: "uppercase" as const,
+  textDecoration: "none",
+  fontFamily: "Helvetica, Arial, sans-serif",
+  fontWeight: "600",
+  padding: "13px 26px",
+  display: "inline-block",
+};
+
+export const EMAIL_PARAGRAPH_STYLE = {
+  fontSize: "15px",
+  lineHeight: "1.65",
+  color: "#3B352E",
+  fontFamily: "Helvetica, Arial, sans-serif",
+  margin: "0 0 16px 0",
+};

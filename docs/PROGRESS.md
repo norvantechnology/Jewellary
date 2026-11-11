@@ -19,3 +19,12 @@ Tracking phase-by-phase execution against `PROJECT_REQUIREMENTS.md`.
 - **Requirement IDs covered:** DESIGN-01 to DESIGN-10, CW-01 to CW-07, CW-94 to CW-102, A11Y foundations.
 - **Gate passed:** `tsc --noEmit`, `eslint .`, `prettier --check`, `vitest` (12/12 unit tests), `next build`, Playwright E2E `design-system.spec.ts` (3/3 passing: home/404 statuses, light/dark axe-core WCAG 2.2 AA with zero serious/critical violations, zero horizontal overflow across all 7 viewports 360–1920 px).
 - **Next:** Phase 2 — Data Schema, Migrations, Auth, RBAC, Rate Limiting, Email & Seed.
+
+---
+
+## Phase 2 — Data Schema, Migrations, Auth, RBAC, Rate Limiting, Email & Seed (Completed)
+
+- **Built:** `prisma.config.ts` (Prisma 7 `@prisma/adapter-pg`), full `prisma/schema.prisma`, initial + raw-SQL migrations (`pg_trgm`, `unaccent`, weighted `Product.searchVector` trigger + GIN indexes, stock/price/order `CHECK` constraints, `order_number_seq`), `src/server/prisma-client.ts`, `src/server/db.ts`, Better Auth setup (`src/server/auth.ts`, `src/server/auth-client.ts`, `/api/auth/[...all]` with per-tier rate limiting), `src/server/dal.ts` (`getOptionalSession`, `requireUser`, `requireRole`, `requirePermission`), `src/server/create-action.ts`, `src/server/rate-limit.ts` (Upstash Redis + sliding-window fallback), `src/server/audit.ts` (credential-redacting DB audit logger), React Email templates (`src/emails/*`) & email dispatcher (`Resend` + SMTP/test outbox), `src/proxy.ts`, `/api/health` DB check, `(auth)` pages (`/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email`), RBAC-guarded `/account` and `/admin` entry pages, `prisma/seed.ts` + `prisma/seed-assets.ts` (`sharp` WebP assets).
+- **Requirement IDs covered:** SEC-01 to SEC-06, SEC-14, SEC-15, CW-63 to CW-67, SEED-01 to SEED-07, §8 schema & constraints.
+- **Gate passed:** `prisma migrate deploy`, idempotent `db:seed`, `tsc --noEmit`, `eslint .`, `prettier --check`, `vitest` (5 files / 23 unit & integration tests), `next build`, Playwright E2E `auth.spec.ts` & `design-system.spec.ts` (6/6 passing).
+- **Next:** Phase 3 — Media Upload Pipeline, Admin Shell, Catalogue, Facets, Inventory Ledger, Banners, Articles & Settings.

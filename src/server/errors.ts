@@ -70,8 +70,14 @@ export class OutOfStockError extends AppError {
 }
 
 export class RateLimitError extends AppError {
-  constructor(message = "Too many requests. Please try again shortly.") {
+  readonly retryAfterSeconds?: number;
+
+  constructor(
+    message = "Too many requests. Please try again shortly.",
+    retryAfterSeconds?: number,
+  ) {
     super("RATE_LIMITED", message, 429);
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
