@@ -98,3 +98,34 @@ export async function getPublishedArticleBySlug(slug: string): Promise<ArticleDT
     updatedAt: a.updatedAt.toISOString(),
   };
 }
+
+export type ArticleResolutionResult =
+  { kind: "article"; article: ArticleDTO } | { kind: "redirect"; newSlug: string } | null;
+
+export async function resolvePublishedArticleBySlug(
+  slug: string,
+): Promise<ArticleResolutionResult> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.articles, CACHE_TAGS.article(slug));
+
+  const article = await getPublishedArticleBySlug(slug);
+  if (article) {
+    return { kind: "article", article };
+  }
+
+  const redirect = await db.slugRedirect.findUnique({
+    where: {
+      entityType_oldSlug: {
+        entityType: "article",
+        oldSlug: slug,
+      },
+    },
+  });
+
+  if (redirect) {
+    return { kind: "redirect", newSlug: redirect.newSlug };
+  }
+
+  return null;
+}

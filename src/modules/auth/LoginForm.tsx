@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { AuthCard, AuthHelpLink } from "@/modules/auth/AuthCard";
 import { loginSchema, type LoginInput } from "@/modules/auth/auth.schemas";
+import { syncGuestCartOnAuthAction } from "@/modules/cart/cart.actions";
+import { syncGuestWishlistOnAuthAction } from "@/modules/wishlist/wishlist.actions";
 import { authClient } from "@/server/auth-client";
 
 interface LoginFormProps {
@@ -40,6 +42,8 @@ export function LoginForm({ nextUrl, googleEnabled }: LoginFormProps) {
       setServerError(res.error.message ?? "Invalid email or password.");
       return;
     }
+
+    await Promise.allSettled([syncGuestWishlistOnAuthAction(), syncGuestCartOnAuthAction()]);
 
     toast.success("Signed in");
     router.push(nextUrl);

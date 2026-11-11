@@ -31,8 +31,11 @@ export function MegaMenu({ categories }: MegaMenuProps) {
   }, []);
 
   return (
-    <nav aria-label="Primary collections" className="hidden lg:flex lg:items-center lg:gap-1">
-      {categories.map((category) => {
+    <nav
+      aria-label="Primary collections"
+      className="hidden lg:flex lg:flex-wrap lg:items-center lg:justify-center lg:gap-0.5 xl:gap-1"
+    >
+      {categories.slice(0, 5).map((category) => {
         const hasChildren = category.children.length > 0;
         const isOpen = openId === category.id;
 
@@ -49,7 +52,7 @@ export function MegaMenu({ categories }: MegaMenuProps) {
             <div className="flex items-center">
               <Link
                 href={`/collections/${category.path}`}
-                className="inline-flex min-h-11 items-center gap-1 px-3 text-sm font-medium tracking-wide text-foreground transition-colors hover:text-accent-text"
+                className="inline-flex min-h-11 items-center gap-1 px-2.5 text-sm font-medium tracking-wide whitespace-nowrap text-foreground transition-colors hover:text-accent-text xl:px-3"
               >
                 {category.name}
               </Link>
@@ -105,15 +108,15 @@ export function MegaMenu({ categories }: MegaMenuProps) {
       })}
       <Link
         href="/collections"
-        className="inline-flex min-h-11 items-center px-3 text-sm font-medium tracking-wide text-foreground transition-colors hover:text-accent-text"
+        className="inline-flex min-h-11 items-center px-2.5 text-sm font-medium tracking-wide whitespace-nowrap text-foreground transition-colors hover:text-accent-text xl:px-3"
       >
         All Jewellery
       </Link>
       <Link
         href="/guides"
-        className="inline-flex min-h-11 items-center px-3 text-sm font-medium tracking-wide text-foreground transition-colors hover:text-accent-text"
+        className="inline-flex min-h-11 items-center px-2.5 text-sm font-medium tracking-wide whitespace-nowrap text-foreground transition-colors hover:text-accent-text xl:px-3"
       >
-        Journal &amp; Guides
+        Guides
       </Link>
     </nav>
   );

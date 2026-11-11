@@ -37,3 +37,17 @@ Tracking phase-by-phase execution against `PROJECT_REQUIREMENTS.md`.
 - **Requirement IDs covered:** AD-01 to AD-13, AD-17, AD-18, AD-24 to AD-30, MED-01 to MED-05, SEC-09, SEC-11.
 - **Gate passed:** `tsc --noEmit`, `eslint .`, `prettier --check`, `vitest` (7 files / 32 unit & integration tests), `next build` (24 routes built cleanly with `cacheComponents` + PPR), Playwright E2E Chromium suite (9/9 passing across `design-system.spec.ts`, `auth.spec.ts`, and `admin-catalogue.spec.ts` covering 360px/1440px responsive layout, WCAG 2.2 AA axe-core scans, STAFF settings restriction, PNG upload -> WebP processing, product creation, stock ledger adjustment, and archive).
 - **Next:** Phase 4 — Customer Storefront: Home, Collections/Filters, Search, Product Detail, Wishlist, Static Pages & Guides.
+
+---
+
+## Phase 4 — Customer Storefront, Search, Wishlist, Initial Bag & Concierge (Completed)
+
+- **Built:**
+  - Server-side cached catalog read layer (`src/modules/catalog/catalog.public.ts`) using `"use cache"` + `cacheLife("hours")` + `cacheTag`, enforcing zero `costPrice` projection, `SlugRedirect` resolution across categories & products, recursive descendant category filtering, dynamic facet bucketing, sorting, and pagination.
+  - Weighted PostgreSQL Full-Text Search + `pg_trgm` typo-tolerant search engine (`src/modules/search/search.service.ts`) and rate-limited `/api/search/suggest` route handler + live `HeaderSearchBar` typeahead.
+  - HMAC-SHA256 signed `maison_guest_id` visitor token (`src/server/guest-token.ts`), Wishlist persistence & login/registration merge (`src/modules/wishlist/*`), initial persisted Shopping Bag (`src/modules/cart/*`) with server-side Decimal pricing & `PRICE_ON_REQUEST` / stock guards, Visitor hydration & client store (`src/modules/storefront/*`), `WishlistToggleButton`, `StorefrontHeaderActions`, and `StorefrontShell`.
+  - Concierge Enquiry module (`src/modules/enquiries/*`) and Newsletter subscription module (`src/modules/newsletter/*`) with honeypot + rate limiting + safe async email notifications (`FooterNewsletterForm` in `Footer`).
+  - Cached editorial Markdown loader (`src/lib/content.ts`, `content/*.md`), `resolvePublishedArticleBySlug` with `SlugRedirect`, and all public storefront routes (`/(storefront)/page.tsx`, `/collections/[[...slug]]`, `/products/[slug]`, `/search`, `/wishlist`, `/cart`, `/guides`, `/guides/[slug]`, `/contact`, `/about`, `/faq`, `/shipping-returns`, `/ring-size-guide`, `/care-guide`, `/privacy`, `/terms`) using shared reusable storefront components (`ProductCard`, `CollectionFilters`, `ProductGallery`, `ProductDetailClient`, `EnquiryForm`, `CartPageClient`, `WishlistPageClient`, `EditorialContentView`).
+- **Requirement IDs covered:** CW-01 to CW-33, CW-49 to CW-54, CW-71 to CW-78, CW-83 to CW-93, CW-103 to CW-107, CW-109, CW-111 to CW-115.
+- **Gate passed:** `prettier --check .`, `tsc --noEmit`, `eslint .` (including `design-tokens/no-raw-hex` & no-blue/purple), `vitest` (8 files / 37 tests including FTS/trigram, SlugRedirect, guest token merge, enquiry & newsletter integration), `next build` (40/40 routes cleanly built with `cacheComponents` + PPR), and Playwright E2E Chromium suite (10/10 passing across `design-system`, `auth`, `admin-catalogue`, and `browse-search-wishlist` with zero console errors, zero failed network responses, zero overflow at 360–1920 px, and WCAG 2.2 AA axe-core passing).
+- **Next:** Phase 5 — Cart Shipping & Tax Estimator, Atomic Stock-Reserved Checkout, Payment Adapters (Stripe/Razorpay/Sandbox), Webhooks & Cron Jobs.

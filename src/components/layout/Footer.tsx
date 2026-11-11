@@ -1,6 +1,7 @@
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { ShieldCheck, Sparkles, Truck } from "lucide-react";
+import { FooterNewsletterForm } from "@/components/layout/FooterNewsletterForm";
 import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
 import { Logo } from "@/components/shared/Logo";
 import { Container } from "@/components/shared/primitives";
@@ -71,6 +72,7 @@ export function Footer({ config }: FooterProps) {
               </a>
               {config.contactPhone && <span>{config.contactPhone}</span>}
             </div>
+            <FooterNewsletterForm />
           </div>
 
           <div>
@@ -107,11 +109,6 @@ export function Footer({ config }: FooterProps) {
               <li>
                 <Link href="/care-guide" className="hover:text-foreground">
                   Jewellery Care Guide
-                </Link>
-              </li>
-              <li>
-                <Link href="/orders/track" className="hover:text-foreground">
-                  Track Your Order
                 </Link>
               </li>
               <li>

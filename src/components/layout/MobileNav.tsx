@@ -92,13 +92,6 @@ export function MobileNav({ siteName, categories }: MobileNavProps) {
               Our Maison
             </Link>
             <Link
-              href="/orders/track"
-              onClick={() => setOpen(false)}
-              className="py-2 text-foreground hover:text-accent-text"
-            >
-              Track an Order
-            </Link>
-            <Link
               href="/contact"
               onClick={() => setOpen(false)}
               className="py-2 text-foreground hover:text-accent-text"

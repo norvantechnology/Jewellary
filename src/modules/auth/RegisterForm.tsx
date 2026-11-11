@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { AuthCard, AuthHelpLink } from "@/modules/auth/AuthCard";
 import { registerSchema, type RegisterInput } from "@/modules/auth/auth.schemas";
+import { syncGuestCartOnAuthAction } from "@/modules/cart/cart.actions";
+import { syncGuestWishlistOnAuthAction } from "@/modules/wishlist/wishlist.actions";
 import { authClient } from "@/server/auth-client";
 
 interface RegisterFormProps {
@@ -52,6 +54,8 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
       setServerError(res.error.message ?? "Unable to create your account. Please try again.");
       return;
     }
+
+    await Promise.allSettled([syncGuestWishlistOnAuthAction(), syncGuestCartOnAuthAction()]);
 
     toast.success("Account created. Please check your inbox to verify your email.");
     router.push(nextUrl);
