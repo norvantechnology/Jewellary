@@ -13,13 +13,17 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/unit/**/*.test.{ts,tsx}", "tests/integration/**/*.test.{ts,tsx}"],
+    fileParallelism: false,
     testTimeout: 30000,
     hookTimeout: 30000,
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      include: ["src/modules/**/service.ts", "src/lib/**/*.ts", "src/server/**/*.ts"],
+      include: ["src/modules/**/*.service.ts", "src/lib/**/*.ts", "src/server/**/*.ts"],
       exclude: ["src/**/*.d.ts", "src/lib/seo/jsonld/index.ts", "src/server/db.ts"],
+      thresholds: {
+        statements: 85,
+      },
     },
   },
 });

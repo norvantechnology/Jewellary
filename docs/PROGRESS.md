@@ -107,3 +107,17 @@ Tracking phase-by-phase execution against `PROJECT_REQUIREMENTS.md`.
 - **Requirement IDs covered:** SEC-01 to SEC-20, PERF-01 to PERF-10, UX-01 to UX-10.
 - **Gate passed:** `prettier --write .`, `tsc --noEmit`, `eslint .`, `vitest run` (`14/14` files / `61/61` tests), `next build`, `npm run seo:crawl` (39 pages), Lighthouse CI (`SEO: 1.00`, `Accessibility: 0.99-1.00`, `Best Practices: 0.96`, `CLS: 0`, `Performance: 0.79-0.80` warn under local throttled Chrome), and Playwright E2E Chromium suite (`18/18` passing).
 - **Next:** Phase 9 — Coverage Target (>= 85% across services, libs, and server modules), Operations Runbooks, Complete `README.md`, and Final Requirements Audit (`docs/FINAL_AUDIT.md`).
+
+---
+
+## Phase 9 — Final Hardening, Coverage Enforcement, Runbooks, README & Requirements Audit (Completed)
+
+- **Built & Completed:**
+  - Test Coverage Expansion & Enforcement (`vitest.config.mts`, `tests/unit/lib-and-server-coverage.test.ts`, `tests/unit/dal-and-actions.test.ts`, `tests/unit/email-and-cart-wishlist-unit.test.ts`, `tests/integration/services-coverage.test.ts`): enforced `thresholds: { statements: 85 }` across `src/modules/**/*.service.ts`, `src/lib/**/*.ts`, and `src/server/**/*.ts`, verified with zero worker contention via `fileParallelism: false`.
+  - Complete Documentation Suite: rewritten [`README.md`](../README.md) with stack summary, `.env.example` variable table, Docker Compose setup, production vs `SEED_DEMO_DATA=true` seed workflows, script inventory, cron/webhook specs, and Docker/managed hosting instructions; authored [`docs/RUNBOOKS.md`](./RUNBOOKS.md) covering deploy/rollback, quarterly PITR restore drills (`SEC-16`), secret rotation, refunds/chargebacks, stuck `PENDING_PAYMENT` recovery, admin creation, 7-day Next.js security patching (`SEC-13`), and SEO/AI crawler WAF rules (`SEO-26`, `AI-03`); authored [`docs/FINAL_AUDIT.md`](./FINAL_AUDIT.md) mapping all `149` requirement IDs, §18 coverage metrics, and §21 traceability.
+- **Gate passed:**
+  - `npm run format:check` & `npm run typecheck` & `npm run lint`: zero errors.
+  - `npm run test:coverage`: `18/18` files (`86/86` tests, `71.00s`), **`86.67%` Stmts** (`95.53%` Funcs, `87.63%` Lines) passing `statements >= 85%` gate.
+  - `npm run build` + `npm run seo:crawl`: `42` pages crawled (`41` sitemap URLs, `42` internal URLs) with zero broken links or orphans.
+  - `npx playwright test --project=chromium`: `18/18` E2E specs passing (`2.4m`).
+  - Lighthouse CI: Accessibility `0.99–1.00`, Best Practices `0.96`, SEO `1.00`, CLS `0` (Performance `0.76–0.82` warn on localhost CPU-throttled mobile run).
