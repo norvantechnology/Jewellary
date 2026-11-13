@@ -7,9 +7,13 @@ export const CACHE_TAGS = {
   categories: "categories",
   category: (id: string) => `category:${id}`,
   facets: "facets",
+  landingFacets: "landing-facets",
+  redirects: "redirects",
+  staticPages: "static-pages",
   banners: "banners",
   articles: "articles",
   article: (slug: string) => `article:${slug}`,
   settings: "settings",
   shipping: "shipping",
+  currencies: "currencies",
 } as const;

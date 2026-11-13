@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { Download } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { FormField } from "@/components/shared/FormField";
+import { AccountTwoFactorSection } from "@/components/storefront/AccountTwoFactorSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,7 +17,13 @@ import {
 import type { AccountProfileDTO } from "@/modules/account/account.service";
 import { authClient } from "@/server/auth-client";
 
-export function AccountSettingsClient({ profile }: { profile: AccountProfileDTO }) {
+export function AccountSettingsClient({
+  profile,
+  requireTwoFactorPrompt = false,
+}: {
+  profile: AccountProfileDTO;
+  requireTwoFactorPrompt?: boolean;
+}) {
   const router = useRouter();
   const [name, setName] = React.useState(profile.name);
   const [phone, setPhone] = React.useState(profile.phone ?? "");
@@ -31,6 +39,33 @@ export function AccountSettingsClient({ profile }: { profile: AccountProfileDTO 
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [confirmEmail, setConfirmEmail] = React.useState("");
   const [deleting, setDeleting] = React.useState(false);
+  const [exportingData, setExportingData] = React.useState(false);
+
+  async function handleDownloadData() {
+    setExportingData(true);
+    try {
+      const response = await fetch("/api/account/export", { cache: "no-store" });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        toast.error(body?.error ?? "Unable to export personal data right now.");
+        return;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `account-data-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Personal data export downloaded.");
+    } catch {
+      toast.error("Unable to download personal data right now.");
+    } finally {
+      setExportingData(false);
+    }
+  }
 
   function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -82,7 +117,7 @@ export function AccountSettingsClient({ profile }: { profile: AccountProfileDTO 
       }
       await authClient.signOut();
       toast.success("Your account has been closed and personal details anonymized.");
-      router.push("/");
+      router.replace("/");
       router.refresh();
     } catch {
       toast.error("Unable to complete account closure.");
@@ -91,9 +126,11 @@ export function AccountSettingsClient({ profile }: { profile: AccountProfileDTO 
   }
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-md border border-border bg-card p-6">
-        <h2 className="font-display text-2xl font-medium text-foreground">Personal Details</h2>
+    <div className="space-y-6 md:space-y-8">
+      <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
+        <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
+          Personal Details
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Update the client profile used for receipts and private concierge communication.
         </p>
@@ -118,6 +155,9 @@ export function AccountSettingsClient({ profile }: { profile: AccountProfileDTO 
             {(fp) => (
               <Input
                 {...fp}
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+1 555 234 5678"
@@ -131,8 +171,8 @@ export function AccountSettingsClient({ profile }: { profile: AccountProfileDTO 
         </form>
       </section>
 
-      <section className="rounded-md border border-border bg-card p-6">
-        <h2 className="font-display text-2xl font-medium text-foreground">
+      <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
+        <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
           Password &amp; Security
         </h2>
         {profile.hasPasswordAccount ? (
@@ -204,8 +244,38 @@ export function AccountSettingsClient({ profile }: { profile: AccountProfileDTO 
         )}
       </section>
 
-      <section className="rounded-md border border-destructive/40 bg-card p-6">
-        <h2 className="font-display text-2xl font-medium text-foreground">
+      <AccountTwoFactorSection
+        twoFactorEnabled={profile.twoFactorEnabled}
+        hasPasswordAccount={profile.hasPasswordAccount}
+        setupRequired={requireTwoFactorPrompt}
+      />
+
+      <section
+        id="data-export"
+        className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6"
+      >
+        <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
+          Personal Data Export
+        </h2>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          Download a portable JSON copy of your client profile, saved shipping and billing
+          addresses, order history, saved wishlist items, and studio enquiries.
+        </p>
+        <div className="mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            loading={exportingData}
+            onClick={() => void handleDownloadData()}
+          >
+            <Download className="size-5 stroke-[1.5]" aria-hidden="true" />
+            <span>Download my data</span>
+          </Button>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-destructive/40 bg-card p-4 shadow-sm sm:p-6">
+        <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
           Close &amp; Anonymize Account
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">

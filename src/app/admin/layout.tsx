@@ -1,15 +1,14 @@
+import { getRequestReturnTo } from "@/server/return-to";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Container, Section } from "@/components/shared/primitives";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { roleAtLeast } from "@/lib/permissions";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
-import { getOptionalSession } from "@/server/dal";
+import { requireStaffPageSession } from "@/server/dal";
 
 export const metadata: Metadata = {
   title: {
@@ -20,15 +19,14 @@ export const metadata: Metadata = {
 };
 
 async function AdminSessionGate({ children }: { children: React.ReactNode }) {
-  const [session, settings] = await Promise.all([getOptionalSession(), getPublicStoreSettings()]);
+  const [session, settings] = await Promise.all([
+    requireStaffPageSession(await getRequestReturnTo("/admin")),
+    getPublicStoreSettings(),
+  ]);
 
   if (!session) {
-    redirect("/login?next=/admin");
-  }
-
-  if (!roleAtLeast(session.user.role, "STAFF")) {
     return (
-      <main id="main-content" className="min-h-screen bg-background">
+      <main id="main-content" className="min-h-dvh bg-background">
         <Section>
           <Container>
             <Card className="mx-auto max-w-lg">
@@ -68,11 +66,14 @@ async function AdminSessionGate({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Signed-in area: every page is rendered per request behind an auth check, so blocking is intended.
+export const instant = false;
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-start justify-center bg-background p-6">
+        <div className="flex min-h-dvh items-start justify-center bg-background p-4 sm:p-6">
           <div className="w-full max-w-5xl space-y-6">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-64 w-full" />

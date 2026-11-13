@@ -3,10 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { FadeIn } from "@/components/motion/Reveal";
+import { AbuseProtectionFields } from "@/components/shared/AbuseProtectionFields";
 import { FormField } from "@/components/shared/FormField";
 import { OrderDetailView } from "@/components/storefront/OrderDetailView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAbuseProtection } from "@/hooks/use-abuse-protection";
 import { lookupGuestOrderAction } from "@/modules/account/account.actions";
 import type { GuestOrderTrackResultDTO } from "@/modules/account/account.service";
 
@@ -17,6 +20,7 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string[]>>({});
   const [pending, startTransition] = React.useTransition();
   const [result, setResult] = React.useState<GuestOrderTrackResultDTO | null>(null);
+  const abuse = useAbuseProtection();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,27 +28,35 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
     setFieldErrors({});
 
     startTransition(async () => {
-      const res = await lookupGuestOrderAction({ orderNumber, email });
+      const res = await lookupGuestOrderAction({
+        orderNumber,
+        email,
+        website: abuse.website,
+        timingToken: abuse.timingToken,
+        turnstileToken: abuse.turnstileToken,
+      });
       if (!res.ok) {
         setErrorMsg(res.error.message);
         setFieldErrors(res.error.fieldErrors ?? {});
         setResult(null);
+        abuse.refreshToken();
         return;
       }
       setResult(res.data);
+      abuse.refreshToken();
     });
   }
 
   return (
-    <div className="space-y-10">
-      <div className="mx-auto max-w-xl rounded-md border border-border bg-card p-6 sm:p-8">
+    <div className="space-y-8 md:space-y-10">
+      <div className="mx-auto max-w-xl rounded-xl border border-border bg-card p-4 shadow-sm sm:p-8">
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <FormField
             id="track-order-number"
             label="Order Number"
             required
             error={fieldErrors.orderNumber?.[0]}
-            hint="Found in your confirmation email, e.g. MA-10001."
+            hint="In your confirmation email, e.g. ORD-2026-10001."
           >
             {(fieldProps) => (
               <Input
@@ -52,7 +64,7 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
                 name="orderNumber"
                 value={orderNumber}
                 onChange={(e) => setOrderNumber(e.target.value)}
-                placeholder="MA-10001"
+                placeholder="ORD-2026-10001"
                 autoComplete="off"
                 required
               />
@@ -71,6 +83,7 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
                 {...fieldProps}
                 name="email"
                 type="email"
+                inputMode="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="client@example.com"
@@ -83,32 +96,39 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
           {errorMsg && (
             <p
               role="alert"
-              className="rounded-sm border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              className="ma-error-shake rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
             >
               {errorMsg}
             </p>
           )}
 
-          <Button type="submit" loading={pending} className="w-full sm:w-auto">
-            <Search className="mr-2 size-4" aria-hidden="true" />
-            Find Order Status
+          <AbuseProtectionFields
+            website={abuse.website}
+            onWebsiteChange={abuse.setWebsite}
+            turnstileSiteKey={abuse.turnstileSiteKey}
+            onTurnstileToken={abuse.setTurnstileToken}
+          />
+
+          <Button type="submit" loading={pending} size="lg" className="w-full sm:w-auto">
+            <Search className="size-5 stroke-[1.5]" aria-hidden="true" />
+            <span>Track Order</span>
           </Button>
         </form>
 
         <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
-          Have a client account?{" "}
+          Have an account?{" "}
           <Link
             href="/account/orders"
             className="font-medium text-foreground underline underline-offset-4 hover:text-accent-text"
           >
-            View all commissions in your account
+            View your orders
           </Link>
           .
         </p>
       </div>
 
       {result && (
-        <div className="rounded-md border border-border bg-background p-6 sm:p-8">
+        <FadeIn className="rounded-xl border border-border bg-background p-4 shadow-sm sm:p-8">
           <OrderDetailView
             order={result.order}
             guestToken={result.accessToken}
@@ -117,7 +137,7 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
               label: "Open Printable Receipt",
             }}
           />
-        </div>
+        </FadeIn>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { LocalDate } from "@/components/shared/LocalDate";
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -151,7 +152,7 @@ export function InventoryManager({
       header: "Available",
       cell: (v) => (
         <div className="flex items-center gap-2">
-          <span className="font-semibold tabular-nums-price">{v.availableQty}</span>
+          <span className="tabular-nums-price font-semibold">{v.availableQty}</span>
           {v.isLowStock && (
             <Badge variant={v.availableQty <= 0 ? "destructive" : "warning"}>
               <AlertTriangle className="size-3" aria-hidden="true" />
@@ -199,8 +200,8 @@ export function InventoryManager({
         <span
           className={
             t.delta > 0
-              ? "font-medium text-success tabular-nums-price"
-              : "font-medium text-destructive tabular-nums-price"
+              ? "tabular-nums-price font-medium text-success"
+              : "tabular-nums-price font-medium text-destructive"
           }
         >
           {t.delta > 0 ? `+${t.delta}` : String(t.delta)}
@@ -219,7 +220,7 @@ export function InventoryManager({
         <div className="max-w-xs">
           <p className="truncate text-sm">{t.note ?? "—"}</p>
           <p className="text-xs text-muted-foreground">
-            {t.actorEmail ?? "System"} · {new Date(t.createdAt).toLocaleString()}
+            {t.actorEmail ?? "System"} · <LocalDate value={t.createdAt} withTime />
           </p>
         </div>
       ),
@@ -284,7 +285,6 @@ export function InventoryManager({
           data={variants}
           columns={stockColumns}
           keyExtractor={(v) => v.id}
-          mobileTitle={(v) => `${v.productName} — ${v.sku}`}
           emptyState={
             <EmptyState
               icon={Boxes}

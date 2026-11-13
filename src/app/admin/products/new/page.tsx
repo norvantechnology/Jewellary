@@ -33,6 +33,9 @@ async function NewProductContent() {
   );
 }
 
+// Rendered per request (signed-in / URL-driven); a blocking navigation is intended.
+export const instant = false;
+
 export default function AdminNewProductPage() {
   return (
     <Suspense fallback={<Skeleton className="h-96 w-full" />}>

@@ -3,6 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { CustomizedSpecsBadge } from "@/components/shared/CustomizedSpecsBadge";
 import { useRouter } from "next/navigation";
 import { Mail, Printer, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
@@ -197,12 +198,29 @@ export function AdminOrderDetailClient({
                     <p className="text-xs text-muted-foreground">
                       {item.variantTitleSnapshot} · SKU {item.skuSnapshot}
                     </p>
+                    <CustomizedSpecsBadge
+                      requestId={item.customizationRequestId}
+                      requestNumber={item.customizationRequestNumber}
+                      summaryLines={item.customizationSummaryLines}
+                      hrefBase="/admin/customizations"
+                    />
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {formatMoneyExact(item.unitPrice, order.currency)} × {item.quantity}
+                      {formatMoneyExact(
+                        item.unitPrice,
+                        order.currency,
+                        "en-US",
+                        order.currencyDecimals,
+                      )}{" "}
+                      × {item.quantity}
                     </p>
                   </div>
-                  <p className="font-medium text-foreground tabular-nums-price">
-                    {formatMoneyExact(item.lineTotal, order.currency)}
+                  <p className="tabular-nums-price font-medium text-foreground">
+                    {formatMoneyExact(
+                      item.lineTotal,
+                      order.currency,
+                      "en-US",
+                      order.currencyDecimals,
+                    )}
                   </p>
                 </li>
               ))}
@@ -212,32 +230,86 @@ export function AdminOrderDetailClient({
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Subtotal</dt>
                 <dd className="tabular-nums-price">
-                  {formatMoneyExact(order.subtotal, order.currency)}
+                  {formatMoneyExact(
+                    order.subtotal,
+                    order.currency,
+                    "en-US",
+                    order.currencyDecimals,
+                  )}
                 </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">{order.shippingMethodName}</dt>
                 <dd className="tabular-nums-price">
-                  {formatMoneyExact(order.shippingCost, order.currency)}
+                  {formatMoneyExact(
+                    order.shippingCost,
+                    order.currency,
+                    "en-US",
+                    order.currencyDecimals,
+                  )}
                 </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Tax</dt>
                 <dd className="tabular-nums-price">
-                  {formatMoneyExact(order.taxAmount, order.currency)}
+                  {formatMoneyExact(
+                    order.taxAmount,
+                    order.currency,
+                    "en-US",
+                    order.currencyDecimals,
+                  )}
                 </dd>
               </div>
+              {Number(order.discountAmount) > 0 && (
+                <div className="flex justify-between text-success">
+                  <dt>Discount</dt>
+                  <dd className="tabular-nums-price">
+                    -
+                    {formatMoneyExact(
+                      order.discountAmount,
+                      order.currency,
+                      "en-US",
+                      order.currencyDecimals,
+                    )}
+                  </dd>
+                </div>
+              )}
               <div className="flex justify-between border-t border-border pt-2 font-medium">
-                <dt>Total</dt>
-                <dd className="font-display text-lg tabular-nums-price">
-                  {formatMoneyExact(order.total, order.currency)}
+                <dt>Total ({order.currency})</dt>
+                <dd className="tabular-nums-price font-display text-lg">
+                  {formatMoneyExact(order.total, order.currency, "en-US", order.currencyDecimals)}
                 </dd>
               </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <dt>FX Rate &amp; Base Total ({order.baseCurrency})</dt>
+                <dd className="tabular-nums-price">
+                  1 {order.baseCurrency} = {Number(order.exchangeRate).toFixed(4)} {order.currency}{" "}
+                  ·{" "}
+                  <span className="font-medium text-foreground">
+                    {formatMoneyExact(order.baseTotal, order.baseCurrency)}
+                  </span>
+                </dd>
+              </div>
+              {order.chargedCurrency !== order.currency && order.chargedAmount && (
+                <div className="flex justify-between text-xs text-warning">
+                  <dt>Gateway Charged Amount</dt>
+                  <dd className="tabular-nums-price font-medium">
+                    {formatMoneyExact(order.chargedAmount, order.chargedCurrency)} (
+                    {order.chargedCurrency})
+                  </dd>
+                </div>
+              )}
               {Number(order.refundedAmount) > 0 && (
                 <div className="flex justify-between text-xs text-accent-text">
                   <dt>Total Refunded</dt>
                   <dd className="tabular-nums-price">
-                    -{formatMoneyExact(order.refundedAmount, order.currency)}
+                    -
+                    {formatMoneyExact(
+                      order.refundedAmount,
+                      order.currency,
+                      "en-US",
+                      order.currencyDecimals,
+                    )}
                   </dd>
                 </div>
               )}
@@ -266,7 +338,7 @@ export function AdminOrderDetailClient({
                       <Badge variant={p.status === "SUCCEEDED" ? "success" : "outline"}>
                         {p.status}
                       </Badge>
-                      <span className="font-medium tabular-nums-price">
+                      <span className="tabular-nums-price font-medium">
                         {formatMoneyExact(p.amount, p.currency)}
                       </span>
                     </div>

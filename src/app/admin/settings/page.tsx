@@ -44,6 +44,9 @@ async function SettingsContent() {
   return <SettingsManager settings={settings} zones={zones} />;
 }
 
+// Rendered per request (signed-in / URL-driven); a blocking navigation is intended.
+export const instant = false;
+
 export default function AdminSettingsPage() {
   return (
     <Suspense fallback={<Skeleton className="h-96 w-full" />}>

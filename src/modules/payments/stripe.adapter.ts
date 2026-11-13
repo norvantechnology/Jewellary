@@ -15,6 +15,8 @@ import { PaymentError, ValidationError } from "@/server/errors";
 
 export class StripePaymentAdapter implements PaymentProviderAdapter {
   readonly provider = "STRIPE" as const;
+  private client: Stripe | null = null;
+  private clientKey: string | null = null;
 
   get isSandbox(): boolean {
     return env.PAYMENT_TEST_SANDBOX === "true" || !env.STRIPE_SECRET_KEY;
@@ -24,7 +26,11 @@ export class StripePaymentAdapter implements PaymentProviderAdapter {
     if (!env.STRIPE_SECRET_KEY) {
       throw new PaymentError("Stripe secret key is not configured on the server.");
     }
-    return new Stripe(env.STRIPE_SECRET_KEY);
+    if (!this.client || this.clientKey !== env.STRIPE_SECRET_KEY) {
+      this.clientKey = env.STRIPE_SECRET_KEY;
+      this.client = new Stripe(env.STRIPE_SECRET_KEY);
+    }
+    return this.client;
   }
 
   private getWebhookSecret(): string {
@@ -52,14 +58,14 @@ export class StripePaymentAdapter implements PaymentProviderAdapter {
           sandbox: true,
           orderId: input.orderId,
           orderNumber: input.orderNumber,
-          amountMinor: toMinorUnits(input.amountDecimal, input.currency),
+          amountMinor: toMinorUnits(input.amountDecimal, input.currency, true),
           currency: input.currency.toLowerCase(),
         },
       };
     }
 
     const stripe = this.getClient();
-    const amountMinor = toMinorUnits(input.amountDecimal, input.currency);
+    const amountMinor = toMinorUnits(input.amountDecimal, input.currency, true);
 
     const intent = await stripe.paymentIntents.create(
       {
@@ -113,8 +119,18 @@ export class StripePaymentAdapter implements PaymentProviderAdapter {
     let chargeId: string | null = typeof obj?.latest_charge === "string" ? obj.latest_charge : null;
     let failureReason: string | null = null;
 
+    let amountMinor: number | null = null;
+    let refundAmountMode: VerifiedWebhookEvent["refundAmountMode"] = null;
+    const currency = typeof obj?.currency === "string" ? obj.currency.toUpperCase() : null;
+
     if (event.type === "payment_intent.succeeded") {
       status = "succeeded";
+      amountMinor =
+        typeof obj?.amount_received === "number"
+          ? obj.amount_received
+          : typeof obj?.amount === "number"
+            ? obj.amount
+            : null;
     } else if (event.type === "payment_intent.payment_failed") {
       status = "failed";
       const lastError = obj?.last_payment_error as Record<string, unknown> | undefined;
@@ -128,6 +144,9 @@ export class StripePaymentAdapter implements PaymentProviderAdapter {
       if (typeof obj?.id === "string") {
         chargeId = obj.id;
       }
+      // charge.refunded fires for partial refunds too; amount_refunded is the charge's running total.
+      amountMinor = typeof obj?.amount_refunded === "number" ? obj.amount_refunded : null;
+      refundAmountMode = "cumulative";
     }
 
     return {
@@ -141,6 +160,9 @@ export class StripePaymentAdapter implements PaymentProviderAdapter {
         typeof metadata.orderNumber === "string" ? metadata.orderNumber : null,
       status,
       failureReason,
+      amountMinor,
+      currency,
+      refundAmountMode,
       rawPayload: event,
     };
   }
@@ -153,7 +175,7 @@ export class StripePaymentAdapter implements PaymentProviderAdapter {
         rawResponse: {
           sandbox: true,
           intentId: input.providerIntentId,
-          amountMinor: toMinorUnits(input.amountDecimal, input.currency),
+          amountMinor: toMinorUnits(input.amountDecimal, input.currency, true),
         },
       };
     }
@@ -161,7 +183,7 @@ export class StripePaymentAdapter implements PaymentProviderAdapter {
     const stripe = this.getClient();
     const refund = await stripe.refunds.create({
       payment_intent: input.providerIntentId,
-      amount: toMinorUnits(input.amountDecimal, input.currency),
+      amount: toMinorUnits(input.amountDecimal, input.currency, true),
       reason: "requested_by_customer",
     });
 
@@ -171,6 +193,38 @@ export class StripePaymentAdapter implements PaymentProviderAdapter {
       rawResponse: { id: refund.id, status: refund.status },
     };
   }
+
+  async cancelPaymentIntent(providerIntentId: string): Promise<boolean> {
+    if (env.PAYMENT_TEST_SANDBOX === "true" || providerIntentId.startsWith("pi_sandbox_")) {
+      return true;
+    }
+    const stripe = this.getClient();
+    try {
+      const intent = await stripe.paymentIntents.retrieve(providerIntentId);
+      if (intent.status === "succeeded") return false;
+      if (intent.status === "canceled") return true;
+      await stripe.paymentIntents.cancel(providerIntentId, {
+        cancellation_reason: "abandoned",
+      });
+      return true;
+    } catch (err) {
+      // A concurrent capture makes cancel fail; re-check so callers never assume it was voided.
+      const latest = await stripe.paymentIntents.retrieve(providerIntentId).catch(() => null);
+      if (latest?.status === "succeeded") return false;
+      if (latest?.status === "canceled") return true;
+      throw err;
+    }
+  }
+
+  async getClientSecret(providerIntentId: string): Promise<string | null> {
+    if (env.PAYMENT_TEST_SANDBOX === "true" || providerIntentId.startsWith("pi_sandbox_")) {
+      return `${providerIntentId}_secret_${createId().slice(0, 12)}`;
+    }
+    const intent = await this.getClient().paymentIntents.retrieve(providerIntentId);
+    return intent.status === "canceled" || intent.status === "succeeded"
+      ? null
+      : intent.client_secret;
+  }
 }
 
 export function buildSignedSandboxStripeWebhook(params: {
@@ -179,6 +233,9 @@ export function buildSignedSandboxStripeWebhook(params: {
   orderId: string;
   orderNumber: string;
   failureMessage?: string;
+  /** Captured amount in minor units; mirrors Stripe's `amount_received`. */
+  amountMinor?: number;
+  currency?: string;
 }): { rawBody: string; signatureHeader: string } {
   const secret = env.STRIPE_WEBHOOK_SECRET ?? env.BETTER_AUTH_SECRET;
   const payload = JSON.stringify({
@@ -194,6 +251,10 @@ export function buildSignedSandboxStripeWebhook(params: {
         latest_charge:
           params.eventType === "payment_intent.succeeded" ? `ch_sandbox_${createId()}` : null,
         last_payment_error: params.failureMessage ? { message: params.failureMessage } : null,
+        ...(params.amountMinor !== undefined
+          ? { amount: params.amountMinor, amount_received: params.amountMinor }
+          : {}),
+        ...(params.currency ? { currency: params.currency.toLowerCase() } : {}),
         metadata: {
           orderId: params.orderId,
           orderNumber: params.orderNumber,

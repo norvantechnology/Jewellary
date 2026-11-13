@@ -48,6 +48,7 @@ export const updateStoreSettingsSchema = z
     announcementBarHref: z.string().trim().max(200).optional().nullable(),
     logoUrl: z.string().trim().max(300).optional().nullable(),
     allowAiCrawlers: z.boolean(),
+    requireAdminTwoFactor: z.boolean().default(false),
     seoDefaultTitlePattern: z.string().trim().max(160).optional().nullable(),
     seoDefaultDescription: z.string().trim().max(320).optional().nullable(),
     defaultOgImageUrl: z.string().trim().max(300).optional().nullable(),

@@ -8,7 +8,7 @@ export function Label({ className, ...props }: React.ComponentProps<typeof Radix
   return (
     <RadixLabel.Root
       className={cn(
-        "text-sm leading-none font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+        "text-sm leading-snug font-medium text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
         className,
       )}
       {...props}

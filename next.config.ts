@@ -36,31 +36,61 @@ function buildRemotePatterns(): NonNullable<NextConfig["images"]>["remotePattern
   return patterns;
 }
 
-const allowedOrigins: string[] = [];
-if (process.env.NEXT_PUBLIC_SITE_URL) {
+const allowedOriginsSet = new Set<string>();
+for (const rawUrl of [process.env.NEXT_PUBLIC_SITE_URL, process.env.BETTER_AUTH_URL]) {
+  if (!rawUrl) continue;
   try {
-    allowedOrigins.push(new URL(process.env.NEXT_PUBLIC_SITE_URL).host);
+    allowedOriginsSet.add(new URL(rawUrl).host);
   } catch {
     // Ignore malformed URL during skipped validation
   }
 }
+if (process.env.NODE_ENV !== "production") {
+  allowedOriginsSet.add("localhost:3000");
+  allowedOriginsSet.add("127.0.0.1:3000");
+}
+const allowedOrigins = Array.from(allowedOriginsSet);
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  devIndicators: false,
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,
   poweredByHeader: false,
-  htmlLimitedBots:
-    /[\w-]+-Google|Google-[\w-]+|Google-Extended|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight|GPTBot|OAI-SearchBot|ChatGPT-User|ClaudeBot|Claude-Web|PerplexityBot|CCBot/i,
+  // Disable streaming metadata uniformly so every browser and crawler receives <head> tags synchronously.
+  htmlLimitedBots: /.*/,
   images: {
     formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 2678400,
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [64, 96, 128, 256, 384],
     remotePatterns: buildRemotePatterns(),
   },
   experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "framer-motion",
+      "radix-ui",
+      "sonner",
+      "cmdk",
+      "zod",
+      "recharts",
+    ],
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
     serverActions: {
       bodySizeLimit: "2mb",
       ...(allowedOrigins.length > 0 ? { allowedOrigins } : {}),
+    },
+  },
+  turbopack: {
+    resolveAlias: {
+      // Bypass motion/react's `import * as fm` namespace shim so Turbopack tree-shakes
+      // unused `motion` proxy / domMax / Reorder bundles under LazyMotion + domAnimation.
+      "motion/react": "framer-motion",
     },
   },
   async headers() {
@@ -101,6 +131,37 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=(), payment=(self)",
           },
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow",
+          },
+        ],
+      },
+      {
+        source: "/uploads/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/api/:path*",
+        headers: [
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow",
+          },
+        ],
+      },
+      {
+        source: "/feeds/:path*",
+        headers: [
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow",
+          },
         ],
       },
     ];
@@ -113,7 +174,12 @@ const nextConfig: NextConfig = {
           destination: "/sitemap-index.xml",
         },
       ],
-      afterFiles: [],
+      afterFiles: [
+        {
+          source: "/:key([a-zA-Z0-9-]{8,128}).txt",
+          destination: "/api/seo/indexnow-key?key=:key",
+        },
+      ],
       fallback: [],
     };
   },
@@ -121,6 +187,7 @@ const nextConfig: NextConfig = {
 
 const withBundleAnalyzer = createBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
+  openAnalyzer: false,
 });
 
 export default withBundleAnalyzer(nextConfig);

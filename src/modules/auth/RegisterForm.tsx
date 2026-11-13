@@ -5,7 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { AbuseProtectionFields } from "@/components/shared/AbuseProtectionFields";
 import { FormField } from "@/components/shared/FormField";
+import { useAbuseProtection } from "@/hooks/use-abuse-protection";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -26,6 +28,8 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [googlePending, setGooglePending] = React.useState(false);
+  const [sentTo, setSentTo] = React.useState<string | null>(null);
+  const abuse = useAbuseProtection();
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -42,23 +46,39 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
   const onSubmit = form.handleSubmit(async (values) => {
     setServerError(null);
     const phone = values.phone?.trim() || undefined;
-    const res = await authClient.signUp.email({
-      name: values.name,
-      email: values.email,
-      password: values.password,
-      phone,
-      callbackURL: nextUrl,
-    });
+    const res = await authClient.signUp.email(
+      {
+        name: values.name,
+        email: values.email,
+        password: values.password,
+        phone,
+        callbackURL: nextUrl,
+      },
+      {
+        headers: {
+          "x-abuse-website": abuse.website,
+          "x-abuse-timing": abuse.timingToken,
+          "x-abuse-turnstile": abuse.turnstileToken,
+        },
+      },
+    );
 
     if (res.error) {
       setServerError(res.error.message ?? "Unable to create your account. Please try again.");
+      abuse.refreshToken();
+      return;
+    }
+
+    // Verification is required, so no session exists yet: show the "check your inbox" state.
+    const hasSession = Boolean((res.data as { token?: string | null } | null)?.token);
+    if (!hasSession) {
+      setSentTo(values.email);
       return;
     }
 
     await Promise.allSettled([syncGuestWishlistOnAuthAction(), syncGuestCartOnAuthAction()]);
-
-    toast.success("Account created. Please check your inbox to verify your email.");
-    router.push(nextUrl);
+    toast.success("Account created.");
+    router.replace(nextUrl);
     router.refresh();
   });
 
@@ -73,6 +93,30 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
       setGooglePending(false);
       setServerError(res.error.message ?? "Unable to continue with Google.");
     }
+  }
+
+  if (sentTo) {
+    return (
+      <AuthCard
+        eyebrow="Client Registration"
+        title="Check Your Inbox"
+        description="One last step to activate your account."
+        footer={
+          <span>
+            Didn&apos;t get it? <AuthHelpLink href="/verify-email">Resend the link</AuthHelpLink>
+          </span>
+        }
+      >
+        <div
+          role="status"
+          className="rounded-md border border-success/40 bg-success/10 p-4 text-sm text-foreground"
+        >
+          If <strong className="break-all">{sentTo}</strong> is new to us, we&apos;ve sent a
+          verification link to it. Open the link to activate your account, then sign in. Your bag
+          and wishlist stay saved on this device.
+        </div>
+      </AuthCard>
+    );
   }
 
   return (
@@ -90,7 +134,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
       {serverError && (
         <div
           role="alert"
-          className="rounded-sm border border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive"
+          className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
         >
           {serverError}
         </div>
@@ -123,6 +167,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
           {(aria) => (
             <Input
               type="email"
+              inputMode="email"
               autoComplete="email"
               placeholder="claire@example.com"
               {...form.register("email")}
@@ -140,6 +185,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
           {(aria) => (
             <Input
               type="tel"
+              inputMode="tel"
               autoComplete="tel"
               placeholder="+1 212 555 0140"
               {...form.register("phone")}
@@ -188,17 +234,27 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
             control={form.control}
             name="acceptTerms"
             render={({ field }) => (
-              <div className="flex items-start gap-2.5">
+              <div className="flex min-h-11 items-center gap-3">
                 <Checkbox
                   id="register-terms"
                   checked={field.value === true}
                   onCheckedChange={(checked) => field.onChange(checked === true)}
                   aria-invalid={Boolean(form.formState.errors.acceptTerms)}
-                  className="mt-0.5"
+                  className="shrink-0"
                 />
-                <Label htmlFor="register-terms" className="text-xs leading-relaxed font-normal">
-                  I agree to the <AuthHelpLink href="/terms">Terms of Service</AuthHelpLink> and{" "}
-                  <AuthHelpLink href="/privacy">Privacy Policy</AuthHelpLink>.
+                <Label
+                  htmlFor="register-terms"
+                  className="cursor-pointer text-sm leading-relaxed font-normal text-muted-foreground"
+                >
+                  I agree to the{" "}
+                  <AuthHelpLink inline href="/terms">
+                    Terms of Service
+                  </AuthHelpLink>{" "}
+                  and{" "}
+                  <AuthHelpLink inline href="/privacy">
+                    Privacy Policy
+                  </AuthHelpLink>
+                  .
                 </Label>
               </div>
             )}
@@ -209,6 +265,13 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
             </p>
           )}
         </div>
+
+        <AbuseProtectionFields
+          website={abuse.website}
+          onWebsiteChange={abuse.setWebsite}
+          turnstileSiteKey={abuse.turnstileSiteKey}
+          onTurnstileToken={abuse.setTurnstileToken}
+        />
 
         <Button type="submit" className="w-full" size="lg" loading={form.formState.isSubmitting}>
           Create Account

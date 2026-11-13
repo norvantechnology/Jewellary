@@ -46,7 +46,8 @@ test.describe("Phase 4 E2E — Storefront Discovery, Search, Wishlist, Cart & Co
     // 3. Navigate into first product detail page
     await page.locator('article h3 a[href^="/products/"]').first().click();
     await page.waitForURL(/\/products\//);
-    await expect(page.getByText(/Gemological Dossier/i)).toBeVisible();
+    await page.getByRole("button", { name: /Details & Specifications/i }).click();
+    await expect(page.getByRole("heading", { name: "Specifications", exact: true })).toBeVisible();
 
     // 4. Toggle guest Wishlist and verify persistence across reload
     await page.getByRole("button", { name: /Save to Wishlist/i }).click();

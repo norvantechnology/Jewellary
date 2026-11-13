@@ -27,10 +27,12 @@ describe("Phase 7 Integration — Sitemaps, Merchant Feed, llms.txt, and Archive
     expect(indexResponse.status).toBe(200);
     const indexXml = await indexResponse.text();
     expect(indexXml).toContain("<sitemapindex");
-    expect(indexXml).toContain("/sitemap/static.xml");
-    expect(indexXml).toContain("/sitemap/categories.xml");
-    expect(indexXml).toContain("/sitemap/products.xml");
-    expect(indexXml).toContain("/sitemap/guides.xml");
+    expect(indexXml).toContain("/sitemaps/pages.xml");
+    expect(indexXml).toContain("/sitemaps/collections.xml");
+    expect(indexXml).toContain("/sitemaps/landing-facets.xml");
+    expect(indexXml).toContain("/sitemaps/guides.xml");
+    expect(indexXml).toContain("/sitemaps/products-1.xml");
+    expect(indexXml).toContain("/sitemaps/images-1.xml");
 
     const segments = await generateSitemaps();
     expect(segments.map((s) => s.id)).toEqual(

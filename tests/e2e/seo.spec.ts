@@ -28,13 +28,22 @@ test.describe("Phase 7 E2E — Technical SEO, JSON-LD, Sitemaps, Feeds & AI Craw
     const sitemapIndexRes = await request.get("/sitemap.xml");
     expect(sitemapIndexRes.status()).toBe(200);
     const sitemapIndexXml = await sitemapIndexRes.text();
-    expect(sitemapIndexXml).toContain("/sitemap/static.xml");
-    expect(sitemapIndexXml).toContain("/sitemap/categories.xml");
-    expect(sitemapIndexXml).toContain("/sitemap/products.xml");
-    expect(sitemapIndexXml).toContain("/sitemap/guides.xml");
+    expect(sitemapIndexXml).toContain("/sitemaps/pages.xml");
+    expect(sitemapIndexXml).toContain("/sitemaps/collections.xml");
+    expect(sitemapIndexXml).toContain("/sitemaps/landing-facets.xml");
+    expect(sitemapIndexXml).toContain("/sitemaps/guides.xml");
+    expect(sitemapIndexXml).toContain("/sitemaps/products-1.xml");
+    expect(sitemapIndexXml).toContain("/sitemaps/images-1.xml");
 
-    for (const seg of ["static", "categories", "products", "guides"]) {
-      const segRes = await request.get(`/sitemap/${seg}.xml`);
+    for (const seg of [
+      "pages",
+      "collections",
+      "landing-facets",
+      "guides",
+      "products-1",
+      "images-1",
+    ]) {
+      const segRes = await request.get(`/sitemaps/${seg}.xml`);
       expect(segRes.status()).toBe(200);
       const segXml = await segRes.text();
       expect(segXml).toContain("<urlset");

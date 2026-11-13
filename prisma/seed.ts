@@ -1,6 +1,10 @@
 import "dotenv/config";
 import { hashPassword } from "better-auth/crypto";
 import { Prisma } from "@/generated/prisma/client";
+import {
+  CUSTOMIZATION_CATEGORY_PRESETS,
+  type CustomizationPresetKey,
+} from "@/modules/customization/customization.presets";
 import { createPrismaClient } from "@/server/prisma-client";
 import { ensureSeedImageAsset } from "./seed-assets";
 
@@ -50,7 +54,7 @@ async function ensureUserWithPassword(input: {
 }
 
 async function seedProductionBaseline() {
-  const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "Maison Aurelia";
+  const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "Atelier Fine Jewellery";
   const contactEmail = process.env.EMAIL_FROM || "concierge@example.com";
 
   await prisma.storeSetting.upsert({
@@ -89,6 +93,188 @@ async function seedProductionBaseline() {
     },
   });
 
+  const existingDefaultCurrency = await prisma.currency.findFirst({
+    where: { isDefault: true },
+    select: { id: true },
+  });
+
+  const initialCurrencies: Array<{
+    id: string;
+    code: string;
+    name: string;
+    symbol: string;
+    symbolPosition: "BEFORE" | "AFTER";
+    decimalPlaces: number;
+    roundingRule: "HALF_UP" | "HALF_EVEN" | "CEIL" | "FLOOR" | "NONE";
+    exchangeRate: string;
+    isActive: boolean;
+    isDefault: boolean;
+    isBase: boolean;
+    sortOrder: number;
+  }> = [
+    {
+      id: "curr_base_usd",
+      code: "USD",
+      name: "US Dollar",
+      symbol: "$",
+      symbolPosition: "BEFORE",
+      decimalPlaces: 2,
+      roundingRule: "HALF_UP",
+      exchangeRate: "1.00000000",
+      isActive: true,
+      isDefault: !existingDefaultCurrency,
+      isBase: true,
+      sortOrder: 0,
+    },
+    {
+      id: "curr_eur",
+      code: "EUR",
+      name: "Euro",
+      symbol: "€",
+      symbolPosition: "BEFORE",
+      decimalPlaces: 2,
+      roundingRule: "HALF_UP",
+      exchangeRate: "0.92000000",
+      isActive: true,
+      isDefault: false,
+      isBase: false,
+      sortOrder: 1,
+    },
+    {
+      id: "curr_gbp",
+      code: "GBP",
+      name: "British Pound",
+      symbol: "£",
+      symbolPosition: "BEFORE",
+      decimalPlaces: 2,
+      roundingRule: "HALF_UP",
+      exchangeRate: "0.79000000",
+      isActive: true,
+      isDefault: false,
+      isBase: false,
+      sortOrder: 2,
+    },
+    {
+      id: "curr_cad",
+      code: "CAD",
+      name: "Canadian Dollar",
+      symbol: "CA$",
+      symbolPosition: "BEFORE",
+      decimalPlaces: 2,
+      roundingRule: "HALF_UP",
+      exchangeRate: "1.38000000",
+      isActive: true,
+      isDefault: false,
+      isBase: false,
+      sortOrder: 3,
+    },
+    {
+      id: "curr_aud",
+      code: "AUD",
+      name: "Australian Dollar",
+      symbol: "A$",
+      symbolPosition: "BEFORE",
+      decimalPlaces: 2,
+      roundingRule: "HALF_UP",
+      exchangeRate: "1.52000000",
+      isActive: true,
+      isDefault: false,
+      isBase: false,
+      sortOrder: 4,
+    },
+    {
+      id: "curr_chf",
+      code: "CHF",
+      name: "Swiss Franc",
+      symbol: "CHF ",
+      symbolPosition: "BEFORE",
+      decimalPlaces: 2,
+      roundingRule: "HALF_UP",
+      exchangeRate: "0.88000000",
+      isActive: true,
+      isDefault: false,
+      isBase: false,
+      sortOrder: 5,
+    },
+    {
+      id: "curr_jpy",
+      code: "JPY",
+      name: "Japanese Yen",
+      symbol: "¥",
+      symbolPosition: "BEFORE",
+      decimalPlaces: 0,
+      roundingRule: "HALF_UP",
+      exchangeRate: "152.00000000",
+      isActive: true,
+      isDefault: false,
+      isBase: false,
+      sortOrder: 6,
+    },
+    {
+      id: "curr_inr",
+      code: "INR",
+      name: "Indian Rupee",
+      symbol: "₹",
+      symbolPosition: "BEFORE",
+      decimalPlaces: 2,
+      roundingRule: "HALF_UP",
+      exchangeRate: "84.20000000",
+      isActive: true,
+      isDefault: false,
+      isBase: false,
+      sortOrder: 7,
+    },
+    {
+      id: "curr_aed",
+      code: "AED",
+      name: "UAE Dirham",
+      symbol: "د.إ ",
+      symbolPosition: "BEFORE",
+      decimalPlaces: 2,
+      roundingRule: "HALF_UP",
+      exchangeRate: "3.67250000",
+      isActive: true,
+      isDefault: false,
+      isBase: false,
+      sortOrder: 8,
+    },
+    {
+      id: "curr_kwd",
+      code: "KWD",
+      name: "Kuwaiti Dinar",
+      symbol: "KD ",
+      symbolPosition: "BEFORE",
+      decimalPlaces: 3,
+      roundingRule: "HALF_UP",
+      exchangeRate: "0.30700000",
+      isActive: true,
+      isDefault: false,
+      isBase: false,
+      sortOrder: 9,
+    },
+  ];
+
+  for (const item of initialCurrencies) {
+    await prisma.currency.upsert({
+      where: { code: item.code },
+      update: {},
+      create: {
+        id: item.id,
+        code: item.code,
+        name: item.name,
+        symbol: item.symbol,
+        symbolPosition: item.symbolPosition,
+        decimalPlaces: item.decimalPlaces,
+        roundingRule: item.roundingRule,
+        exchangeRate: new Prisma.Decimal(item.exchangeRate),
+        isActive: item.isActive,
+        isDefault: item.isDefault,
+        isBase: item.isBase,
+        sortOrder: item.sortOrder,
+      },
+    });
+  }
+
   await prisma.shippingZone.upsert({
     where: { id: "zone-us-domestic" },
     update: {},
@@ -125,7 +311,7 @@ async function seedProductionBaseline() {
 
   const adminEmail = process.env.ADMIN_SEED_EMAIL || "admin@example.com";
   const adminPassword = process.env.ADMIN_SEED_PASSWORD || "AdminChangeMe123!";
-  const adminName = process.env.ADMIN_SEED_NAME || "Maison Director";
+  const adminName = process.env.ADMIN_SEED_NAME || "Atelier Director";
 
   await ensureUserWithPassword({
     id: "seed-admin-user",
@@ -343,6 +529,123 @@ async function seedProductionBaseline() {
       optionMap.set(opt.value, { id: savedOpt.id, label: savedOpt.label });
     }
     facetByCode.set(spec.code, { id: facet.id, options: optionMap });
+  }
+
+  // Seed default category customization option templates (idempotent: only when category has 0 groups)
+  const categoryPresetBindings: Array<{ categoryId: string; key: CustomizationPresetKey }> = [
+    { categoryId: rings.id, key: "rings" },
+    { categoryId: engagementRings.id, key: "rings" },
+    { categoryId: weddingBands.id, key: "rings" },
+    { categoryId: necklaces.id, key: "necklaces" },
+    { categoryId: pendants.id, key: "necklaces" },
+    { categoryId: earrings.id, key: "earrings" },
+    { categoryId: bracelets.id, key: "bracelets" },
+  ];
+
+  for (const binding of categoryPresetBindings) {
+    const existingGroupCount = await prisma.customizationOptionGroup.count({
+      where: { categoryId: binding.categoryId },
+    });
+    if (existingGroupCount > 0) continue;
+
+    const groups = CUSTOMIZATION_CATEGORY_PRESETS[binding.key];
+    for (const group of groups) {
+      await prisma.customizationOptionGroup.create({
+        data: {
+          categoryId: binding.categoryId,
+          code: group.code,
+          label: group.label,
+          type: group.type,
+          helperText: group.helperText ?? null,
+          placeholder: group.placeholder ?? null,
+          required: group.required,
+          minValue: group.minValue ? new Prisma.Decimal(group.minValue) : null,
+          maxValue: group.maxValue ? new Prisma.Decimal(group.maxValue) : null,
+          stepValue: group.stepValue ? new Prisma.Decimal(group.stepValue) : null,
+          defaultValue: group.defaultValue ?? null,
+          maxLength: group.maxLength ?? null,
+          maxFiles: group.maxFiles ?? null,
+          unit: group.unit ?? null,
+          validationRules: group.validationRules
+            ? (group.validationRules as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+          isActive: group.isActive,
+          sortOrder: group.sortOrder,
+          values: {
+            create: group.values.map((val) => ({
+              value: val.value,
+              label: val.label,
+              swatchHex: val.swatchHex ?? null,
+              swatchImageUrl: val.swatchImageUrl ?? null,
+              priceAdjustmentType: val.priceAdjustmentType,
+              priceAdjustmentValue: new Prisma.Decimal(val.priceAdjustmentValue),
+              isAvailable: val.isAvailable,
+              sortOrder: val.sortOrder,
+            })),
+          },
+        },
+      });
+    }
+  }
+
+  // Seed default concierge canned replies (idempotent)
+  const cannedRepliesSeed = [
+    {
+      id: "canned-greeting",
+      title: "Atelier Greeting & Bespoke Timeline",
+      category: "General",
+      body: "Bonjour from Maison Aurelia. Our master bench jewelers craft bespoke commissions within 3–4 weeks from final CAD approval. Would you like me to guide you through metal or stone proportions for your piece?",
+      sortOrder: 0,
+    },
+    {
+      id: "canned-sizing",
+      title: "Ring Sizing & Complimentary Resizing",
+      category: "Sizing",
+      body: "All bespoke and fine rings include one complimentary resize within 60 days of delivery. If you are selecting as a surprise, our atelier recommends standard size 6 (US) / L½ (UK) / 52 (EU).",
+      sortOrder: 1,
+    },
+    {
+      id: "canned-dossier",
+      title: "GIA / IGI Dossier & Stone Viewing",
+      category: "Diamonds",
+      body: "Our gemologists hand-curate every diamond above 0.50 ct with original GIA or IGI laboratory dossiers and laser-inscribed girdles. I can share macro bench imagery or alternative stone pairings upon request.",
+      sortOrder: 2,
+    },
+    {
+      id: "canned-quote-walkthrough",
+      title: "Reviewing Your Bespoke Quote",
+      category: "Customization",
+      body: "Your official atelier quotation locks pricing and gold-smithing allocation for 7 days. Once approved, simply follow your secure quotation link or accept directly inside your Customization Requests portal.",
+      sortOrder: 3,
+    },
+    {
+      id: "canned-delivery",
+      title: "Insured White-Glove Courier Dispatch",
+      category: "Shipping",
+      body: "Every Maison Aurelia creation dispatches via insured armoured courier with adult signature verification and tamper-sealed presentation packaging.",
+      sortOrder: 4,
+    },
+  ];
+
+  for (const tpl of cannedRepliesSeed) {
+    await prisma.chatCannedReply.upsert({
+      where: { id: tpl.id },
+      update: {
+        title: tpl.title,
+        category: tpl.category,
+        body: tpl.body,
+        sortOrder: tpl.sortOrder,
+        isActive: true,
+      },
+      create: {
+        id: tpl.id,
+        title: tpl.title,
+        category: tpl.category,
+        body: tpl.body,
+        sortOrder: tpl.sortOrder,
+        isActive: true,
+      },
+    });
   }
 
   return {
@@ -992,6 +1295,7 @@ async function seedDemoCatalogue(ctx: Awaited<ReturnType<typeof seedProductionBa
         isFeatured: item.isFeatured ?? false,
         isNewArrival: item.isNewArrival ?? false,
         isBestseller: item.isBestseller ?? false,
+        isCustomizable: item.priceMode === "FIXED",
       },
       create: {
         sku: item.sku,
@@ -1021,9 +1325,27 @@ async function seedDemoCatalogue(ctx: Awaited<ReturnType<typeof seedProductionBa
         isFeatured: item.isFeatured ?? false,
         isNewArrival: item.isNewArrival ?? false,
         isBestseller: item.isBestseller ?? false,
+        isCustomizable: item.priceMode === "FIXED",
       },
     });
     createdProductIds.push(product.id);
+
+    await prisma.productCustomizationConfig.upsert({
+      where: { productId: product.id },
+      update: {
+        enabled: item.priceMode === "FIXED",
+        inheritCategoryDefaults: true,
+        minLeadTimeDays: 21,
+        disclaimerText: "Crafted to order in our New York & Paris ateliers (typically 3–4 weeks).",
+      },
+      create: {
+        productId: product.id,
+        enabled: item.priceMode === "FIXED",
+        inheritCategoryDefaults: true,
+        minLeadTimeDays: 21,
+        disclaimerText: "Crafted to order in our New York & Paris ateliers (typically 3–4 weeks).",
+      },
+    });
 
     // Variants & initial inventory ledger
     for (let vIdx = 0; vIdx < item.variants.length; vIdx++) {
@@ -1136,11 +1458,11 @@ async function seedDemoCatalogue(ctx: Awaited<ReturnType<typeof seedProductionBa
   // Banners
   const heroAsset = await ensureSeedImageAsset({
     slug: "hero-bridal-2026",
-    title: "THE LUMIÈRE SOLITAIRE COLLECTION",
+    title: "The Lumière Solitaire Collection",
     subtitle: "Handcrafted in Recycled 18K Gold & 950 Platinum",
     motif: "banner",
     width: 1600,
-    height: 760,
+    height: 1200,
   });
 
   const existingHero = await prisma.banner.findFirst({
@@ -1173,7 +1495,7 @@ async function seedDemoCatalogue(ctx: Awaited<ReturnType<typeof seedProductionBa
         "How cut proportions govern brilliance more than any other characteristic, and how to balance color and clarity for natural luminance.",
       authorName: "Claire Moreau, GG (GIA)",
       relatedCategorySlug: "rings/engagement-rings",
-      bodyMarkdown: `## Why Cut Governs Light Performance\n\nAmong the four grading pillars—Cut, Color, Clarity, and Carat—**Cut** is the only human craft variable. Even a D-Flawless stone appears dull if cut too deep or too shallow.\n\n### Recommended Maison Balance\n\n- **Cut Grade:** Prioritize Ideal or GIA Excellent.\n- **Color:** D–F appears icy colorless against platinum; G–H harmonizes warmly with 18K yellow gold.\n- **Clarity:** VS1–VS2 delivers complete eye-clean purity without paying collector premiums for VVS inclusions visible only under 10x loupe magnification.`,
+      bodyMarkdown: `## Why Cut Governs Light Performance\n\nAmong the four grading pillars—Cut, Color, Clarity, and Carat—**Cut** is the only human craft variable. Even a D-Flawless stone appears dull if cut too deep or too shallow.\n\n### Recommended Atelier Balance\n\n- **Cut Grade:** Prioritize Ideal or GIA Excellent.\n- **Color:** D–F appears icy colorless against platinum; G–H harmonizes warmly with 18K yellow gold.\n- **Clarity:** VS1–VS2 delivers complete eye-clean purity without paying collector premiums for VVS inclusions visible only under 10x loupe magnification.`,
     },
     {
       slug: "natural-vs-lab-grown-diamonds",
@@ -1231,11 +1553,21 @@ async function seedDemoCatalogue(ctx: Awaited<ReturnType<typeof seedProductionBa
           userId: demoCustomer.id,
           status: "DELIVERED",
           currency: "USD",
+          currencyDecimals: 2,
+          baseCurrency: "USD",
+          exchangeRate: new Prisma.Decimal("1.00000000"),
           subtotal: new Prisma.Decimal("3250.00"),
           shippingCost: new Prisma.Decimal("0.00"),
           taxAmount: new Prisma.Decimal("260.00"),
           taxRateSnapshot: new Prisma.Decimal("0.0800"),
           total: new Prisma.Decimal("3510.00"),
+          baseSubtotal: new Prisma.Decimal("3250.00"),
+          baseShippingCost: new Prisma.Decimal("0.00"),
+          baseTaxAmount: new Prisma.Decimal("260.00"),
+          baseDiscountAmount: new Prisma.Decimal("0.00"),
+          baseTotal: new Prisma.Decimal("3510.00"),
+          chargedCurrency: "USD",
+          chargedAmount: new Prisma.Decimal("3510.00"),
           shippingMethodName: "Insured Domestic Express (US)",
           shippingZoneId: "zone-us-domestic",
           signatureRequired: true,
@@ -1305,9 +1637,182 @@ async function seedDemoCatalogue(ctx: Awaited<ReturnType<typeof seedProductionBa
       await prisma.$executeRaw`SELECT setval('order_number_seq', 10002, false)`;
     }
   }
+
+  // Sample Customization Request & Attached Atelier Chat for Claire Laurent
+  const existingCustomReq = await prisma.customizationRequest.findUnique({
+    where: { requestNumber: "CR-2026-10001" },
+  });
+  if (!existingCustomReq) {
+    const customProduct = await prisma.product.findUnique({
+      where: { sku: "AUR-EMR-180" },
+      include: { images: true, variants: true },
+    });
+    if (customProduct) {
+      const custReq = await prisma.customizationRequest.create({
+        data: {
+          id: "seed-cust-req-10001",
+          requestNumber: "CR-2026-10001",
+          userId: demoCustomer.id,
+          productId: customProduct.id,
+          variantId: customProduct.variants[0]?.id ?? null,
+          status: "IN_REVIEW",
+          displayCurrency: "USD",
+          indicativeMinBase: new Prisma.Decimal("5497.00"),
+          indicativeMaxBase: new Prisma.Decimal("6046.70"),
+          contactPreference: "EMAIL",
+          customerName: demoCustomer.name,
+          customerEmail: demoCustomer.email,
+          preferredTimeline: "Mid next month",
+          customerNote:
+            "Could we keep the cathedral gallery ultra low-profile to sit flush with a pavé band?",
+          item: {
+            create: {
+              productNameSnapshot: customProduct.name,
+              productSlugSnapshot: customProduct.slug,
+              productSkuSnapshot: customProduct.sku,
+              variantTitleSnapshot: customProduct.variants[0]?.title ?? null,
+              basePriceSnapshot: customProduct.basePrice,
+              selections: [
+                {
+                  groupId: "seed-metal",
+                  groupCode: "metal",
+                  groupLabel: "Precious Metal",
+                  groupType: "SWATCH",
+                  valueCodes: ["platinum_950"],
+                  rawText: null,
+                  numberValue: null,
+                  displayValue: "Platinum 950",
+                  swatchHex: "#D6D8DC",
+                  priceDeltaBase: "250.00",
+                },
+                {
+                  groupId: "seed-stone",
+                  groupCode: "stone_shape",
+                  groupLabel: "Center Stone Cut",
+                  groupType: "SELECT",
+                  valueCodes: ["emerald"],
+                  rawText: null,
+                  numberValue: null,
+                  displayValue: "Emerald Step-Cut",
+                  swatchHex: null,
+                  priceDeltaBase: "297.00",
+                },
+                {
+                  groupId: "seed-carat",
+                  groupCode: "carat_weight",
+                  groupLabel: "Preferred Carat Weight",
+                  groupType: "NUMBER_RANGE",
+                  valueCodes: [],
+                  rawText: null,
+                  numberValue: "2.0",
+                  displayValue: "2.0 ct",
+                  swatchHex: null,
+                  priceDeltaBase: "0.00",
+                },
+                {
+                  groupId: "seed-size",
+                  groupCode: "ring_size",
+                  groupLabel: "Ring Size (US / UK / EU)",
+                  groupType: "SELECT",
+                  valueCodes: ["US_6"],
+                  rawText: null,
+                  numberValue: null,
+                  displayValue: "US 6 · UK L 1/2 · EU 52",
+                  swatchHex: null,
+                  priceDeltaBase: "0.00",
+                },
+                {
+                  groupId: "seed-engraving",
+                  groupCode: "engraving",
+                  groupLabel: "Inner Band Engraving",
+                  groupType: "TEXT",
+                  valueCodes: [],
+                  rawText: "12.11.26 C&J",
+                  numberValue: null,
+                  displayValue: "12.11.26 C&J",
+                  swatchHex: null,
+                  priceDeltaBase: "0.00",
+                },
+              ] as Prisma.InputJsonValue,
+            },
+          },
+          events: {
+            create: [
+              {
+                actorId: demoCustomer.id,
+                actorRole: "CUSTOMER",
+                toStatus: "SUBMITTED",
+                eventType: "SUBMITTED",
+                message: "Bespoke customization request submitted",
+              },
+              {
+                fromStatus: "SUBMITTED",
+                toStatus: "IN_REVIEW",
+                actorRole: "ADMIN",
+                eventType: "STATUS_CHANGED",
+                message: "Assigned to Paris stone-sourcing bench for emerald pair matching",
+              },
+            ],
+          },
+        },
+      });
+
+      const conversation = await prisma.conversation.upsert({
+        where: { id: "seed-conv-cust-10001" },
+        update: {},
+        create: {
+          id: "seed-conv-cust-10001",
+          userId: demoCustomer.id,
+          contextType: "CUSTOMIZATION_REQUEST",
+          contextRefId: custReq.id,
+          customizationRequestId: custReq.id,
+          status: "OPEN",
+          tags: ["Customization"],
+          lastMessageAt: new Date("2026-10-12T15:15:00Z"),
+          lastMessagePreview:
+            "Our head setter is confirming gallery clearance for a flush wedding band stack.",
+          participants: {
+            create: [{ userId: demoCustomer.id, lastReadAt: new Date("2026-10-12T14:00:00Z") }],
+          },
+        },
+      });
+
+      await prisma.message.createMany({
+        data: [
+          {
+            id: "seed-msg-cust-1",
+            conversationId: conversation.id,
+            senderId: demoCustomer.id,
+            senderRole: "CUSTOMER",
+            senderName: demoCustomer.name,
+            clientTempId: "seed-1",
+            type: "TEXT",
+            body: "Hello! I just submitted CR-2026-10001 for the Versailles Emerald Cut in 950 Platinum and wanted to double-check band stack height.",
+            createdAt: new Date("2026-10-12T14:05:00Z"),
+          },
+          {
+            id: "seed-msg-cust-2",
+            conversationId: conversation.id,
+            senderRole: "ADMIN",
+            senderName: "Atelier Concierge",
+            clientTempId: "seed-2",
+            type: "TEXT",
+            body: "Bonjour Claire — we have received your specifications! Our head setter is confirming gallery clearance for a flush wedding band stack and will prepare your quotation shortly.",
+            createdAt: new Date("2026-10-12T15:15:00Z"),
+          },
+        ],
+        skipDuplicates: true,
+      });
+
+      await prisma.$executeRaw`SELECT setval('customization_request_number_seq', 10002, false)`;
+    }
+  }
 }
 
 async function main() {
+  if (process.env.NODE_ENV === "production" && process.env.SEED_DEMO_DATA === "true") {
+    throw new Error("Refusing to seed demo data when NODE_ENV=production.");
+  }
   const baseline = await seedProductionBaseline();
   if (process.env.SEED_DEMO_DATA === "true") {
     await seedDemoCatalogue(baseline);

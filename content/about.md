@@ -1,6 +1,6 @@
 ---
 title: About {{siteName}}
-eyebrow: Our Maison
+eyebrow: Our Atelier
 description: The craft, gemological standards, and ethical sourcing behind every piece at {{siteName}}.
 updatedAt: November 2026
 ---

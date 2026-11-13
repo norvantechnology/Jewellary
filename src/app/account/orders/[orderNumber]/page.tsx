@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { BackLink } from "@/components/shared/BackLink";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { OrderDetailView } from "@/components/storefront/OrderDetailView";
@@ -10,6 +10,9 @@ import { NotFoundError } from "@/server/errors";
 export const metadata: Metadata = {
   title: "Order Details",
 };
+
+// Signed-in page rendered per request; a blocking navigation is intended.
+export const instant = false;
 
 export default async function AccountOrderDetailPage({
   params,
@@ -33,13 +36,13 @@ export default async function AccountOrderDetailPage({
   return (
     <div className="space-y-6">
       <div className="print:hidden">
-        <Link
-          href="/account/orders"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        <BackLink
+          fallbackHref="/account/orders"
+          className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground/45"
         >
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Back to Orders
-        </Link>
+          <ArrowLeft className="size-5 stroke-[1.5]" aria-hidden="true" />
+          <span>Back to Orders</span>
+        </BackLink>
       </div>
 
       <OrderDetailView order={order} />

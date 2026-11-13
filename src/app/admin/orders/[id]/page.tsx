@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { BackLink } from "@/components/shared/BackLink";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AdminOrderDetailClient } from "@/components/admin/AdminOrderDetailClient";
@@ -11,6 +11,9 @@ import { NotFoundError } from "@/server/errors";
 export const metadata: Metadata = {
   title: "Order Detail",
 };
+
+// Rendered per request (signed-in / URL-driven); a blocking navigation is intended.
+export const instant = false;
 
 export default async function AdminOrderDetailPage({
   params,
@@ -30,13 +33,13 @@ export default async function AdminOrderDetailPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link
-          href="/admin/orders"
+        <BackLink
+          fallbackHref="/admin/orders"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Orders
-        </Link>
+        </BackLink>
       </div>
 
       <AdminOrderDetailClient

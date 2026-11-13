@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import { Heart } from "lucide-react";
-import { toast } from "sonner";
+import { m } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { useReducedMotionSafe } from "@/lib/motion";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import { cn } from "@/lib/utils";
-import { useVisitorState, visitorStore } from "@/modules/storefront/visitor-store";
+import { useIsWishlisted, visitorStore } from "@/modules/storefront/visitor-store";
 import { toggleWishlistAction } from "@/modules/wishlist/wishlist.actions";
 
 interface WishlistToggleButtonProps {
@@ -21,20 +23,21 @@ export function WishlistToggleButton({
   mode = "icon",
   className,
 }: WishlistToggleButtonProps) {
-  const state = useVisitorState();
+  const isSaved = useIsWishlisted(variantId);
   const [pending, setPending] = React.useState(false);
+  const [pulseKey, setPulseKey] = React.useState(0);
+  const reducedMotion = useReducedMotionSafe();
 
   if (!variantId) return null;
-
-  const isSaved = state.wishlistVariantIds.includes(variantId);
 
   async function handleToggle(event: React.MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
     if (!variantId || pending) return;
 
-    const previousIds = [...state.wishlistVariantIds];
+    const previousIds = [...visitorStore.getSnapshot().wishlistVariantIds];
     setPending(true);
+    setPulseKey((k) => k + 1);
     const optimisticSaved = visitorStore.toggleWishlistOptimistic(variantId);
 
     const result = await toggleWishlistAction({ variantId });
@@ -42,12 +45,12 @@ export function WishlistToggleButton({
 
     if (!result.ok) {
       visitorStore.setWishlistVariantIds(previousIds);
-      toast.error(result.error.message);
+      void notifyError(result.error.message);
       return;
     }
 
     visitorStore.setWishlistVariantIds(result.data.variantIds);
-    toast.success(
+    void notifySuccess(
       optimisticSaved
         ? `${productName} added to your saved pieces.`
         : `${productName} removed from your saved pieces.`,
@@ -65,10 +68,24 @@ export function WishlistToggleButton({
         onClick={handleToggle}
         className={cn("gap-2", className)}
       >
-        <Heart
-          className={cn("size-4", isSaved ? "fill-accent text-accent" : "text-foreground")}
-          aria-hidden="true"
-        />
+        <m.span
+          key={pulseKey}
+          initial={pulseKey > 0 && !reducedMotion ? { scale: 0.8 } : false}
+          animate={pulseKey > 0 && !reducedMotion ? { scale: [0.8, 1.18, 1] } : undefined}
+          transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          className="inline-flex"
+        >
+          <Heart
+            className={cn(
+              "size-5 transition-colors duration-200",
+              isSaved
+                ? "fill-accent-hover text-accent-hover dark:fill-accent dark:text-accent"
+                : "text-text",
+            )}
+            strokeWidth={1.5}
+            aria-hidden="true"
+          />
+        </m.span>
         <span>{isSaved ? "Saved in Wishlist" : "Save to Wishlist"}</span>
       </Button>
     );
@@ -84,14 +101,35 @@ export function WishlistToggleButton({
         isSaved ? `Remove ${productName} from wishlist` : `Save ${productName} to wishlist`
       }
       className={cn(
-        "inline-flex size-11 cursor-pointer items-center justify-center rounded-full border border-border/80 bg-card/90 text-foreground backdrop-blur-sm transition-colors hover:border-accent hover:bg-card focus-visible:outline-2 focus-visible:outline-ring",
+        "group/wish inline-flex size-11 cursor-pointer items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         className,
       )}
     >
-      <Heart
-        className={cn("size-4 transition-colors", isSaved ? "fill-accent text-accent" : "")}
-        aria-hidden="true"
-      />
+      <span
+        className={cn(
+          "transition-ui inline-flex size-9 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm group-active/wish:scale-95",
+          isSaved
+            ? "border-accent bg-accent text-on-accent"
+            : "border-border-strong bg-surface/95 text-text group-hover/wish:border-accent group-hover/wish:bg-surface",
+        )}
+      >
+        <m.span
+          key={pulseKey}
+          initial={pulseKey > 0 && !reducedMotion ? { scale: 0.8 } : false}
+          animate={pulseKey > 0 && !reducedMotion ? { scale: [0.8, 1.18, 1] } : undefined}
+          transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          className="inline-flex"
+        >
+          <Heart
+            className={cn(
+              "size-[18px] transition-colors duration-200",
+              isSaved ? "fill-current" : "",
+            )}
+            strokeWidth={1.65}
+            aria-hidden="true"
+          />
+        </m.span>
+      </span>
     </button>
   );
 }

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes";
 import {
   Select,
   SelectContent,
@@ -70,6 +71,11 @@ export function BannersManager({ banners }: { banners: BannerDTO[] }) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [form, setForm] = React.useState<BannerFormState>(emptyBanner);
+  const [savedSnapshot, setSavedSnapshot] = React.useState(() => JSON.stringify(emptyBanner()));
+  const currentSnapshot = React.useMemo(() => JSON.stringify(form), [form]);
+  const unsavedGuard = useUnsavedChangesGuard({
+    isDirty: dialogOpen && currentSnapshot !== savedSnapshot,
+  });
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string[]>>({});
   const [saving, setSaving] = React.useState(false);
 
@@ -77,13 +83,15 @@ export function BannersManager({ banners }: { banners: BannerDTO[] }) {
   const [deleting, setDeleting] = React.useState(false);
 
   function openNew() {
-    setForm(emptyBanner());
+    const initial = emptyBanner();
+    setForm(initial);
+    setSavedSnapshot(JSON.stringify(initial));
     setFieldErrors({});
     setDialogOpen(true);
   }
 
   function openEdit(b: BannerDTO) {
-    setForm({
+    const initial: BannerFormState = {
       id: b.id,
       title: b.title,
       subtitle: b.subtitle ?? "",
@@ -97,7 +105,9 @@ export function BannersManager({ banners }: { banners: BannerDTO[] }) {
       startsAt: b.startsAt ? b.startsAt.slice(0, 16) : "",
       endsAt: b.endsAt ? b.endsAt.slice(0, 16) : "",
       sortOrder: String(b.sortOrder),
-    });
+    };
+    setForm(initial);
+    setSavedSnapshot(JSON.stringify(initial));
     setFieldErrors({});
     setDialogOpen(true);
   }
@@ -131,6 +141,8 @@ export function BannersManager({ banners }: { banners: BannerDTO[] }) {
       return;
     }
 
+    unsavedGuard.markClean();
+    setSavedSnapshot(currentSnapshot);
     toast.success(form.id ? "Banner updated." : "Banner created.");
     setDialogOpen(false);
     router.refresh();
@@ -155,6 +167,7 @@ export function BannersManager({ banners }: { banners: BannerDTO[] }) {
   const columns: ResponsiveColumn<BannerDTO>[] = [
     {
       key: "title",
+      hideOnMobileCard: true,
       header: "Banner",
       cell: (b) => (
         <div className="flex min-w-0 items-center justify-end gap-3 md:justify-start">
@@ -249,7 +262,16 @@ export function BannersManager({ banners }: { banners: BannerDTO[] }) {
         }
       />
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) {
+            setDialogOpen(true);
+            return;
+          }
+          unsavedGuard.confirmLeave(() => setDialogOpen(false));
+        }}
+      >
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{form.id ? "Edit Banner" : "Create Banner"}</DialogTitle>
@@ -411,7 +433,7 @@ export function BannersManager({ banners }: { banners: BannerDTO[] }) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setDialogOpen(false)}
+                onClick={() => unsavedGuard.confirmLeave(() => setDialogOpen(false))}
                 disabled={saving}
               >
                 Cancel
@@ -423,6 +445,8 @@ export function BannersManager({ banners }: { banners: BannerDTO[] }) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {unsavedGuard.dialog}
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

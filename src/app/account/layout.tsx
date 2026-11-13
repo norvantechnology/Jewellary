@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { getRequestReturnTo } from "@/server/return-to";
 import { redirect } from "next/navigation";
 import { AccountShell } from "@/components/storefront/AccountShell";
 import { StorefrontShell } from "@/components/storefront/StorefrontShell";
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
 async function AccountSessionGate({ children }: { children: React.ReactNode }) {
   const session = await getOptionalSession();
   if (!session) {
-    redirect("/login?next=/account");
+    redirect(`/login?next=${encodeURIComponent(await getRequestReturnTo("/account"))}`);
   }
 
   return (
@@ -33,12 +34,15 @@ async function AccountSessionGate({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Signed-in area: every page is rendered per request behind an auth check, so blocking is intended.
+export const instant = false;
+
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   return (
     <StorefrontShell>
       <Suspense
         fallback={
-          <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-12 sm:px-6 lg:px-8">
+          <div className="container-default space-y-6 py-12">
             <Skeleton className="h-16 w-64" />
             <div className="grid gap-6 lg:grid-cols-12">
               <Skeleton className="h-64 lg:col-span-3" />

@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   title: "Commercial Invoice & Packing Slip",
 };
 
+// Rendered per request (signed-in / URL-driven); a blocking navigation is intended.
+export const instant = false;
+
 export default async function AdminOrderInvoicePage({
   params,
 }: {
@@ -34,33 +37,33 @@ export default async function AdminOrderInvoicePage({
       <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
         <Link
           href={`/admin/orders/${order.id}`}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="size-4" aria-hidden="true" />
+          <ArrowLeft className="size-4 stroke-[1.5]" aria-hidden="true" />
           Return to Order {order.orderNumber}
         </Link>
         <ConfirmationPrintButton />
       </div>
 
       {/* Commercial Invoice */}
-      <article className="rounded-md border border-border bg-card p-6 sm:p-10">
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-6">
-          <div>
+      <article className="rounded-xl border border-border bg-card p-4 sm:p-10">
+        <header className="flex flex-col items-start justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:flex-wrap">
+          <div className="min-w-0">
             <p className="text-editorial-label text-accent-text">{order.store.storeName}</p>
-            <h1 className="mt-1 font-display text-3xl font-medium text-foreground">
+            <h1 className="type-h2 mt-1 font-display font-medium text-foreground">
               Commercial Invoice
             </h1>
             {order.store.physicalStore?.address && (
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs break-words text-muted-foreground">
                 {order.store.physicalStore.address}
               </p>
             )}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs break-all text-muted-foreground">
               {order.store.contactEmail}
               {order.store.contactPhone ? ` · ${order.store.contactPhone}` : ""}
             </p>
           </div>
-          <dl className="space-y-1 text-right text-sm">
+          <dl className="space-y-1 text-left text-sm sm:text-right">
             <div>
               <dt className="inline text-muted-foreground">Invoice / Order: </dt>
               <dd className="inline font-medium text-foreground">{order.orderNumber}</dd>
@@ -112,67 +115,137 @@ export default async function AdminOrderInvoicePage({
           </div>
         </div>
 
-        <table className="mt-8 w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-xs tracking-wider text-muted-foreground uppercase">
-              <th className="py-2.5 pr-3">Piece</th>
-              <th className="py-2.5 pr-3">SKU</th>
-              <th className="py-2.5 pr-3 text-right">Qty</th>
-              <th className="py-2.5 pr-3 text-right">Unit Price</th>
-              <th className="py-2.5 text-right">Line Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {order.items.map((item) => (
-              <tr key={item.id}>
-                <td className="py-3 pr-3">
-                  <p className="font-medium text-foreground">{item.titleSnapshot}</p>
+        {/* Mobile item cards (< 768px) */}
+        <ul className="mt-8 divide-y divide-border border-t border-border md:hidden print:hidden">
+          {order.items.map((item) => (
+            <li key={item.id} className="space-y-2 py-3.5 text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium break-words text-foreground">{item.titleSnapshot}</p>
                   <p className="text-xs text-muted-foreground">{item.variantTitleSnapshot}</p>
-                </td>
-                <td className="py-3 pr-3 text-xs text-muted-foreground">{item.skuSnapshot}</td>
-                <td className="py-3 pr-3 text-right tabular-nums-price">{item.quantity}</td>
-                <td className="py-3 pr-3 text-right tabular-nums-price">
-                  {formatMoneyExact(item.unitPrice, order.currency)}
-                </td>
-                <td className="py-3 text-right font-medium tabular-nums-price">
-                  {formatMoneyExact(item.lineTotal, order.currency)}
-                </td>
+                  <p className="mt-0.5 text-xs text-muted-foreground">SKU {item.skuSnapshot}</p>
+                </div>
+                <span className="tabular-nums-price shrink-0 font-semibold text-foreground">
+                  {formatMoneyExact(
+                    item.lineTotal,
+                    order.currency,
+                    "en-US",
+                    order.currencyDecimals,
+                  )}
+                </span>
+              </div>
+              <div className="tabular-nums-price flex items-center justify-between text-xs text-muted-foreground">
+                <span>Qty: {item.quantity}</span>
+                <span>
+                  Unit:{" "}
+                  {formatMoneyExact(
+                    item.unitPrice,
+                    order.currency,
+                    "en-US",
+                    order.currencyDecimals,
+                  )}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {/* Desktop & Print invoice table */}
+        <div className="mt-8 hidden overflow-x-auto md:block print:block">
+          <table className="w-full min-w-[540px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs tracking-wider text-muted-foreground uppercase">
+                <th className="py-2.5 pr-3">Piece</th>
+                <th className="py-2.5 pr-3">SKU</th>
+                <th className="py-2.5 pr-3 text-right">Qty</th>
+                <th className="py-2.5 pr-3 text-right">Unit Price</th>
+                <th className="py-2.5 text-right">Line Total</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {order.items.map((item) => (
+                <tr key={item.id}>
+                  <td className="py-3 pr-3">
+                    <p className="font-medium text-foreground">{item.titleSnapshot}</p>
+                    <p className="text-xs text-muted-foreground">{item.variantTitleSnapshot}</p>
+                  </td>
+                  <td className="py-3 pr-3 text-xs text-muted-foreground">{item.skuSnapshot}</td>
+                  <td className="tabular-nums-price py-3 pr-3 text-right">{item.quantity}</td>
+                  <td className="tabular-nums-price py-3 pr-3 text-right">
+                    {formatMoneyExact(
+                      item.unitPrice,
+                      order.currency,
+                      "en-US",
+                      order.currencyDecimals,
+                    )}
+                  </td>
+                  <td className="tabular-nums-price py-3 text-right font-medium">
+                    {formatMoneyExact(
+                      item.lineTotal,
+                      order.currency,
+                      "en-US",
+                      order.currencyDecimals,
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <div className="mt-6 flex justify-end border-t border-border pt-4">
           <dl className="w-full max-w-xs space-y-1.5 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Subtotal</dt>
               <dd className="tabular-nums-price">
-                {formatMoneyExact(order.subtotal, order.currency)}
+                {formatMoneyExact(order.subtotal, order.currency, "en-US", order.currencyDecimals)}
               </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Shipping</dt>
               <dd className="tabular-nums-price">
-                {formatMoneyExact(order.shippingCost, order.currency)}
+                {formatMoneyExact(
+                  order.shippingCost,
+                  order.currency,
+                  "en-US",
+                  order.currencyDecimals,
+                )}
               </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Tax</dt>
               <dd className="tabular-nums-price">
-                {formatMoneyExact(order.taxAmount, order.currency)}
+                {formatMoneyExact(order.taxAmount, order.currency, "en-US", order.currencyDecimals)}
               </dd>
             </div>
             <div className="flex justify-between border-t border-border pt-2 font-medium">
-              <dt>Invoice Total</dt>
-              <dd className="font-display text-lg tabular-nums-price">
-                {formatMoneyExact(order.total, order.currency)}
+              <dt>Invoice Total ({order.currency})</dt>
+              <dd className="tabular-nums-price font-display text-lg">
+                {formatMoneyExact(order.total, order.currency, "en-US", order.currencyDecimals)}
               </dd>
             </div>
+            {order.currency !== order.baseCurrency && (
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <dt>
+                  FX 1 {order.baseCurrency} = {Number(order.exchangeRate).toFixed(4)}{" "}
+                  {order.currency}
+                </dt>
+                <dd className="tabular-nums-price">
+                  Base: {formatMoneyExact(order.baseTotal, order.baseCurrency)}
+                </dd>
+              </div>
+            )}
             {Number(order.refundedAmount) > 0 && (
               <div className="flex justify-between text-xs text-accent-text">
                 <dt>Refunded</dt>
                 <dd className="tabular-nums-price">
-                  -{formatMoneyExact(order.refundedAmount, order.currency)}
+                  -
+                  {formatMoneyExact(
+                    order.refundedAmount,
+                    order.currency,
+                    "en-US",
+                    order.currencyDecimals,
+                  )}
                 </dd>
               </div>
             )}
@@ -208,7 +281,7 @@ export default async function AdminOrderInvoicePage({
                   {item.variantTitleSnapshot} · SKU {item.skuSnapshot}
                 </p>
               </div>
-              <span className="font-medium tabular-nums-price">Qty: {item.quantity}</span>
+              <span className="tabular-nums-price font-medium">Qty: {item.quantity}</span>
             </li>
           ))}
         </ul>

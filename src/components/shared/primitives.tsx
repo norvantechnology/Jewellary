@@ -1,9 +1,21 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export function Container({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export type ContainerVariant = "default" | "wide" | "prose";
+
+const containerVariantClasses: Record<ContainerVariant, string> = {
+  wide: "container-wide",
+  default: "container-default",
+  prose: "container-prose",
+};
+
+interface ContainerProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: ContainerVariant;
+}
+
+export function Container({ variant = "default", className, children, ...props }: ContainerProps) {
   return (
-    <div className={cn("container-page", className)} {...props}>
+    <div className={cn(containerVariantClasses[variant], className)} {...props}>
       {children}
     </div>
   );
@@ -42,7 +54,7 @@ const gridCols: Record<NonNullable<GridProps["cols"]>, string> = {
 
 export function Grid({ cols = 3, className, children, ...props }: GridProps) {
   return (
-    <div className={cn("grid gap-5 md:gap-7", gridCols[cols], className)} {...props}>
+    <div className={cn("grid gap-3 sm:gap-4 lg:gap-6", gridCols[cols], className)} {...props}>
       {children}
     </div>
   );
@@ -53,9 +65,9 @@ interface SectionProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 const sectionSpacing: Record<NonNullable<SectionProps["spacing"]>, string> = {
-  sm: "py-8 md:py-12",
-  md: "py-12 md:py-18",
-  lg: "py-16 md:py-24",
+  sm: "py-6 md:py-12 lg:py-16",
+  md: "py-10 md:py-[4.5rem] lg:py-24",
+  lg: "py-10 md:py-[4.5rem] lg:py-24",
 };
 
 export function Section({ spacing = "md", className, children, ...props }: SectionProps) {
@@ -63,5 +75,31 @@ export function Section({ spacing = "md", className, children, ...props }: Secti
     <section className={cn(sectionSpacing[spacing], className)} {...props}>
       {children}
     </section>
+  );
+}
+
+export type ProductGridVariant = "catalog" | "default";
+
+export function getProductGridClassName(
+  variant: ProductGridVariant = "default",
+  className?: string,
+) {
+  return cn(variant === "catalog" ? "product-grid-catalog" : "product-grid-default", className);
+}
+
+interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: ProductGridVariant;
+}
+
+export function ProductGrid({
+  variant = "default",
+  className,
+  children,
+  ...props
+}: ProductGridProps) {
+  return (
+    <div className={getProductGridClassName(variant, className)} {...props}>
+      {children}
+    </div>
   );
 }

@@ -3,9 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Edit2, Gem, Plus, Search, Trash2 } from "lucide-react";
+import { Archive, Copy, Edit2, Gem, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { CsvExportLink } from "@/components/admin/CsvExportLink";
+import { ProductDeleteDialog } from "@/components/admin/ProductDeleteDialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
@@ -24,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatMoney } from "@/lib/money";
-import { deleteProductAction } from "@/modules/catalog/catalog.actions";
+import { archiveProductAction, duplicateProductAction } from "@/modules/catalog/catalog.actions";
 import type { AdminCategoryDTO, AdminProductListItem } from "@/modules/catalog/catalog.service";
 
 export function ProductsManager({
@@ -54,8 +55,10 @@ export function ProductsManager({
   const [search, setSearch] = React.useState(initialSearch);
   const [status, setStatus] = React.useState(initialStatus || "ALL");
   const [categoryId, setCategoryId] = React.useState(initialCategoryId || "__all__");
+  const [archiveTarget, setArchiveTarget] = React.useState<AdminProductListItem | null>(null);
+  const [archiving, setArchiving] = React.useState(false);
+  const [duplicatingId, setDuplicatingId] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<AdminProductListItem | null>(null);
-  const [deleting, setDeleting] = React.useState(false);
 
   function buildHref(
     nextPage: number,
@@ -77,20 +80,34 @@ export function ProductsManager({
     router.push(buildHref(1));
   }
 
-  async function handleDelete() {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    const res = await deleteProductAction({ id: deleteTarget.id });
-    setDeleting(false);
+  async function handleArchive() {
+    if (!archiveTarget) return;
+    setArchiving(true);
+    const res = await archiveProductAction({ id: archiveTarget.id });
+    setArchiving(false);
 
     if (!res.ok) {
       toast.error(res.error.message);
       return;
     }
 
-    toast.success(`Archived "${deleteTarget.name}".`);
-    setDeleteTarget(null);
+    toast.success(`Archived "${archiveTarget.name}".`);
+    setArchiveTarget(null);
     router.refresh();
+  }
+
+  async function handleDuplicate(p: AdminProductListItem) {
+    setDuplicatingId(p.id);
+    const res = await duplicateProductAction({ id: p.id });
+    setDuplicatingId(null);
+
+    if (!res.ok) {
+      toast.error(res.error.message);
+      return;
+    }
+
+    toast.success(`Duplicated "${p.name}" as Draft.`);
+    router.replace(`/admin/products/${res.data.id}`);
   }
 
   const columns: ResponsiveColumn<AdminProductListItem>[] = [
@@ -165,20 +182,44 @@ export function ProductsManager({
       header: "Actions",
       className: "text-right",
       cell: (p) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-1.5">
           <Button asChild variant="outline" size="sm">
             <Link href={`/admin/products/${p.id}`}>
               <Edit2 className="size-3.5" aria-hidden="true" />
               <span>Edit</span>
             </Link>
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            loading={duplicatingId === p.id}
+            onClick={() => void handleDuplicate(p)}
+            aria-label={`Duplicate product ${p.name}`}
+            title="Duplicate product as Draft"
+          >
+            <Copy className="size-4" aria-hidden="true" />
+          </Button>
+          {p.status !== "ARCHIVED" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setArchiveTarget(p)}
+              aria-label={`Archive product ${p.name}`}
+              title="Archive product"
+            >
+              <Archive className="size-4 text-muted-foreground" aria-hidden="true" />
+            </Button>
+          )}
           {canDelete && (
             <Button
               type="button"
               variant="ghost"
               size="icon"
               onClick={() => setDeleteTarget(p)}
-              aria-label={`Archive product ${p.name}`}
+              aria-label={`Delete product ${p.name}`}
+              title="Delete permanently"
             >
               <Trash2 className="size-4 text-destructive" aria-hidden="true" />
             </Button>
@@ -217,7 +258,7 @@ export function ProductsManager({
         onSubmit={applyFilters}
         className="grid gap-3 rounded-md border border-border bg-card p-4 sm:grid-cols-12"
       >
-        <div className="relative sm:col-span-5">
+        <div className="relative sm:col-span-4">
           <Search
             className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden="true"
@@ -261,8 +302,8 @@ export function ProductsManager({
           </Select>
         </div>
 
-        <div className="sm:col-span-1">
-          <Button type="submit" variant="secondary" className="w-full">
+        <div className="sm:col-span-2">
+          <Button type="submit" variant="secondary" className="w-full px-3">
             Filter
           </Button>
         </div>
@@ -272,7 +313,6 @@ export function ProductsManager({
         data={items}
         columns={columns}
         keyExtractor={(p) => p.id}
-        mobileTitle={(p) => p.name}
         emptyState={
           <EmptyState
             icon={Gem}
@@ -291,20 +331,29 @@ export function ProductsManager({
       />
 
       <ConfirmDialog
-        open={Boolean(deleteTarget)}
+        open={Boolean(archiveTarget)}
         onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
+          if (!open) setArchiveTarget(null);
         }}
         title="Archive Product"
         description={
-          deleteTarget
-            ? `Soft-delete and archive "${deleteTarget.name}"? Historical orders referencing its variants remain intact.`
+          archiveTarget
+            ? `Soft-delete and archive "${archiveTarget.name}"? Historical orders referencing its variants remain intact.`
             : ""
         }
         confirmLabel="Archive Product"
         destructive
-        loading={deleting}
-        onConfirm={handleDelete}
+        loading={archiving}
+        onConfirm={handleArchive}
+      />
+
+      <ProductDeleteDialog
+        target={deleteTarget ? { id: deleteTarget.id, name: deleteTarget.name } : null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        onDeleted={() => router.refresh()}
+        onArchived={() => router.refresh()}
       />
     </div>
   );

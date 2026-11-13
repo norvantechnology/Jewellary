@@ -3,20 +3,22 @@ import { env } from "@/lib/env";
 import { toAbsoluteUrl } from "@/lib/seo/metadata";
 import { getPublishedArticles } from "@/modules/articles/article.service";
 import { getAllActiveCategoriesTree } from "@/modules/catalog/catalog.public";
+import { listSitemapLandingFacets } from "@/modules/seo/seo.service";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
 /**
- * Generates `/llms.txt` (`AI-14`, controlled by `ENABLE_LLMS_TXT`) summarizing key collections,
- * gemological buying guides, and store policies in markdown format for AI retrieval systems.
+ * Generates `/llms.txt` summarizing collections, curated landing facets, buying guides,
+ * and store policies in clean markdown for AI retrieval systems.
  */
 export async function GET() {
   if (env.ENABLE_LLMS_TXT !== "true") {
     return new NextResponse("Not found", { status: 404 });
   }
 
-  const [settings, categories, articles] = await Promise.all([
+  const [settings, categories, facets, articles] = await Promise.all([
     getPublicStoreSettings(),
     getAllActiveCategoriesTree(),
+    listSitemapLandingFacets().catch(() => []),
     getPublishedArticles(),
   ]);
 
@@ -26,6 +28,7 @@ export async function GET() {
     `> ${settings.tagline ?? "Certified fine diamond jewellery crafted in recycled 18K gold and 950 platinum."}`,
     "",
     `Website: ${toAbsoluteUrl("/")}`,
+    `Full Context Digest: ${toAbsoluteUrl("/llms-full.txt")}`,
     `Contact: ${settings.contactEmail}`,
     `Currency: ${settings.currency} · Insured Returns: ${settings.returnWindowDays} days`,
     "",
@@ -34,12 +37,24 @@ export async function GET() {
       (cat) =>
         `- [${cat.name}](${toAbsoluteUrl(`/collections/${cat.path}`)}): ${cat.description ?? `${cat.name} crafted in 18K gold and platinum.`}`,
     ),
+    ...(facets.length > 0
+      ? [
+          "",
+          "## Curated Specialty Pages",
+          ...facets.map(
+            (facet) =>
+              `- [${facet.facetSlug.replace(/-/g, " ")}](${toAbsoluteUrl(`/collections/${facet.categoryPath}/${facet.facetSlug}`)})`,
+          ),
+        ]
+      : []),
     "",
     "## Gemological Buying Guides",
-    ...articles.map(
-      (article) =>
-        `- [${article.title}](${toAbsoluteUrl(`/guides/${article.slug}`)}): ${article.excerpt}`,
-    ),
+    ...articles
+      .filter((a) => !a.noindex)
+      .map(
+        (article) =>
+          `- [${article.title}](${toAbsoluteUrl(`/guides/${article.slug}`)}): ${article.excerpt}`,
+      ),
     "",
     "## Client Care & Policies",
     `- [All Jewellery Catalogue](${toAbsoluteUrl("/collections")}): Browse all filterable GIA and IGI certified pieces.`,

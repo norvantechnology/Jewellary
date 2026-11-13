@@ -1,6 +1,9 @@
 import "@/lib/zod-csp";
 import { z } from "zod";
-import { checkoutAddressSchema } from "@/modules/orders/order.schemas";
+import {
+  checkoutAddressBaseSchema,
+  validateCheckoutAddressFields,
+} from "@/modules/orders/order.schemas";
 
 export const updateProfileSchema = z
   .object({
@@ -42,7 +45,7 @@ export const changePasswordSchema = z
     }
   });
 
-export const saveAddressSchema = checkoutAddressSchema
+export const saveAddressSchema = checkoutAddressBaseSchema
   .extend({
     id: z.string().trim().min(2).max(64).optional().nullable(),
     label: z
@@ -55,7 +58,8 @@ export const saveAddressSchema = checkoutAddressSchema
     isDefaultShipping: z.boolean().optional().default(false),
     isDefaultBilling: z.boolean().optional().default(false),
   })
-  .strict();
+  .strict()
+  .superRefine(validateCheckoutAddressFields);
 
 export const deleteAddressSchema = z
   .object({
@@ -90,6 +94,21 @@ export const guestOrderLookupSchema = z
       .email("Enter the email address used for the order.")
       .max(160)
       .transform((val) => val.toLowerCase()),
+    website: z.string().optional().default(""),
+    timingToken: z.string().trim().max(200).optional().default(""),
+    turnstileToken: z.string().trim().max(4096).optional().default(""),
+  })
+  .strict();
+
+export const reorderOrderSchema = z
+  .object({
+    orderNumber: z
+      .string()
+      .trim()
+      .min(4, "Order number is required.")
+      .max(32)
+      .transform((val) => val.toUpperCase()),
+    guestToken: z.string().trim().max(256).optional().nullable(),
   })
   .strict();
 
@@ -100,3 +119,4 @@ export type DeleteAddressInput = z.infer<typeof deleteAddressSchema>;
 export type SetDefaultAddressInput = z.infer<typeof setDefaultAddressSchema>;
 export type RequestAccountDeletionInput = z.infer<typeof requestAccountDeletionSchema>;
 export type GuestOrderLookupInput = z.infer<typeof guestOrderLookupSchema>;
+export type ReorderOrderInput = z.infer<typeof reorderOrderSchema>;

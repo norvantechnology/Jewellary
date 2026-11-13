@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Container, Section } from "@/components/shared/primitives";
 import { EnquiryForm } from "@/components/storefront/EnquiryForm";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   buildBreadcrumbListJsonLd,
   buildJewelryStoreJsonLd,
@@ -56,20 +57,17 @@ async function ContactPageBody({ searchParams }: ContactPageProps) {
   const jewelryStoreJsonLd = buildJewelryStoreJsonLd(settings);
 
   return (
-    <Section spacing="sm">
+    <Section spacing="md" className="pt-8 pb-10 sm:pt-10 sm:pb-16 lg:pb-24">
       <JsonLd data={contactJsonLd} />
       <JsonLd data={breadcrumbJsonLd} />
       {jewelryStoreJsonLd && <JsonLd data={jewelryStoreJsonLd} />}
       <Container>
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Private Concierge" }]} />
 
-        <div className="mt-4 grid gap-10 lg:grid-cols-12">
+        <div className="mt-4 grid gap-8 lg:grid-cols-12 lg:gap-10">
           <div className="space-y-6 lg:col-span-5">
             <div>
-              <p className="font-sans text-editorial-label text-accent-text">Client Services</p>
-              <h1 className="mt-1 font-display text-4xl font-medium tracking-tight text-foreground">
-                Private Concierge
-              </h1>
+              <h1 className="type-h1 font-semibold text-foreground">Private Concierge</h1>
               <p className="mt-3 text-base leading-relaxed text-muted-foreground">
                 Whether commissioning an heirloom solitaire, arranging an in-salon viewing, or
                 confirming ring size tolerances, our specialists respond personally within one
@@ -77,16 +75,19 @@ async function ContactPageBody({ searchParams }: ContactPageProps) {
               </p>
             </div>
 
-            <div className="space-y-4 rounded-md border border-border bg-card p-6">
+            <div className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
               <div className="flex items-start gap-3">
-                <Mail className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
-                <div>
-                  <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                <Mail
+                  className="mt-0.5 size-5 shrink-0 stroke-[1.5] text-accent-text"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                     Email
                   </p>
                   <a
                     href={`mailto:${settings.contactEmail}`}
-                    className="text-sm font-medium text-foreground hover:underline"
+                    className="inline-flex min-h-11 items-center text-sm font-semibold break-all text-foreground underline-offset-4 hover:text-accent-text hover:underline"
                   >
                     {settings.contactEmail}
                   </a>
@@ -95,36 +96,47 @@ async function ContactPageBody({ searchParams }: ContactPageProps) {
 
               {settings.contactPhone && (
                 <div className="flex items-start gap-3">
-                  <Phone className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+                  <Phone
+                    className="mt-0.5 size-5 shrink-0 stroke-[1.5] text-accent-text"
+                    aria-hidden="true"
+                  />
                   <div>
-                    <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                    <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                       Telephone
                     </p>
-                    <p className="text-sm font-medium text-foreground">{settings.contactPhone}</p>
+                    <p className="tabular-nums-price mt-0.5 text-sm font-semibold text-foreground">
+                      {settings.contactPhone}
+                    </p>
                   </div>
                 </div>
               )}
 
               {settings.supportHours && (
                 <div className="flex items-start gap-3">
-                  <Clock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+                  <Clock
+                    className="mt-0.5 size-5 shrink-0 stroke-[1.5] text-accent-text"
+                    aria-hidden="true"
+                  />
                   <div>
-                    <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                    <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                       Concierge Hours
                     </p>
-                    <p className="text-sm text-foreground">{settings.supportHours}</p>
+                    <p className="mt-0.5 text-sm text-foreground">{settings.supportHours}</p>
                   </div>
                 </div>
               )}
 
               {settings.physicalStore?.streetAddress && (
                 <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+                  <MapPin
+                    className="mt-0.5 size-5 shrink-0 stroke-[1.5] text-accent-text"
+                    aria-hidden="true"
+                  />
                   <div>
-                    <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      {settings.physicalStore.name ?? "Maison Salon"}
+                    <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                      {settings.physicalStore.name ?? "Atelier Salon"}
                     </p>
-                    <p className="text-sm text-foreground">
+                    <p className="mt-0.5 text-sm text-foreground">
                       {[
                         settings.physicalStore.streetAddress,
                         settings.physicalStore.city,
@@ -146,8 +158,8 @@ async function ContactPageBody({ searchParams }: ContactPageProps) {
           </div>
 
           <div className="lg:col-span-7">
-            <div className="rounded-md border border-border bg-card p-6 sm:p-8">
-              <h2 className="mb-5 font-display text-2xl font-medium text-foreground">
+            <div className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-8">
+              <h2 className="mb-5 text-2xl font-semibold tracking-[-0.015em] text-foreground">
                 Send a Note to the Studio
               </h2>
               <EnquiryForm defaultType={defaultType} productName={productHint} />
@@ -163,9 +175,13 @@ export default function ContactPage(props: ContactPageProps) {
   return (
     <Suspense
       fallback={
-        <Section spacing="sm">
+        <Section spacing="md" className="pt-8 pb-10 sm:pb-16 lg:pb-24">
           <Container>
-            <div className="py-12 text-sm text-muted-foreground">Loading concierge…</div>
+            <Skeleton className="h-4 w-48" />
+            <div className="mt-6 grid gap-8 lg:grid-cols-12">
+              <Skeleton className="h-80 rounded-xl lg:col-span-5" />
+              <Skeleton className="h-96 rounded-xl lg:col-span-7" />
+            </div>
           </Container>
         </Section>
       }

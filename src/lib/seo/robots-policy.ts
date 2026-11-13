@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { env } from "@/lib/env";
+import { getSiteUrl } from "@/lib/seo/site";
 
 export const ROBOTS_ALLOW_PATHS = ["/", "/_next/static/", "/_next/image"];
 
@@ -20,11 +20,14 @@ export const ROBOTS_DISALLOW_PATHS = [
 ];
 
 /**
- * Search and retrieval user-agents always permitted to index public catalogue & editorial copy.
- * Internal `/search` is deliberately omitted from `Disallow` so `noindex,follow` is crawled and honored.
+ * Search, social, and retrieval user-agents always permitted to index public catalogue & editorial copy.
+ * Internal `/search`, `/wishlist`, and `/products/.../customize` stay allowed to crawl so bots honor
+ * `noindex, follow` meta/X-Robots-Tag directives rather than getting trapped as uncrawled URLs.
  */
 export const RETRIEVAL_USER_AGENTS = [
   "Googlebot",
+  "Googlebot-Image",
+  "Storebot-Google",
   "Bingbot",
   "OAI-SearchBot",
   "ChatGPT-User",
@@ -32,6 +35,8 @@ export const RETRIEVAL_USER_AGENTS = [
   "Perplexity-User",
   "Claude-SearchBot",
   "Claude-User",
+  "Applebot",
+  "Pinterestbot",
 ] as const;
 
 /**
@@ -43,29 +48,47 @@ export const AI_TRAINING_USER_AGENTS = [
   "Google-Extended",
   "Applebot-Extended",
   "CCBot",
+  "Bytespider",
 ] as const;
 
 export function buildRobotsPolicy(
   allowAiCrawlers: boolean,
-  siteOrigin: string = env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, ""),
+  siteOrigin: string = getSiteUrl(),
+  options?: { stagingMode?: boolean; customDisallowPaths?: string[] },
 ): MetadataRoute.Robots {
+  const isStaging = options?.stagingMode ?? process.env.STAGING_MODE === "true";
+  if (isStaging) {
+    return {
+      rules: [
+        {
+          userAgent: "*",
+          disallow: "/",
+        },
+      ],
+    };
+  }
+
+  const disallowPaths = Array.from(
+    new Set([...ROBOTS_DISALLOW_PATHS, ...(options?.customDisallowPaths ?? [])]),
+  );
+
   const rules: NonNullable<MetadataRoute.Robots["rules"]> = [
     {
       userAgent: "*",
       allow: ROBOTS_ALLOW_PATHS,
-      disallow: ROBOTS_DISALLOW_PATHS,
+      disallow: disallowPaths,
     },
     ...RETRIEVAL_USER_AGENTS.map((userAgent) => ({
       userAgent,
       allow: ROBOTS_ALLOW_PATHS,
-      disallow: ROBOTS_DISALLOW_PATHS,
+      disallow: disallowPaths,
     })),
     ...AI_TRAINING_USER_AGENTS.map((userAgent) =>
       allowAiCrawlers
         ? {
             userAgent,
             allow: ROBOTS_ALLOW_PATHS,
-            disallow: ROBOTS_DISALLOW_PATHS,
+            disallow: disallowPaths,
           }
         : {
             userAgent,
@@ -74,8 +97,11 @@ export function buildRobotsPolicy(
     ),
   ];
 
+  const cleanOrigin = siteOrigin.replace(/\/+$/, "");
+
   return {
     rules,
-    sitemap: `${siteOrigin}/sitemap.xml`,
+    sitemap: `${cleanOrigin}/sitemap.xml`,
+    host: cleanOrigin,
   };
 }

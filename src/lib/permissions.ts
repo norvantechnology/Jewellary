@@ -16,6 +16,8 @@ export type Permission =
   | "customers:export"
   | "content:manage"
   | "enquiries:manage"
+  | "customization:manage"
+  | "chat:manage"
   | "settings:manage"
   | "audit:read"
   | "exports:operational";
@@ -42,6 +44,8 @@ export const PERMISSION_MATRIX: Record<Permission, readonly UserRole[]> = {
   "customers:export": ["ADMIN"],
   "content:manage": ["STAFF", "ADMIN"],
   "enquiries:manage": ["STAFF", "ADMIN"],
+  "customization:manage": ["STAFF", "ADMIN"],
+  "chat:manage": ["STAFF", "ADMIN"],
   "settings:manage": ["ADMIN"],
   "audit:read": ["ADMIN"],
   "exports:operational": ["STAFF", "ADMIN"],

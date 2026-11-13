@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { Package } from "lucide-react";
+import { Gem, Package } from "lucide-react";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
 import {
@@ -22,6 +23,54 @@ export const metadata: Metadata = {
   title: "My Orders",
 };
 
+function OrderThumbnailStrip({ order }: { order: CustomerOrderSummaryDTO }) {
+  const thumbs = order.itemThumbnails;
+  return (
+    <div className="flex items-center justify-end gap-2.5 md:justify-start">
+      <div className="flex shrink-0 -space-x-2">
+        {thumbs.length > 0 ? (
+          thumbs.map((thumb, idx) => {
+            const isSeedImage = thumb.imageUrl?.startsWith("/images/seed/") ?? false;
+            return (
+              <div
+                key={`${order.id}-thumb-${idx}`}
+                className="relative flex size-9 items-center justify-center overflow-hidden rounded-md border border-border bg-surface-2 ring-1 ring-card"
+              >
+                {thumb.imageUrl ? (
+                  <Image
+                    src={thumb.imageUrl}
+                    alt={thumb.title}
+                    fill
+                    sizes="36px"
+                    className={
+                      isSeedImage
+                        ? "object-cover object-center dark:brightness-90"
+                        : "object-cover object-center"
+                    }
+                  />
+                ) : (
+                  <Gem className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <div className="flex size-9 items-center justify-center rounded-md border border-border bg-surface-2">
+            <Gem className="size-3.5 text-muted-foreground" aria-hidden="true" />
+          </div>
+        )}
+      </div>
+      <span className="min-w-0 truncate text-sm text-foreground">
+        {order.firstItemTitle}
+        {order.itemCount > 1 ? ` + ${order.itemCount - 1} more` : ""}
+      </span>
+    </div>
+  );
+}
+
+// Signed-in page rendered per request; a blocking navigation is intended.
+export const instant = false;
+
 export default async function AccountOrdersPage({
   searchParams,
 }: {
@@ -38,7 +87,7 @@ export default async function AccountOrdersPage({
       cell: (row) => (
         <Link
           href={`/account/orders/${encodeURIComponent(row.orderNumber)}`}
-          className="font-medium text-foreground underline underline-offset-4 hover:text-accent-text"
+          className="tabular-nums-price font-semibold text-foreground underline underline-offset-4 hover:text-accent-text"
         >
           {row.orderNumber}
         </Link>
@@ -47,17 +96,16 @@ export default async function AccountOrdersPage({
     {
       key: "date",
       header: "Date",
-      cell: (row) => <span className="text-muted-foreground">{formatDate(row.createdAt)}</span>,
+      cell: (row) => (
+        <span className="tabular-nums-price text-muted-foreground">
+          {formatDate(row.createdAt)}
+        </span>
+      ),
     },
     {
       key: "summary",
       header: "Pieces",
-      cell: (row) => (
-        <span>
-          {row.firstItemTitle}
-          {row.itemCount > 1 ? ` + ${row.itemCount - 1} more` : ""}
-        </span>
-      ),
+      cell: (row) => <OrderThumbnailStrip order={row} />,
     },
     {
       key: "status",
@@ -72,9 +120,16 @@ export default async function AccountOrdersPage({
       header: "Total",
       className: "text-right",
       cell: (row) => (
-        <span className="font-medium tabular-nums-price">
-          {formatMoneyExact(row.total, row.currency)}
-        </span>
+        <div className="text-right">
+          <span className="tabular-nums-price font-semibold text-foreground">
+            {formatMoneyExact(row.total, row.currency, "en-US", row.currencyDecimals)}
+          </span>
+          {row.currency !== row.baseCurrency && (
+            <p className="tabular-nums-price text-[11px] text-muted-foreground">
+              {formatMoneyExact(row.baseTotal, row.baseCurrency, "en-US", 2)}
+            </p>
+          )}
+        </div>
       ),
     },
     {
@@ -83,8 +138,8 @@ export default async function AccountOrdersPage({
       hideOnMobileCard: true,
       className: "text-right",
       cell: (row) => (
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/account/orders/${encodeURIComponent(row.orderNumber)}`}>Inspect</Link>
+        <Button asChild variant="outline" size="sm" className="min-h-11 md:min-h-10">
+          <Link href={`/account/orders/${encodeURIComponent(row.orderNumber)}`}>View details</Link>
         </Button>
       ),
     },
@@ -93,8 +148,10 @@ export default async function AccountOrdersPage({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-2xl font-medium text-foreground">Commission History</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h2 className="text-2xl font-semibold tracking-[-0.015em] text-foreground">
+          Commission History
+        </h2>
+        <p className="tabular-nums-price mt-1 text-sm text-muted-foreground">
           {data.total} {data.total === 1 ? "order" : "orders"} recorded in your account.
         </p>
       </div>
@@ -107,7 +164,7 @@ export default async function AccountOrdersPage({
           <div className="flex items-center justify-between gap-2">
             <Link
               href={`/account/orders/${encodeURIComponent(row.orderNumber)}`}
-              className="font-display text-lg font-medium text-foreground underline underline-offset-4"
+              className="tabular-nums-price text-base font-semibold text-foreground underline underline-offset-4"
             >
               {row.orderNumber}
             </Link>
@@ -116,12 +173,19 @@ export default async function AccountOrdersPage({
             </Badge>
           </div>
         )}
+        mobileFooter={(row) => (
+          <Button asChild variant="outline" className="min-h-11 w-full">
+            <Link href={`/account/orders/${encodeURIComponent(row.orderNumber)}`}>
+              View details
+            </Link>
+          </Button>
+        )}
         emptyState={
           <EmptyState
             icon={Package}
             title="You have no orders yet"
             description="Your confirmed reservations, courier tracking numbers, and invoices will appear here."
-            actionLabel="Browse Collection"
+            actionLabel="Start shopping"
             actionHref="/collections"
           />
         }

@@ -10,6 +10,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { BRAND_PALETTE } from "@/lib/brand-palette";
 
 interface EmailLayoutProps {
   siteName: string;
@@ -21,15 +22,15 @@ interface EmailLayoutProps {
 
 const STYLES = {
   body: {
-    backgroundColor: "#FAF7F2",
-    color: "#221E1A",
+    backgroundColor: BRAND_PALETTE.light.bg,
+    color: BRAND_PALETTE.light.text,
     fontFamily: "Georgia, 'Times New Roman', serif",
     margin: "0",
     padding: "32px 16px",
   },
   container: {
-    backgroundColor: "#FFFFFF",
-    border: "1px solid #E5DCCB",
+    backgroundColor: BRAND_PALETTE.light.surface,
+    border: `1px solid ${BRAND_PALETTE.light.border}`,
     borderRadius: "4px",
     margin: "0 auto",
     maxWidth: "580px",
@@ -39,7 +40,7 @@ const STYLES = {
     fontSize: "13px",
     letterSpacing: "0.22em",
     textTransform: "uppercase" as const,
-    color: "#8C6D3F",
+    color: BRAND_PALETTE.light.accentText,
     margin: "0 0 12px 0",
     fontFamily: "Helvetica, Arial, sans-serif",
   },
@@ -47,17 +48,17 @@ const STYLES = {
     fontSize: "26px",
     lineHeight: "1.25",
     fontWeight: "500",
-    color: "#221E1A",
+    color: BRAND_PALETTE.light.text,
     margin: "0 0 20px 0",
   },
   hr: {
-    borderColor: "#E5DCCB",
+    borderColor: BRAND_PALETTE.light.border,
     margin: "28px 0 20px 0",
   },
   footer: {
     fontSize: "12px",
     lineHeight: "1.6",
-    color: "#73685A",
+    color: BRAND_PALETTE.light.textMuted,
     fontFamily: "Helvetica, Arial, sans-serif",
     margin: "0",
   },
@@ -85,7 +86,7 @@ export function EmailLayout({
           <Section>
             <Text style={STYLES.footer}>
               {siteName} Private Concierge &bull; Need assistance? Reply to{" "}
-              <a href={`mailto:${contactEmail}`} style={{ color: "#8C6D3F" }}>
+              <a href={`mailto:${contactEmail}`} style={{ color: BRAND_PALETTE.light.accentText }}>
                 {contactEmail}
               </a>
             </Text>
@@ -97,8 +98,8 @@ export function EmailLayout({
 }
 
 export const EMAIL_BUTTON_STYLE = {
-  backgroundColor: "#221E1A",
-  color: "#FAF7F2",
+  backgroundColor: BRAND_PALETTE.light.primary,
+  color: BRAND_PALETTE.light.onPrimary,
   borderRadius: "4px",
   fontSize: "13px",
   letterSpacing: "0.08em",
@@ -113,7 +114,7 @@ export const EMAIL_BUTTON_STYLE = {
 export const EMAIL_PARAGRAPH_STYLE = {
   fontSize: "15px",
   lineHeight: "1.65",
-  color: "#3B352E",
+  color: BRAND_PALETTE.light.text2,
   fontFamily: "Helvetica, Arial, sans-serif",
   margin: "0 0 16px 0",
 };

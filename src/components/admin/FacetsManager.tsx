@@ -186,6 +186,7 @@ export function FacetsManager({
   const columns: ResponsiveColumn<AdminFacetDTO>[] = [
     {
       key: "name",
+      hideOnMobileCard: true,
       header: "Attribute",
       cell: (f) => (
         <div>

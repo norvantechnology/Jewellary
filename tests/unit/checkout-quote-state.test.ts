@@ -6,6 +6,7 @@ import type { PublicStoreSettings, ShippingZoneDTO } from "@/modules/settings/se
 
 const mockSettings: PublicStoreSettings = {
   storeName: "Maison Aurelia",
+  legalName: null,
   tagline: null,
   contactEmail: "concierge@example.com",
   contactPhone: null,
@@ -26,9 +27,12 @@ const mockSettings: PublicStoreSettings = {
   socialLinks: [],
   physicalStore: null,
   allowAiCrawlers: true,
+  requireAdminTwoFactor: false,
   seoDefaultTitlePattern: null,
   seoDefaultDescription: null,
   defaultOgImageUrl: null,
+  seoTemplates: null,
+  seoSettings: null,
 };
 
 const mockZones: ShippingZoneDTO[] = [

@@ -1,25 +1,26 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { Toaster as Sonner } from "sonner";
 
 export function Toaster() {
-  const { resolvedTheme } = useTheme();
-
   return (
     <Sonner
-      theme={resolvedTheme === "dark" ? "dark" : "light"}
       position="bottom-right"
+      duration={4000}
+      visibleToasts={3}
+      closeButton={false}
+      style={{ zIndex: "var(--z-toast)" } as React.CSSProperties}
       toastOptions={{
         classNames: {
           toast:
-            "bg-card text-card-foreground border border-border shadow-soft rounded-md font-sans",
-          description: "text-muted-foreground",
-          actionButton: "bg-primary text-primary-foreground",
-          cancelButton: "bg-secondary text-secondary-foreground",
-          error: "border-destructive/40 text-destructive",
-          success: "border-success/40 text-success",
-          warning: "border-warning/40 text-warning",
+            "!rounded-lg !border !border-border !bg-surface !text-text !shadow-md !px-4 !py-3 !text-sm !items-center !gap-2.5",
+          title: "!text-sm !font-medium !leading-snug",
+          description: "!text-xs !text-text-muted",
+          success: "!border-success/40",
+          error: "!border-danger/45",
+          actionButton:
+            "!bg-primary !text-on-primary !rounded-md !text-xs !font-medium !px-2.5 !py-1",
+          cancelButton: "!bg-surface-3 !text-text !rounded-md !text-xs !px-2.5 !py-1",
         },
       }}
     />

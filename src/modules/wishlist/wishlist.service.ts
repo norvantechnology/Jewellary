@@ -1,4 +1,6 @@
 import "server-only";
+import { cache } from "react";
+import type { PublicCardVariantOptionDTO } from "@/modules/catalog/catalog.public";
 import { db } from "@/server/db";
 import { getOptionalSession } from "@/server/dal";
 import { ConflictError, NotFoundError } from "@/server/errors";
@@ -12,6 +14,8 @@ export interface WishlistItemDTO {
   productId: string;
   productName: string;
   productSlug: string;
+  categoryName: string;
+  hasSizing: boolean;
   priceMode: "FIXED" | "PRICE_ON_REQUEST";
   price: string;
   compareAtPrice: string | null;
@@ -21,6 +25,7 @@ export interface WishlistItemDTO {
   metalType: string | null;
   caratTotal: string | null;
   addedAt: string;
+  variants: PublicCardVariantOptionDTO[];
 }
 
 export interface WishlistStateDTO {
@@ -63,8 +68,29 @@ async function findWishlistWithItems(owner: WishlistOwner) {
                   priceMode: true,
                   basePrice: true,
                   compareAtPrice: true,
+                  hasSizing: true,
                   metalType: true,
                   caratTotal: true,
+                  category: {
+                    select: { name: true },
+                  },
+                  variants: {
+                    where: { isActive: true },
+                    orderBy: [{ isDefault: "desc" }, { sortOrder: "asc" }],
+                    select: {
+                      id: true,
+                      sku: true,
+                      title: true,
+                      size: true,
+                      metal: true,
+                      stoneSpec: true,
+                      priceOverride: true,
+                      compareAtOverride: true,
+                      stockQty: true,
+                      reservedQty: true,
+                      isDefault: true,
+                    },
+                  },
                   images: {
                     orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
                     take: 1,
@@ -110,6 +136,8 @@ function mapWishlistRowsToState(
       productId: p.id,
       productName: p.name,
       productSlug: p.slug,
+      categoryName: p.category?.name ?? "Fine Jewellery",
+      hasSizing: p.hasSizing,
       priceMode: p.priceMode,
       price,
       compareAtPrice: compareAt,
@@ -119,6 +147,18 @@ function mapWishlistRowsToState(
       metalType: p.metalType,
       caratTotal: p.caratTotal?.toString() ?? null,
       addedAt: row.createdAt.toISOString(),
+      variants: p.variants.map((v) => ({
+        id: v.id,
+        sku: v.sku,
+        title: v.title,
+        size: v.size,
+        metal: v.metal,
+        stoneSpec: v.stoneSpec,
+        price: (v.priceOverride ?? p.basePrice).toString(),
+        compareAtPrice: (v.compareAtOverride ?? p.compareAtPrice)?.toString() ?? null,
+        availableStock: Math.max(0, v.stockQty - v.reservedQty),
+        isDefault: v.isDefault,
+      })),
     });
   }
 
@@ -138,6 +178,11 @@ export async function mergeGuestWishlistToUser(
   userId: string,
 ): Promise<number> {
   if (!guestToken || !userId) return 0;
+
+  // Fast path: this runs on page renders for signed-in visitors that still carry a guest cookie.
+  // Only open a transaction when there is actually a guest wishlist to merge.
+  const pending = await db.wishlist.findUnique({ where: { guestToken }, select: { id: true } });
+  if (!pending) return 0;
 
   return db.$transaction(async (tx) => {
     const guestWishlist = await tx.wishlist.findUnique({
@@ -276,8 +321,10 @@ export async function removeWishlistForOwner(
 export async function resolveCurrentWishlistOwner(createGuestIfMissing = false): Promise<{
   owner: WishlistOwner | null;
 }> {
-  const session = await getOptionalSession();
-  const guestToken = await readGuestTokenFromCookies();
+  const [session, guestToken] = await Promise.all([
+    getOptionalSession(),
+    readGuestTokenFromCookies(),
+  ]);
 
   if (session?.user) {
     if (guestToken) {
@@ -298,10 +345,10 @@ export async function resolveCurrentWishlistOwner(createGuestIfMissing = false):
   return { owner: null };
 }
 
-export async function getCurrentWishlistState(): Promise<WishlistStateDTO> {
+export const getCurrentWishlistState = cache(async (): Promise<WishlistStateDTO> => {
   const { owner } = await resolveCurrentWishlistOwner(false);
   if (!owner) {
     return { count: 0, variantIds: [], items: [] };
   }
   return getWishlistForOwner(owner);
-}
+});

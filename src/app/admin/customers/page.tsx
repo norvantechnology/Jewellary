@@ -28,6 +28,9 @@ export const metadata: Metadata = {
 
 const ROLE_OPTIONS: Array<UserRole | "ALL"> = ["ALL", "CUSTOMER", "STAFF", "ADMIN"];
 
+// Rendered per request (signed-in / URL-driven); a blocking navigation is intended.
+export const instant = false;
+
 export default async function AdminCustomersPage({
   searchParams,
 }: {
@@ -46,6 +49,7 @@ export default async function AdminCustomersPage({
   const columns: ResponsiveColumn<AdminCustomerListItemDTO>[] = [
     {
       key: "name",
+      hideOnMobileCard: true,
       header: "Client",
       cell: (row) => (
         <div>
@@ -81,7 +85,7 @@ export default async function AdminCustomersPage({
       header: "Lifetime Spend",
       className: "text-right",
       cell: (row) => (
-        <span className="font-medium tabular-nums-price">
+        <span className="tabular-nums-price font-medium">
           {formatMoneyExact(row.lifetimeSpend, row.currency)}
         </span>
       ),

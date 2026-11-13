@@ -3,10 +3,10 @@
 import * as React from "react";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe, type Appearance } from "@stripe/stripe-js";
-import { Lock } from "lucide-react";
+import { AlertCircle, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { formatMoneyExact } from "@/lib/money";
+import { formatMoneyExact, getCurrencyExponent } from "@/lib/money";
 
 interface StripePaymentFormProps {
   orderNumber: string;
@@ -37,7 +37,11 @@ function StripePaymentForm({ orderNumber, guestToken, total, currency }: StripeP
     });
 
     if (result.error) {
-      const msg = result.error.message ?? "Payment authorization failed.";
+      // A voided session (reservation expired) must read as "not charged", not as a card problem.
+      const msg =
+        result.error.code === "payment_intent_unexpected_state"
+          ? "This payment session has expired and you have not been charged. Please refresh to start a new checkout."
+          : (result.error.message ?? "Payment authorization failed.");
       setErrorMessage(msg);
       toast.error(msg);
       setSubmitting(false);
@@ -45,17 +49,27 @@ function StripePaymentForm({ orderNumber, guestToken, total, currency }: StripeP
   }
 
   return (
-    <form onSubmit={handleConfirm} className="space-y-4">
-      <PaymentElement />
+    <form onSubmit={handleConfirm} className="w-full min-w-0 space-y-4">
+      <div className="w-full min-w-0 overflow-hidden">
+        <PaymentElement />
+      </div>
       {errorMessage && (
-        <p role="alert" className="text-xs font-medium text-destructive">
-          {errorMessage}
+        <p role="alert" className="flex items-start gap-1.5 text-xs font-medium text-destructive">
+          <AlertCircle className="mt-0.5 size-4 shrink-0 stroke-[1.5]" aria-hidden="true" />
+          <span>{errorMessage}</span>
         </p>
       )}
-      <Button type="submit" size="lg" className="w-full" disabled={!stripe || submitting}>
+      <Button
+        type="submit"
+        size="lg"
+        className="min-h-12 w-full md:min-h-11"
+        disabled={!stripe || submitting}
+      >
         <Lock className="size-4" aria-hidden="true" />
         <span>
-          {submitting ? "Authorizing Payment…" : `Authorize ${formatMoneyExact(total, currency)}`}
+          {submitting
+            ? "Authorizing Payment…"
+            : `Authorize ${formatMoneyExact(total, currency, "en-US", getCurrencyExponent(currency))}`}
         </span>
       </Button>
     </form>
@@ -65,8 +79,8 @@ function StripePaymentForm({ orderNumber, guestToken, total, currency }: StripeP
 const DEFAULT_APPEARANCE_JSON = JSON.stringify({
   theme: "flat",
   variables: {
-    fontFamily: "var(--font-jost), system-ui, sans-serif",
-    borderRadius: "4px",
+    fontFamily: "Jost, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    borderRadius: "8px",
   },
 } satisfies Appearance);
 
@@ -91,8 +105,8 @@ function getAppearanceSnapshot(): string {
       colorText: readVar("--foreground"),
       colorTextSecondary: readVar("--muted-foreground"),
       colorDanger: readVar("--destructive"),
-      fontFamily: "var(--font-jost), system-ui, sans-serif",
-      borderRadius: "4px",
+      fontFamily: "Jost, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      borderRadius: "8px",
     },
   } satisfies Appearance);
 }

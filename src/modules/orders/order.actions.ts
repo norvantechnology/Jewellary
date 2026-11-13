@@ -2,6 +2,10 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getCurrentCartSummary } from "@/modules/cart/cart.service";
+import {
+  getServerRequestCurrency,
+  resolveActiveCurrencyByCode,
+} from "@/modules/currencies/currency.service";
 import { calculateCheckoutQuote } from "@/modules/orders/checkout-quote";
 import {
   confirmSandboxPaymentSchema,
@@ -35,11 +39,12 @@ export const quoteCheckoutAction = createAction(
     schema: quoteCheckoutSchema,
     auth: "public",
   },
-  async ({ shippingCountry, shippingZoneId }) => {
-    const [cart, settings, zones] = await Promise.all([
+  async ({ shippingCountry, shippingZoneId, currency }) => {
+    const [cart, settings, zones, resolvedCurr] = await Promise.all([
       getCurrentCartSummary(),
       getPublicStoreSettings(),
       getAllShippingZones(true),
+      currency ? resolveActiveCurrencyByCode(currency) : getServerRequestCurrency(),
     ]);
 
     const result = calculateCheckoutQuote({
@@ -48,6 +53,7 @@ export const quoteCheckoutAction = createAction(
       shippingZoneId,
       zones,
       settings,
+      targetCurrency: resolvedCurr.currency,
     });
 
     if (!result.ok) {

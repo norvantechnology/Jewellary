@@ -1,6 +1,34 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { Pool } from "pg";
 import sharp from "sharp";
+
+// Remove the throw-away categories this suite creates so they never reach the storefront.
+test.afterAll(async () => {
+  try {
+    process.loadEnvFile?.();
+  } catch {
+    // .env may be absent in CI
+  }
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) return;
+  const pool = new Pool({ connectionString: dbUrl });
+  try {
+    await pool
+      .query(
+        `UPDATE "Product" SET "categoryId" = NULL WHERE "categoryId" IN (SELECT id FROM "Category" WHERE name LIKE 'Atelier Capsule %')`,
+      )
+      .catch(() => undefined);
+    await pool.query(
+      `UPDATE "Category" SET "isActive" = false WHERE name LIKE 'Atelier Capsule %'`,
+    );
+    await pool.query(
+      `DELETE FROM "Category" c WHERE c.name LIKE 'Atelier Capsule %' AND NOT EXISTS (SELECT 1 FROM "Product" p WHERE p."categoryId" = c.id)`,
+    );
+  } finally {
+    await pool.end();
+  }
+});
 
 async function loginAs(page: import("@playwright/test").Page, email: string, password: string) {
   await page.goto("/login?next=/admin");

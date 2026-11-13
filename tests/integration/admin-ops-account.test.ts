@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { deleteTestOrders } from "../helpers/cleanup";
 import { createId } from "@paralleldrive/cuid2";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -25,6 +26,7 @@ import { buildSignedSandboxStripeWebhook } from "@/modules/payments/stripe.adapt
 import { processVerifiedWebhookEvent } from "@/modules/orders/order.service";
 import { getPaymentProvider } from "@/modules/payments";
 import type { AuthenticatedContext } from "@/server/dal";
+import { createAbuseFormToken } from "@/server/abuse";
 import { db } from "@/server/db";
 import { clearEmailOutbox, getEmailOutbox } from "@/server/email/client";
 import { ConflictError, ForbiddenError, NotFoundError } from "@/server/errors";
@@ -42,6 +44,7 @@ function makeActor(user: {
       name: user.name,
       role: user.role,
       emailVerified: true,
+      twoFactorEnabled: false,
       phone: null,
     },
     sessionId: `sess_${createId().slice(0, 8)}`,
@@ -75,7 +78,7 @@ describe("Phase 6 Integration — Admin Operations, RBAC, Guest Tracking & GDPR 
     if (createdOrderIds.length > 0) {
       await db.auditLog.deleteMany({ where: { entityId: { in: createdOrderIds } } });
       await db.inventoryTransaction.deleteMany({ where: { referenceId: { in: createdOrderIds } } });
-      await db.order.deleteMany({ where: { id: { in: createdOrderIds } } });
+      await deleteTestOrders(createdOrderIds);
     }
     if (createdWebhookIds.length > 0) {
       await db.webhookEvent.deleteMany({ where: { eventId: { in: createdWebhookIds } } });
@@ -316,17 +319,25 @@ describe("Phase 6 Integration — Admin Operations, RBAC, Guest Tracking & GDPR 
     const auditFeed = await listAuditLogs({ entityType: "Order", action: "order.refund" });
     expect(auditFeed.logs.some((log) => log.entityId === orderId)).toBe(true);
 
+    const timingToken = createAbuseFormToken(Date.now() - 5000);
+
     // Guest lookup verifies case-insensitive orderNumber + rejects wrong email with generic error
     await expect(
       verifyGuestOrderLookup({
         orderNumber: orderNumber.toLowerCase(),
         email: "wrong@example.com",
+        website: "",
+        timingToken,
+        turnstileToken: "",
       }),
     ).rejects.toBeInstanceOf(NotFoundError);
 
     const trackFound = await verifyGuestOrderLookup({
       orderNumber: orderNumber.toLowerCase(),
       email: customer.email.toUpperCase(),
+      website: "",
+      timingToken,
+      turnstileToken: "",
     });
     expect(trackFound.order.orderNumber).toBe(orderNumber);
     expect(trackFound.order.carrier).toBe("Malca-Amit");
@@ -400,6 +411,8 @@ describe("Phase 6 Integration — Admin Operations, RBAC, Guest Tracking & GDPR 
         message: "Seeking emerald-cut platinum solitaire consultation.",
         productId: null,
         website: "",
+        timingToken: createAbuseFormToken(Date.now() - 5000),
+        turnstileToken: "",
       },
       customer.id,
     );

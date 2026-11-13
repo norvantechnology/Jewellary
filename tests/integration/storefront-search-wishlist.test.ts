@@ -20,6 +20,7 @@ import {
   mergeGuestWishlistToUser,
   toggleWishlistForOwner,
 } from "@/modules/wishlist/wishlist.service";
+import { createAbuseFormToken } from "@/server/abuse";
 import { clearEmailOutbox, getEmailOutbox } from "@/server/email/client";
 import { ConflictError, ValidationError } from "@/server/errors";
 import { buildSignedGuestCookieValue, verifySignedGuestCookieValue } from "@/server/guest-token";
@@ -246,6 +247,8 @@ describe("Phase 4 Integration — Storefront Discovery, FTS/Trigram Search, Wish
       message: "Looking for a bespoke radiant cut 2.0ct solitaire in platinum.",
       productId: null,
       website: "",
+      timingToken: createAbuseFormToken(Date.now() - 5000),
+      turnstileToken: "",
     });
     createdEnquiryIds.push(submitted.id);
 

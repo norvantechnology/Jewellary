@@ -7,6 +7,7 @@ import {
   getSitemapCategories,
   getSitemapProducts,
 } from "@/modules/catalog/catalog.public";
+import { listAllStaticPageSeos, listSitemapLandingFacets } from "@/modules/seo/seo.service";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
 const PRODUCTS_PER_SITEMAP = 50000;
@@ -18,6 +19,7 @@ export async function generateSitemaps() {
   const segments: Array<{ id: string }> = [
     { id: "static" },
     { id: "categories" },
+    { id: "landing-facets" },
     ...Array.from({ length: productChunks }, (_, idx) => ({
       id: idx === 0 ? "products" : `products-${idx}`,
     })),
@@ -35,6 +37,7 @@ export default async function sitemap(props: {
   if (id === "static") {
     const [
       settings,
+      staticOverrides,
       aboutMtime,
       faqMtime,
       shippingMtime,
@@ -44,6 +47,7 @@ export default async function sitemap(props: {
       termsMtime,
     ] = await Promise.all([
       getPublicStoreSettings(),
+      listAllStaticPageSeos().catch(() => []),
       getEditorialLastModified("about"),
       getEditorialLastModified("faq"),
       getEditorialLastModified("shipping-returns"),
@@ -53,21 +57,29 @@ export default async function sitemap(props: {
       getEditorialLastModified("terms"),
     ]);
 
+    const noindexSet = new Set(staticOverrides.filter((s) => s.noindex).map((s) => s.slug));
     const siteUpdated = new Date(settings.updatedAt ?? aboutMtime);
 
-    return [
-      { url: toAbsoluteUrl("/"), lastModified: siteUpdated },
-      { url: toAbsoluteUrl("/collections"), lastModified: siteUpdated },
-      { url: toAbsoluteUrl("/guides"), lastModified: siteUpdated },
-      { url: toAbsoluteUrl("/contact"), lastModified: siteUpdated },
-      { url: toAbsoluteUrl("/about"), lastModified: new Date(aboutMtime) },
-      { url: toAbsoluteUrl("/faq"), lastModified: new Date(faqMtime) },
-      { url: toAbsoluteUrl("/shipping-returns"), lastModified: new Date(shippingMtime) },
-      { url: toAbsoluteUrl("/ring-size-guide"), lastModified: new Date(ringSizeMtime) },
-      { url: toAbsoluteUrl("/care-guide"), lastModified: new Date(careMtime) },
-      { url: toAbsoluteUrl("/privacy"), lastModified: new Date(privacyMtime) },
-      { url: toAbsoluteUrl("/terms"), lastModified: new Date(termsMtime) },
+    const staticCandidates = [
+      { slug: "/", lastModified: siteUpdated },
+      { slug: "/collections", lastModified: siteUpdated },
+      { slug: "/guides", lastModified: siteUpdated },
+      { slug: "/contact", lastModified: siteUpdated },
+      { slug: "/about", lastModified: new Date(aboutMtime) },
+      { slug: "/faq", lastModified: new Date(faqMtime) },
+      { slug: "/shipping-returns", lastModified: new Date(shippingMtime) },
+      { slug: "/ring-size-guide", lastModified: new Date(ringSizeMtime) },
+      { slug: "/care-guide", lastModified: new Date(careMtime) },
+      { slug: "/privacy", lastModified: new Date(privacyMtime) },
+      { slug: "/terms", lastModified: new Date(termsMtime) },
     ];
+
+    return staticCandidates
+      .filter((entry) => !noindexSet.has(entry.slug))
+      .map((entry) => ({
+        url: toAbsoluteUrl(entry.slug),
+        lastModified: entry.lastModified,
+      }));
   }
 
   if (id === "categories") {
@@ -76,6 +88,14 @@ export default async function sitemap(props: {
       url: toAbsoluteUrl(`/collections/${cat.path}`),
       lastModified: cat.updatedAt,
       ...(cat.imageUrl ? { images: [toAbsoluteUrl(cat.imageUrl)] } : {}),
+    }));
+  }
+
+  if (id === "landing-facets") {
+    const facets = await listSitemapLandingFacets();
+    return facets.map((facet) => ({
+      url: toAbsoluteUrl(`/collections/${facet.categoryPath}/${facet.facetSlug}`),
+      lastModified: facet.updatedAt,
     }));
   }
 
@@ -97,11 +117,13 @@ export default async function sitemap(props: {
 
   if (id === "guides") {
     const articles = await getPublishedArticles();
-    return articles.map((article) => ({
-      url: toAbsoluteUrl(`/guides/${article.slug}`),
-      lastModified: new Date(article.updatedAt),
-      ...(article.coverImageUrl ? { images: [toAbsoluteUrl(article.coverImageUrl)] } : {}),
-    }));
+    return articles
+      .filter((article) => !article.noindex)
+      .map((article) => ({
+        url: toAbsoluteUrl(`/guides/${article.slug}`),
+        lastModified: new Date(article.updatedAt),
+        ...(article.coverImageUrl ? { images: [toAbsoluteUrl(article.coverImageUrl)] } : {}),
+      }));
   }
 
   return [];

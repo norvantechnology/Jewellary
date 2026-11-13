@@ -9,6 +9,7 @@ export const addToCartSchema = z
 
 export const updateCartItemSchema = z
   .object({
+    cartItemId: z.string().trim().min(4).max(64).optional(),
     variantId: z.string().trim().min(4).max(64),
     quantity: z.coerce.number().int().min(0).max(10),
   })
@@ -16,12 +17,14 @@ export const updateCartItemSchema = z
 
 export const removeCartItemSchema = z
   .object({
+    cartItemId: z.string().trim().min(4).max(64).optional(),
     variantId: z.string().trim().min(4).max(64),
   })
   .strict();
 
 export const saveForLaterSchema = z
   .object({
+    cartItemId: z.string().trim().min(4).max(64).optional(),
     variantId: z.string().trim().min(4).max(64),
   })
   .strict();
@@ -34,6 +37,13 @@ export const estimateCartSchema = z
       .toUpperCase()
       .regex(/^[A-Z]{2}$/, "Valid destination country code required."),
     shippingZoneId: z.string().trim().min(2).max(64).optional().nullable(),
+    currency: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z]{3}$/)
+      .optional()
+      .nullable(),
   })
   .strict();
 

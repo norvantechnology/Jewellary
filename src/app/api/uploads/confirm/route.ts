@@ -10,6 +10,16 @@ const confirmUploadSchema = z
     tempKey: z.string().min(1),
     folder: z.enum(["products", "categories", "banners", "articles", "store"]),
     mode: z.enum(["s3", "local"]),
+    seo: z
+      .object({
+        slug: z.string().max(160).optional(),
+        productName: z.string().max(160).optional(),
+        metal: z.string().max(60).optional(),
+        carat: z.string().max(24).optional(),
+        viewType: z.string().max(30).optional(),
+        copyrightNotice: z.string().max(200).optional(),
+      })
+      .optional(),
   })
   .strict();
 

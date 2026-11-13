@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   title: "Customer Profile",
 };
 
+// Rendered per request (signed-in / URL-driven); a blocking navigation is intended.
+export const instant = false;
+
 export default async function AdminCustomerDetailPage({
   params,
 }: {

@@ -10,13 +10,27 @@ async function handlePublishAndCleanup(request: Request) {
 
   const now = new Date();
 
-  const dueArticles = await db.article.findMany({
-    where: {
-      isPublished: false,
-      publishedAt: { lte: now },
-    },
-    select: { id: true, slug: true },
-  });
+  const [dueArticles, deletedExpiredCarts, scheduledBannerCount] = await Promise.all([
+    db.article.findMany({
+      where: {
+        isPublished: false,
+        publishedAt: { lte: now },
+      },
+      select: { id: true, slug: true },
+    }),
+    db.cart.deleteMany({
+      where: {
+        userId: null,
+        expiresAt: { lte: now },
+      },
+    }),
+    db.banner.count({
+      where: {
+        isActive: true,
+        OR: [{ startsAt: { not: null } }, { endsAt: { not: null } }],
+      },
+    }),
+  ]);
 
   if (dueArticles.length > 0) {
     await db.article.updateMany({
@@ -29,14 +43,9 @@ async function handlePublishAndCleanup(request: Request) {
     }
   }
 
-  const deletedExpiredCarts = await db.cart.deleteMany({
-    where: {
-      userId: null,
-      expiresAt: { lte: now },
-    },
-  });
-
-  revalidateTag(CACHE_TAGS.banners, "max");
+  if (scheduledBannerCount > 0) {
+    revalidateTag(CACHE_TAGS.banners, "max");
+  }
 
   return NextResponse.json({
     ok: true,

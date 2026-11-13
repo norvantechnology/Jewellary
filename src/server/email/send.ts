@@ -3,6 +3,7 @@ import type * as React from "react";
 import { render } from "@react-email/render";
 import { EnquiryNotificationEmail } from "@/emails/EnquiryNotificationEmail";
 import { EnquiryReplyEmail } from "@/emails/EnquiryReplyEmail";
+import { NewsletterConfirmEmail } from "@/emails/NewsletterConfirmEmail";
 import {
   OrderConfirmationEmail,
   type OrderConfirmationLine,
@@ -142,6 +143,29 @@ export async function sendOrderStatusEmail(input: {
   });
 }
 
+/** Operational alert to the store team for payments that need attention (late capture, mismatch). */
+export async function sendPaymentAlertEmail(input: {
+  orderId: string;
+  orderNumber: string;
+  title: string;
+  message: string;
+}) {
+  return sendTemplate({
+    to: env.ADMIN_NOTIFY_EMAIL,
+    subject: `[Payment alert] ${input.orderNumber}: ${input.title}`,
+    tag: "payment-alert",
+    element: OrderStatusEmail({
+      siteName: env.NEXT_PUBLIC_SITE_NAME,
+      recipientName: "Atelier team",
+      orderNumber: input.orderNumber,
+      statusLabel: input.title,
+      message: input.message,
+      orderUrl: `${env.NEXT_PUBLIC_SITE_URL}/admin/orders/${input.orderId}`,
+      contactEmail: env.EMAIL_FROM,
+    }),
+  });
+}
+
 export async function sendEnquiryNotificationEmails(input: {
   customerName: string;
   customerEmail: string;
@@ -201,6 +225,24 @@ export async function sendEnquiryReplyEmail(input: {
       enquiryType: input.enquiryType,
       replyMessage: input.replyMessage,
       productName: input.productName,
+      contactEmail: env.EMAIL_FROM,
+    }),
+  });
+}
+
+export async function sendNewsletterConfirmationEmail(input: {
+  to: string;
+  confirmUrl: string;
+  unsubscribeUrl: string;
+}) {
+  return sendTemplate({
+    to: input.to,
+    subject: `Confirm your subscription — ${env.NEXT_PUBLIC_SITE_NAME}`,
+    tag: "newsletter-confirm",
+    element: NewsletterConfirmEmail({
+      siteName: env.NEXT_PUBLIC_SITE_NAME,
+      confirmUrl: input.confirmUrl,
+      unsubscribeUrl: input.unsubscribeUrl,
       contactEmail: env.EMAIL_FROM,
     }),
   });

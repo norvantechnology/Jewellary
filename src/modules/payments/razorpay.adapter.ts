@@ -16,6 +16,8 @@ import { PaymentError, ValidationError } from "@/server/errors";
 
 export class RazorpayPaymentAdapter implements PaymentProviderAdapter {
   readonly provider = "RAZORPAY" as const;
+  private client: Razorpay | null = null;
+  private clientCredKey: string | null = null;
 
   get isSandbox(): boolean {
     return env.PAYMENT_TEST_SANDBOX === "true" || !env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET;
@@ -25,10 +27,15 @@ export class RazorpayPaymentAdapter implements PaymentProviderAdapter {
     if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) {
       throw new PaymentError("Razorpay API credentials are not configured.");
     }
-    return new Razorpay({
-      key_id: env.RAZORPAY_KEY_ID,
-      key_secret: env.RAZORPAY_KEY_SECRET,
-    });
+    const credKey = `${env.RAZORPAY_KEY_ID}:${env.RAZORPAY_KEY_SECRET}`;
+    if (!this.client || this.clientCredKey !== credKey) {
+      this.clientCredKey = credKey;
+      this.client = new Razorpay({
+        key_id: env.RAZORPAY_KEY_ID,
+        key_secret: env.RAZORPAY_KEY_SECRET,
+      });
+    }
+    return this.client;
   }
 
   private getWebhookSecret(): string {
@@ -116,13 +123,26 @@ export class RazorpayPaymentAdapter implements PaymentProviderAdapter {
         ? parsed.event_id
         : crypto.createHash("sha256").update(rawBody).digest("hex");
 
+    const refundEntity = ((payloadObj.refund as Record<string, unknown> | undefined)?.entity ??
+      {}) as Record<string, unknown>;
+
     let status: VerifiedWebhookEvent["status"] = "ignored";
+    let amountMinor: number | null = null;
+    let refundAmountMode: VerifiedWebhookEvent["refundAmountMode"] = null;
+    let currency: string | null =
+      typeof paymentEntity.currency === "string" ? paymentEntity.currency.toUpperCase() : null;
+
     if (eventType === "payment.captured" || eventType === "order.paid") {
       status = "succeeded";
+      amountMinor = typeof paymentEntity.amount === "number" ? paymentEntity.amount : null;
     } else if (eventType === "payment.failed") {
       status = "failed";
     } else if (eventType === "refund.processed") {
       status = "refunded";
+      // Each refund.processed event carries only that refund's amount.
+      amountMinor = typeof refundEntity.amount === "number" ? refundEntity.amount : null;
+      if (typeof refundEntity.currency === "string") currency = refundEntity.currency.toUpperCase();
+      refundAmountMode = "incremental";
     }
 
     return {
@@ -138,6 +158,9 @@ export class RazorpayPaymentAdapter implements PaymentProviderAdapter {
         typeof paymentEntity.error_description === "string"
           ? paymentEntity.error_description
           : null,
+      amountMinor,
+      currency,
+      refundAmountMode,
       rawPayload: parsed,
     };
   }
@@ -167,6 +190,18 @@ export class RazorpayPaymentAdapter implements PaymentProviderAdapter {
       rawResponse: { id: refund.id, status: refund.status },
     };
   }
+
+  /**
+   * Razorpay orders cannot be voided; an unpaid order simply expires. A late capture is caught by
+   * the webhook handler, which auto-refunds payments on cancelled orders.
+   */
+  async cancelPaymentIntent(_providerIntentId: string): Promise<boolean> {
+    return true;
+  }
+
+  async getClientSecret(_providerIntentId: string): Promise<string | null> {
+    return null;
+  }
 }
 
 export function buildSignedSandboxRazorpayWebhook(params: {
@@ -175,6 +210,8 @@ export function buildSignedSandboxRazorpayWebhook(params: {
   orderId: string;
   orderNumber: string;
   failureMessage?: string;
+  amountMinor?: number;
+  currency?: string;
 }): { rawBody: string; signatureHeader: string } {
   const secret = env.RAZORPAY_WEBHOOK_SECRET ?? env.BETTER_AUTH_SECRET;
   const rawBody = JSON.stringify({
@@ -186,6 +223,8 @@ export function buildSignedSandboxRazorpayWebhook(params: {
           id: `pay_sandbox_${createId()}`,
           order_id: params.razorpayOrderId,
           error_description: params.failureMessage ?? null,
+          ...(params.amountMinor !== undefined ? { amount: params.amountMinor } : {}),
+          ...(params.currency ? { currency: params.currency.toUpperCase() } : {}),
           notes: {
             orderId: params.orderId,
             orderNumber: params.orderNumber,

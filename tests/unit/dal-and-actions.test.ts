@@ -65,6 +65,9 @@ vi.mock("@/server/db", () => ({
     user: {
       findUnique: hoisted.findUser,
     },
+    storeSetting: {
+      findUnique: vi.fn().mockResolvedValue({ requireAdminTwoFactor: false }),
+    },
   },
 }));
 
@@ -92,7 +95,7 @@ import { clearMemoryRateLimits, getClientIp, getClientUserAgent } from "@/server
 describe("DAL, guest cookies, request headers, and createAction coverage", () => {
   beforeEach(() => {
     hoisted.cookieStore.clear();
-    hoisted.setHeaders({});
+    hoisted.setHeaders({ cookie: "better-auth.session_token=test" });
     hoisted.getSession.mockReset();
     hoisted.findUser.mockReset();
     hoisted.writeAuditLog.mockReset();

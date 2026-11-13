@@ -81,6 +81,13 @@ describe("Auth, RBAC, Rate Limiting, Email Outbox & Audit Log", () => {
       true,
     );
 
+    // Unverified accounts cannot sign in.
+    await expect(
+      auth.api.signInEmail({ body: { email: testEmail, password: "LuxuryPassword123!" } }),
+    ).rejects.toThrow(/not verified/i);
+
+    await db.user.update({ where: { id: signUp.user.id }, data: { emailVerified: true } });
+
     const signIn = await auth.api.signInEmail({
       body: {
         email: testEmail,

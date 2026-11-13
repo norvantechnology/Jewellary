@@ -16,6 +16,10 @@ import {
   saveCartItemForLater,
   updateCartItemQtyForOwner,
 } from "@/modules/cart/cart.service";
+import {
+  getServerRequestCurrency,
+  resolveActiveCurrencyByCode,
+} from "@/modules/currencies/currency.service";
 import { calculateCheckoutQuote } from "@/modules/orders/checkout-quote";
 import { getAllShippingZones, getPublicStoreSettings } from "@/modules/settings/settings.service";
 import { createAction } from "@/server/create-action";
@@ -46,12 +50,12 @@ export const updateCartItemQtyAction = createAction(
     schema: updateCartItemSchema,
     auth: "public",
   },
-  async ({ variantId, quantity }) => {
+  async ({ variantId, quantity, cartItemId }) => {
     const owner = await resolveCurrentCartOwner(false);
     if (!owner) {
       throw new ValidationError("Your shopping bag session has expired.");
     }
-    const cart = await updateCartItemQtyForOwner(owner, variantId, quantity);
+    const cart = await updateCartItemQtyForOwner(owner, variantId, quantity, cartItemId);
     revalidatePath("/cart");
     return cart;
   },
@@ -63,12 +67,12 @@ export const removeCartItemAction = createAction(
     schema: removeCartItemSchema,
     auth: "public",
   },
-  async ({ variantId }) => {
+  async ({ variantId, cartItemId }) => {
     const owner = await resolveCurrentCartOwner(false);
     if (!owner) {
       return { itemCount: 0, subtotal: "0.00" };
     }
-    const cart = await updateCartItemQtyForOwner(owner, variantId, 0);
+    const cart = await updateCartItemQtyForOwner(owner, variantId, 0, cartItemId);
     revalidatePath("/cart");
     return { itemCount: cart.itemCount, subtotal: cart.subtotal };
   },
@@ -80,12 +84,12 @@ export const saveCartItemForLaterAction = createAction(
     schema: saveForLaterSchema,
     auth: "public",
   },
-  async ({ variantId }) => {
+  async ({ variantId, cartItemId }) => {
     const owner = await resolveCurrentCartOwner(false);
     if (!owner) {
       throw new ValidationError("Your shopping bag session has expired.");
     }
-    const wishlistVariantIds = await saveCartItemForLater(owner, variantId);
+    const wishlistVariantIds = await saveCartItemForLater(owner, variantId, cartItemId);
     const cart = await getCurrentCartSummary();
     revalidatePath("/cart");
     revalidatePath("/wishlist");
@@ -103,11 +107,12 @@ export const estimateCartQuoteAction = createAction(
     schema: estimateCartSchema,
     auth: "public",
   },
-  async ({ shippingCountry, shippingZoneId }) => {
-    const [cart, settings, zones] = await Promise.all([
+  async ({ shippingCountry, shippingZoneId, currency }) => {
+    const [cart, settings, zones, resolvedCurrency] = await Promise.all([
       getCurrentCartSummary(),
       getPublicStoreSettings(),
       getAllShippingZones(true),
+      currency ? resolveActiveCurrencyByCode(currency) : getServerRequestCurrency(),
     ]);
 
     const result = calculateCheckoutQuote({
@@ -116,6 +121,7 @@ export const estimateCartQuoteAction = createAction(
       shippingZoneId,
       zones,
       settings,
+      targetCurrency: resolvedCurrency.currency,
     });
 
     if (!result.ok) {

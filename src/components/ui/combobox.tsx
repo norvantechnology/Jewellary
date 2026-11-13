@@ -22,6 +22,7 @@ interface ComboboxProps {
   emptyText?: string;
   className?: string;
   disabled?: boolean;
+  inModal?: boolean;
   "aria-label"?: string;
   "aria-labelledby"?: string;
   "aria-describedby"?: string;
@@ -37,6 +38,7 @@ export function Combobox({
   emptyText = "No matches found.",
   className,
   disabled,
+  inModal = false,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
   "aria-describedby": ariaDescribedBy,
@@ -59,25 +61,32 @@ export function Combobox({
           aria-labelledby={ariaLabelledBy}
           aria-describedby={ariaDescribedBy}
           disabled={disabled}
-          className={cn("w-full justify-between font-normal", className)}
+          className={cn(
+            "min-h-12 w-full justify-between text-base font-normal md:min-h-11 md:text-sm",
+            className,
+          )}
         >
-          <span className={cn(!selected && "text-muted-foreground")}>
+          <span className={cn("truncate", !selected && "text-muted-foreground")}>
             {selected ? selected.label : placeholder}
           </span>
-          <ChevronsUpDown className="size-4 text-muted-foreground" aria-hidden="true" />
+          <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent
+        portalled={!inModal}
+        className="z-[var(--z-modal)] w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] min-w-[min(16rem,calc(100vw-2rem))] overflow-hidden p-0"
+        align="start"
+      >
         <Command className="bg-popover text-popover-foreground">
-          <div className="flex items-center border-b border-border px-3">
-            <Search className="mr-2 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <div className="flex items-center border-b border-border bg-surface-2/60 px-3 transition-colors focus-within:border-accent">
+            <Search className="mr-2 size-4 shrink-0 text-text-muted" aria-hidden="true" />
             <Command.Input
               placeholder={searchPlaceholder}
-              className="flex h-11 w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
+              className="flex h-12 w-full border-0 bg-transparent py-2 text-base text-text shadow-none ring-0 outline-none placeholder:text-text-muted focus:ring-0 focus:outline-none focus-visible:shadow-none focus-visible:ring-0 focus-visible:outline-none md:h-11 md:text-sm"
             />
           </div>
-          <Command.List className="max-h-60 overflow-y-auto p-1">
-            <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
+          <Command.List className="max-h-[45dvh] overflow-y-auto p-1 sm:max-h-60">
+            <Command.Empty className="py-6 text-center text-sm text-text-muted">
               {emptyText}
             </Command.Empty>
             {options.map((option) => (
@@ -88,7 +97,7 @@ export function Combobox({
                   onValueChange(option.value === value ? "" : option.value);
                   setOpen(false);
                 }}
-                className="relative flex min-h-10 cursor-pointer items-center rounded-sm py-2 pr-3 pl-8 text-sm outline-none aria-selected:bg-muted aria-selected:text-foreground"
+                className="relative flex min-h-11 cursor-pointer items-center rounded-sm py-2 pr-3 pl-8 text-base text-text outline-none hover:bg-surface-2/70 aria-selected:bg-surface-2 aria-selected:text-text md:min-h-10 md:text-sm"
               >
                 <Check
                   className={cn(

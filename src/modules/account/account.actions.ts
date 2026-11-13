@@ -6,6 +6,7 @@ import {
   changePasswordSchema,
   deleteAddressSchema,
   guestOrderLookupSchema,
+  reorderOrderSchema,
   requestAccountDeletionSchema,
   saveAddressSchema,
   setDefaultAddressSchema,
@@ -15,11 +16,14 @@ import {
   anonymizeCustomerAccount,
   changeCustomerPassword,
   deleteCustomerAddress,
+  reorderCustomerOrder,
   saveCustomerAddress,
   setDefaultCustomerAddress,
   updateCustomerProfile,
   verifyGuestOrderLookup,
 } from "@/modules/account/account.service";
+import { resolveCurrentCartOwner } from "@/modules/cart/cart.service";
+import { assertHumanSubmission } from "@/server/abuse";
 import { createAction } from "@/server/create-action";
 
 export const updateProfileAction = createAction(
@@ -120,7 +124,37 @@ export const lookupGuestOrderAction = createAction(
       key: (_input, ctx) => `guestLookup:${ctx.ip}`,
     },
   },
-  async (input) => {
+  async (input, ctx) => {
+    await assertHumanSubmission({
+      website: input.website,
+      timingToken: input.timingToken,
+      turnstileToken: input.turnstileToken,
+      ip: ctx.ip,
+    });
     return verifyGuestOrderLookup(input);
+  },
+);
+
+export const reorderOrderAction = createAction(
+  {
+    name: "orders.reorder",
+    schema: reorderOrderSchema,
+    auth: "public",
+  },
+  async (input, { auth }) => {
+    const cartOwner = await resolveCurrentCartOwner(true);
+    if (!cartOwner) {
+      throw new Error("Could not initialize bag session.");
+    }
+    const result = await reorderCustomerOrder({
+      orderNumber: input.orderNumber,
+      guestToken: input.guestToken,
+      actorUserId: auth?.user.id ?? null,
+      actorRole: auth?.user.role ?? null,
+      cartOwner,
+    });
+    revalidatePath("/cart");
+    revalidatePath("/checkout");
+    return result;
   },
 );

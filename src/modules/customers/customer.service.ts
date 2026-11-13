@@ -1,5 +1,5 @@
 import "server-only";
-import type { OrderStatus, Prisma, UserRole } from "@/generated/prisma/client";
+import { Prisma, type OrderStatus, type UserRole } from "@/generated/prisma/client";
 import { hasPermission } from "@/lib/permissions";
 import type { ChangeCustomerRoleInput } from "@/modules/customers/customer.schemas";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
@@ -75,8 +75,6 @@ function maskStreet(line: string): string {
   return "•••••• (Protected PII)";
 }
 
-const EXCLUDED_SPEND_STATUSES: OrderStatus[] = ["PENDING_PAYMENT", "PAYMENT_FAILED", "CANCELLED"];
-
 export async function listAdminCustomers(
   params: {
     page?: number;
@@ -134,15 +132,6 @@ export async function listAdminCustomers(
         banned: true,
         anonymizedAt: true,
         createdAt: true,
-        orders: {
-          where: { status: { notIn: EXCLUDED_SPEND_STATUSES } },
-          orderBy: { createdAt: "desc" },
-          select: {
-            total: true,
-            refundedAmount: true,
-            createdAt: true,
-          },
-        },
         _count: {
           select: { orders: true },
         },
@@ -150,12 +139,28 @@ export async function listAdminCustomers(
     }),
   ]);
 
+  const userIds = users.map((u) => u.id);
+  const spendRows =
+    userIds.length > 0
+      ? await db.$queryRaw<
+          Array<{ userId: string; spend: number; lastOrderAt: Date | null }>
+        >(Prisma.sql`
+          SELECT
+            "userId",
+            COALESCE(SUM(GREATEST(0, "total" - "refundedAmount")), 0)::float8 AS spend,
+            MAX("createdAt") AS "lastOrderAt"
+          FROM "Order"
+          WHERE "userId" IN (${Prisma.join(userIds)})
+            AND "status" NOT IN ('PENDING_PAYMENT', 'PAYMENT_FAILED', 'CANCELLED')
+          GROUP BY "userId"
+        `)
+      : [];
+  const spendByUser = new Map(spendRows.map((r) => [r.userId, r]));
+
   return {
     customers: users.map((u) => {
-      let spend = 0;
-      for (const o of u.orders) {
-        spend += Math.max(0, Number(o.total) - Number(o.refundedAmount));
-      }
+      const agg = spendByUser.get(u.id);
+      const spend = Number(agg?.spend ?? 0);
       return {
         id: u.id,
         name: u.name,
@@ -168,7 +173,7 @@ export async function listAdminCustomers(
         orderCount: u._count.orders,
         lifetimeSpend: spend.toFixed(2),
         currency: settings.currency,
-        lastOrderAt: u.orders[0]?.createdAt.toISOString() ?? null,
+        lastOrderAt: agg?.lastOrderAt ? new Date(agg.lastOrderAt).toISOString() : null,
         createdAt: u.createdAt.toISOString(),
         piiMasked: !canReadFullPii,
       };
@@ -193,13 +198,35 @@ export async function getAdminCustomerDetail(
 
   const canReadFullPii = hasPermission(actor.user.role, "customers:read_full_pii");
 
-  const [settings, user] = await Promise.all([
+  const [settings, user, spendAgg] = await Promise.all([
     getPublicStoreSettings(),
     db.user.findUnique({
       where: { id: customerId },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        emailVerified: true,
+        banned: true,
+        anonymizedAt: true,
+        createdAt: true,
         addresses: {
           orderBy: [{ isDefaultShipping: "desc" }, { createdAt: "desc" }],
+          select: {
+            id: true,
+            label: true,
+            fullName: true,
+            phone: true,
+            line1: true,
+            city: true,
+            state: true,
+            postalCode: true,
+            country: true,
+            isDefaultShipping: true,
+            isDefaultBilling: true,
+          },
         },
         orders: {
           orderBy: { createdAt: "desc" },
@@ -210,7 +237,6 @@ export async function getAdminCustomerDetail(
             status: true,
             currency: true,
             total: true,
-            refundedAmount: true,
             createdAt: true,
           },
         },
@@ -222,18 +248,19 @@ export async function getAdminCustomerDetail(
         },
       },
     }),
+    db.$queryRaw<Array<{ spend: number }>>(Prisma.sql`
+      SELECT COALESCE(SUM(GREATEST(0, "total" - "refundedAmount")), 0)::float8 AS spend
+      FROM "Order"
+      WHERE "userId" = ${customerId}
+        AND "status" NOT IN ('PENDING_PAYMENT', 'PAYMENT_FAILED', 'CANCELLED')
+    `),
   ]);
 
   if (!user) {
     throw new NotFoundError("Customer account not found.");
   }
 
-  let lifetimeSpend = 0;
-  for (const o of user.orders) {
-    if (!EXCLUDED_SPEND_STATUSES.includes(o.status)) {
-      lifetimeSpend += Math.max(0, Number(o.total) - Number(o.refundedAmount));
-    }
-  }
+  const lifetimeSpend = Number(spendAgg[0]?.spend ?? 0);
 
   return {
     id: user.id,

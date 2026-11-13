@@ -1,6 +1,8 @@
 // @vitest-environment node
+import { deleteTestOrders } from "../helpers/cleanup";
 import { createId } from "@paralleldrive/cuid2";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createAbuseFormToken } from "@/server/abuse";
 import {
   getEditorialContentPage,
   getEditorialLastModified,
@@ -126,6 +128,7 @@ describe("Service layer integration coverage", () => {
         email: adminRow?.email ?? "admin@maison.test",
         role: "ADMIN",
         emailVerified: true,
+        twoFactorEnabled: false,
         phone: null,
       },
       sessionId: `sess_${createId().slice(0, 8)}`,
@@ -203,7 +206,7 @@ describe("Service layer integration coverage", () => {
       await db.paymentTransaction.deleteMany({ where: { orderId: { in: createdOrderIds } } });
       await db.orderEvent.deleteMany({ where: { orderId: { in: createdOrderIds } } });
       await db.orderItem.deleteMany({ where: { orderId: { in: createdOrderIds } } });
-      await db.order.deleteMany({ where: { id: { in: createdOrderIds } } });
+      await deleteTestOrders(createdOrderIds);
     }
     if (sampleProductId) {
       await db.inventoryTransaction.deleteMany({
@@ -387,7 +390,13 @@ describe("Service layer integration coverage", () => {
     expect(customerOrders.total).toBe(0);
 
     await expect(
-      verifyGuestOrderLookup({ orderNumber: "MA-9999-99999", email: "nobody@example.com" }),
+      verifyGuestOrderLookup({
+        orderNumber: "MA-9999-99999",
+        email: "nobody@example.com",
+        website: "",
+        timingToken: createAbuseFormToken(Date.now() - 5000),
+        turnstileToken: "",
+      }),
     ).rejects.toBeInstanceOf(NotFoundError);
 
     // Enquiry list + update
@@ -400,6 +409,8 @@ describe("Service layer integration coverage", () => {
         message: "Requesting private showroom viewing.",
         productId: sampleProductId,
         website: "",
+        timingToken: createAbuseFormToken(Date.now() - 5000),
+        turnstileToken: "",
       },
       testUserId,
     );
@@ -735,6 +746,9 @@ describe("Service layer integration coverage", () => {
         verifyGuestOrderLookup({
           orderNumber: userOrder.orderNumber,
           email: (await getAccountProfile(testUserId)).email,
+          website: "",
+          timingToken: createAbuseFormToken(Date.now() - 5000),
+          turnstileToken: "",
         }),
         getSearchSuggestions(""),
         getSearchSuggestions("Ring"),

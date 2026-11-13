@@ -18,7 +18,7 @@ export function SignOutButton({
     setPending(true);
     await authClient.signOut();
     toast.success("Signed out");
-    router.push("/");
+    router.replace("/");
     router.refresh();
   }
 

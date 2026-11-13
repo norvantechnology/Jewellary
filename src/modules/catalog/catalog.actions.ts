@@ -1,20 +1,25 @@
 "use server";
 
-import { revalidateTag, updateTag } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
+import { submitIndexNowUrls } from "@/lib/seo/indexnow";
 import {
   adjustStockSchema,
+  archiveProductSchema,
   categoryUpsertSchema,
   deleteCategorySchema,
   deleteFacetSchema,
   deleteProductSchema,
+  duplicateProductSchema,
   facetUpsertSchema,
   productUpsertSchema,
 } from "@/modules/catalog/catalog.schemas";
 import {
   adjustVariantStock,
+  archiveProduct,
   deleteCategory,
   deleteFacet,
-  softDeleteProduct,
+  deleteProduct,
+  duplicateProduct,
   upsertCategory,
   upsertFacet,
   upsertProduct,
@@ -22,10 +27,13 @@ import {
 import { CACHE_TAGS } from "@/server/cache-tags";
 import { createAction } from "@/server/create-action";
 
-function invalidateCatalogTags(tags: string[]) {
+function invalidateCatalogTags(tags: string[], paths: string[] = []) {
   for (const tag of tags) {
     updateTag(tag);
     revalidateTag(tag, "max");
+  }
+  for (const p of paths) {
+    revalidatePath(p);
   }
 }
 
@@ -43,7 +51,11 @@ export const upsertCategoryAction = createAction(
   },
   async (input) => {
     const result = await upsertCategory(input);
-    invalidateCatalogTags([CACHE_TAGS.categories, CACHE_TAGS.category(result.id)]);
+    invalidateCatalogTags(
+      [CACHE_TAGS.categories, CACHE_TAGS.category(result.id)],
+      ["/", "/collections", `/collections/${result.path}`, "/sitemap.xml"],
+    );
+    void submitIndexNowUrls([`/collections/${result.path}`]);
     return result;
   },
 );
@@ -127,7 +139,39 @@ export const upsertProductAction = createAction(
     if (result.oldSlug && result.oldSlug !== result.slug) {
       tags.push(CACHE_TAGS.productSlug(result.oldSlug));
     }
-    invalidateCatalogTags(tags);
+    invalidateCatalogTags(tags, [
+      "/",
+      "/collections",
+      `/products/${result.slug}`,
+      "/sitemap.xml",
+      "/feeds/google-merchant.xml",
+    ]);
+    if (input.status === "ACTIVE" && !input.noindex) {
+      void submitIndexNowUrls([`/products/${result.slug}`]);
+    }
+    return result;
+  },
+);
+
+export const archiveProductAction = createAction(
+  {
+    name: "catalog.product.archive",
+    schema: archiveProductSchema,
+    auth: { permission: "catalog:write" },
+    rateLimit: { tier: "adminWrite" },
+    audit: {
+      action: "PRODUCT_ARCHIVE",
+      entityType: "Product",
+      entityId: (input) => input.id,
+    },
+  },
+  async ({ id }) => {
+    const result = await archiveProduct(id);
+    invalidateCatalogTags([
+      CACHE_TAGS.products,
+      CACHE_TAGS.product(id),
+      CACHE_TAGS.productSlug(result.slug),
+    ]);
     return result;
   },
 );
@@ -139,18 +183,43 @@ export const deleteProductAction = createAction(
     auth: { permission: "catalog:delete" },
     rateLimit: { tier: "adminWrite" },
     audit: {
-      action: "PRODUCT_SOFT_DELETE",
+      action: "PRODUCT_DELETE",
       entityType: "Product",
       entityId: (input) => input.id,
     },
   },
   async ({ id }) => {
-    const result = await softDeleteProduct(id);
+    const result = await deleteProduct(id);
     invalidateCatalogTags([
       CACHE_TAGS.products,
       CACHE_TAGS.product(id),
       CACHE_TAGS.productSlug(result.slug),
     ]);
+    return result;
+  },
+);
+
+export const duplicateProductAction = createAction(
+  {
+    name: "catalog.product.duplicate",
+    schema: duplicateProductSchema,
+    auth: { permission: "catalog:write" },
+    rateLimit: { tier: "adminWrite" },
+    audit: {
+      action: "PRODUCT_DUPLICATE",
+      entityType: "Product",
+      entityId: (_input, res: { id: string }) => res.id,
+      after: (input, res: { id: string; slug: string; sku: string }) => ({
+        sourceProductId: input.id,
+        duplicatedProductId: res.id,
+        duplicatedSlug: res.slug,
+        duplicatedSku: res.sku,
+      }),
+    },
+  },
+  async ({ id }, ctx) => {
+    const result = await duplicateProduct(id, ctx.auth?.user.id ?? null);
+    invalidateCatalogTags([CACHE_TAGS.products]);
     return result;
   },
 );

@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes";
 import {
   Select,
   SelectContent,
@@ -46,6 +48,11 @@ interface CategoryFormState {
   imageUrl: string;
   seoTitle: string;
   seoDescription: string;
+  seoKeywords: string;
+  seoIntroCopy: string;
+  seoIntroPosition: "top" | "bottom";
+  canonicalOverride: string;
+  noindex: boolean;
   sortOrder: string;
   isActive: boolean;
   facetIds: string[];
@@ -59,6 +66,11 @@ const emptyForm = (): CategoryFormState => ({
   imageUrl: "",
   seoTitle: "",
   seoDescription: "",
+  seoKeywords: "",
+  seoIntroCopy: "",
+  seoIntroPosition: "top",
+  canonicalOverride: "",
+  noindex: false,
   sortOrder: "0",
   isActive: true,
   facetIds: [],
@@ -76,6 +88,11 @@ export function CategoriesManager({
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [form, setForm] = React.useState<CategoryFormState>(emptyForm);
+  const [savedSnapshot, setSavedSnapshot] = React.useState(() => JSON.stringify(emptyForm()));
+  const currentSnapshot = React.useMemo(() => JSON.stringify(form), [form]);
+  const unsavedGuard = useUnsavedChangesGuard({
+    isDirty: dialogOpen && currentSnapshot !== savedSnapshot,
+  });
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string[]>>({});
   const [saving, setSaving] = React.useState(false);
 
@@ -83,13 +100,15 @@ export function CategoriesManager({
   const [deleting, setDeleting] = React.useState(false);
 
   function openNew() {
-    setForm(emptyForm());
+    const initial = emptyForm();
+    setForm(initial);
+    setSavedSnapshot(JSON.stringify(initial));
     setFieldErrors({});
     setDialogOpen(true);
   }
 
   function openEdit(cat: AdminCategoryDTO) {
-    setForm({
+    const initial: CategoryFormState = {
       id: cat.id,
       name: cat.name,
       slug: cat.slug,
@@ -98,10 +117,17 @@ export function CategoriesManager({
       imageUrl: cat.imageUrl ?? "",
       seoTitle: cat.seoTitle ?? "",
       seoDescription: cat.seoDescription ?? "",
+      seoKeywords: cat.seoKeywords ?? "",
+      seoIntroCopy: cat.seoIntroCopy ?? "",
+      seoIntroPosition: cat.seoIntroPosition ?? "top",
+      canonicalOverride: cat.canonicalOverride ?? "",
+      noindex: Boolean(cat.noindex),
       sortOrder: String(cat.sortOrder),
       isActive: cat.isActive,
       facetIds: cat.facetIds,
-    });
+    };
+    setForm(initial);
+    setSavedSnapshot(JSON.stringify(initial));
     setFieldErrors({});
     setDialogOpen(true);
   }
@@ -120,6 +146,11 @@ export function CategoriesManager({
       imageUrl: form.imageUrl || null,
       seoTitle: form.seoTitle || null,
       seoDescription: form.seoDescription || null,
+      seoKeywords: form.seoKeywords || null,
+      seoIntroCopy: form.seoIntroCopy || null,
+      seoIntroPosition: form.seoIntroPosition,
+      canonicalOverride: form.canonicalOverride || null,
+      noindex: form.noindex,
       sortOrder: Number(form.sortOrder || "0"),
       isActive: form.isActive,
       facetIds: form.facetIds,
@@ -133,6 +164,8 @@ export function CategoriesManager({
       return;
     }
 
+    unsavedGuard.markClean();
+    setSavedSnapshot(currentSnapshot);
     toast.success(form.id ? "Category updated." : "Category created.");
     setDialogOpen(false);
     router.refresh();
@@ -166,6 +199,7 @@ export function CategoriesManager({
   const columns: ResponsiveColumn<AdminCategoryDTO>[] = [
     {
       key: "name",
+      hideOnMobileCard: true,
       header: "Category",
       cell: (c) => (
         <div>
@@ -266,7 +300,16 @@ export function CategoriesManager({
         }
       />
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) {
+            setDialogOpen(true);
+            return;
+          }
+          unsavedGuard.confirmLeave(() => setDialogOpen(false));
+        }}
+      >
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{form.id ? "Edit Category" : "Create Category"}</DialogTitle>
@@ -400,7 +443,11 @@ export function CategoriesManager({
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField id="cat-seo-title" label="SEO Title" error={fieldErrors.seoTitle?.[0]}>
+              <FormField
+                id="cat-seo-title"
+                label={`SEO Title (${form.seoTitle.length}/60)`}
+                error={fieldErrors.seoTitle?.[0]}
+              >
                 {(aria) => (
                   <Input
                     {...aria}
@@ -412,7 +459,7 @@ export function CategoriesManager({
 
               <FormField
                 id="cat-seo-desc"
-                label="SEO Description"
+                label={`SEO Description (${form.seoDescription.length}/158)`}
                 error={fieldErrors.seoDescription?.[0]}
               >
                 {(aria) => (
@@ -423,6 +470,62 @@ export function CategoriesManager({
                   />
                 )}
               </FormField>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="cat-seo-keywords" label="SEO Keywords">
+                {(aria) => (
+                  <Input
+                    {...aria}
+                    value={form.seoKeywords}
+                    onChange={(e) => setForm((f) => ({ ...f, seoKeywords: e.target.value }))}
+                    placeholder="diamond engagement rings, platinum solitaire"
+                  />
+                )}
+              </FormField>
+              <FormField id="cat-intro-pos" label="Collection Intro Copy Placement">
+                {(aria) => (
+                  <NativeSelect
+                    {...aria}
+                    value={form.seoIntroPosition}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        seoIntroPosition: e.target.value === "bottom" ? "bottom" : "top",
+                      }))
+                    }
+                  >
+                    <option value="top">Top (Above Product Grid)</option>
+                    <option value="bottom">Bottom (Editorial Footer Copy)</option>
+                  </NativeSelect>
+                )}
+              </FormField>
+            </div>
+
+            <FormField id="cat-intro-copy" label="Collection SEO Intro Copy">
+              {(aria) => (
+                <Textarea
+                  {...aria}
+                  rows={2}
+                  value={form.seoIntroCopy}
+                  onChange={(e) => setForm((f) => ({ ...f, seoIntroCopy: e.target.value }))}
+                  placeholder="Optional editorial paragraph displayed on the collection page"
+                />
+              )}
+            </FormField>
+
+            <div className="flex items-center justify-between rounded-sm border border-border px-3.5 py-2.5">
+              <div>
+                <Label htmlFor="cat-noindex">Exclude from Search Indexing (noindex)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Suppress indexing &amp; omit from collection sitemaps.
+                </p>
+              </div>
+              <Switch
+                id="cat-noindex"
+                checked={form.noindex}
+                onCheckedChange={(checked) => setForm((f) => ({ ...f, noindex: checked }))}
+              />
             </div>
 
             <div className="flex items-center justify-between rounded-sm border border-border px-3.5 py-2.5">
@@ -443,7 +546,7 @@ export function CategoriesManager({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setDialogOpen(false)}
+                onClick={() => unsavedGuard.confirmLeave(() => setDialogOpen(false))}
                 disabled={saving}
               >
                 Cancel
@@ -455,6 +558,8 @@ export function CategoriesManager({
           </form>
         </DialogContent>
       </Dialog>
+
+      {unsavedGuard.dialog}
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

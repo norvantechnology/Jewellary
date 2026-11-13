@@ -51,6 +51,9 @@ async function ProductsContent({
   );
 }
 
+// Rendered per request (signed-in / URL-driven); a blocking navigation is intended.
+export const instant = false;
+
 export default function AdminProductsPage({
   searchParams,
 }: {

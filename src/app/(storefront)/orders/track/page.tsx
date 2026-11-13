@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Container, Section } from "@/components/shared/primitives";
 import { GuestOrderTrackClient } from "@/components/storefront/GuestOrderTrackClient";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NOINDEX_NOFOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = buildMetadata({
@@ -25,25 +26,25 @@ export default function GuestOrderTrackPage({
   searchParams: Promise<{ orderNumber?: string }>;
 }) {
   return (
-    <Section spacing="sm">
+    <Section spacing="md" className="pt-4 pb-10 sm:pt-6 sm:pb-16 md:pt-6 lg:pt-8 lg:pb-24">
       <Container>
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Track Order" }]} />
 
-        <div className="mx-auto mb-8 max-w-xl text-center">
-          <p className="font-sans text-editorial-label text-accent-text">Insured Dispatch Lookup</p>
-          <h1 className="mt-2 font-display text-4xl font-medium tracking-tight text-foreground sm:text-5xl">
-            Track Your Commission
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-            Enter your order number and purchasing email address to review atelier progress, courier
-            tracking, and printable receipts.
+        <div className="mx-auto mt-3 mb-6 max-w-xl text-center sm:mb-8">
+          <h1 className="type-h1 font-semibold text-foreground">Track Your Order</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground sm:mt-3 sm:text-base">
+            Enter your order number and the email you used at checkout.
           </p>
         </div>
 
         <Suspense
           fallback={
-            <div className="mx-auto max-w-xl rounded-md border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-              Preparing lookup form…
+            <div className="mx-auto max-w-xl rounded-xl border border-border bg-card p-4 sm:p-8">
+              <div className="space-y-4">
+                <Skeleton className="h-11 w-full" />
+                <Skeleton className="h-11 w-full" />
+                <Skeleton className="h-11 w-44" />
+              </div>
             </div>
           }
         >

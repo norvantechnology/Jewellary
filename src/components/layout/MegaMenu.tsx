@@ -1,122 +1,326 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
+import { buildNavigationSections } from "@/components/layout/navigation-data";
+import { useReducedMotionSafe } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { NavCategoryItem } from "@/types/navigation";
+
+const LazyMegaMenuPortal = dynamic(
+  () => import("@/components/layout/MegaMenuPortal").then((mod) => mod.MegaMenuPortal),
+  { ssr: false },
+);
+
+let prefetchedPortal = false;
+function prefetchMegaMenuPortal() {
+  if (prefetchedPortal) return;
+  prefetchedPortal = true;
+  void import("@/components/layout/MegaMenuPortal");
+}
+
+const emptySubscribe = () => () => {};
 
 interface MegaMenuProps {
   categories: NavCategoryItem[];
 }
 
 export function MegaMenu({ categories }: MegaMenuProps) {
-  const [openId, setOpenId] = React.useState<string | null>(null);
-  const closeTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pathname = usePathname();
+  const [openForPath, setOpenForPath] = React.useState<string | null>(null);
+  const open = openForPath === pathname;
+  const mounted = React.useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+  const [panelTop, setPanelTop] = React.useState(72);
 
-  const openCategory = (id: string) => {
-    if (closeTimeout.current) clearTimeout(closeTimeout.current);
-    setOpenId(id);
-  };
+  const panelId = React.useId();
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const hoverOpenTimerRef = React.useRef<number | null>(null);
+  const hoverCloseTimerRef = React.useRef<number | null>(null);
+  const openedByHoverAtRef = React.useRef<number>(0);
 
-  const scheduleClose = () => {
-    if (closeTimeout.current) clearTimeout(closeTimeout.current);
-    closeTimeout.current = setTimeout(() => setOpenId(null), 150);
-  };
+  const { categoryGroups, collections } = React.useMemo(
+    () => buildNavigationSections(categories),
+    [categories],
+  );
+  const reducedMotion = useReducedMotionSafe();
 
-  React.useEffect(() => {
-    return () => {
-      if (closeTimeout.current) clearTimeout(closeTimeout.current);
-    };
+  const clearTimers = React.useCallback(() => {
+    if (hoverOpenTimerRef.current !== null) {
+      window.clearTimeout(hoverOpenTimerRef.current);
+      hoverOpenTimerRef.current = null;
+    }
+    if (hoverCloseTimerRef.current !== null) {
+      window.clearTimeout(hoverCloseTimerRef.current);
+      hoverCloseTimerRef.current = null;
+    }
   }, []);
 
+  const syncPanelTop = React.useCallback(() => {
+    const header = triggerRef.current?.closest("header");
+    if (header) {
+      setPanelTop(Math.max(64, Math.round(header.getBoundingClientRect().bottom)));
+    }
+  }, []);
+
+  const closeMenu = React.useCallback(
+    (restoreFocus = false) => {
+      clearTimers();
+      setOpenForPath(null);
+      if (restoreFocus) {
+        window.requestAnimationFrame(() => {
+          triggerRef.current?.focus();
+        });
+      }
+    },
+    [clearTimers],
+  );
+
+  // Measure header bottom & bind Escape, outside click, and focus-out when open
+  React.useEffect(() => {
+    if (!open) return;
+
+    syncPanelTop();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMenu(true);
+      }
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) {
+        return;
+      }
+      closeMenu(false);
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) {
+        return;
+      }
+      closeMenu(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("focusin", handleFocusIn);
+    window.addEventListener("resize", syncPanelTop);
+    window.addEventListener("scroll", syncPanelTop, { passive: true });
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("focusin", handleFocusIn);
+      window.removeEventListener("resize", syncPanelTop);
+      window.removeEventListener("scroll", syncPanelTop);
+    };
+  }, [open, syncPanelTop, closeMenu]);
+
+  React.useEffect(() => () => clearTimers(), [clearTimers]);
+
+  const [hasOpenedPortal, setHasOpenedPortal] = React.useState(false);
+
+  const handleMouseEnterZone = () => {
+    prefetchMegaMenuPortal();
+    clearTimers();
+    if (!open) {
+      const pathAtEnter = pathname;
+      hoverOpenTimerRef.current = window.setTimeout(() => {
+        syncPanelTop();
+        openedByHoverAtRef.current = Date.now();
+        setHasOpenedPortal(true);
+        setOpenForPath(pathAtEnter);
+      }, 110);
+    }
+  };
+
+  const handleMouseLeaveZone = () => {
+    clearTimers();
+    hoverCloseTimerRef.current = window.setTimeout(() => {
+      setOpenForPath(null);
+    }, 160);
+  };
+
+  const handleTriggerClick = () => {
+    prefetchMegaMenuPortal();
+    clearTimers();
+    if (open) {
+      // Avoid immediate hover-open -> click flicker closing the menu on touch/mouse click
+      if (Date.now() - openedByHoverAtRef.current < 260) {
+        openedByHoverAtRef.current = 0;
+        return;
+      }
+      setOpenForPath(null);
+      return;
+    }
+    syncPanelTop();
+    setHasOpenedPortal(true);
+    setOpenForPath(pathname);
+  };
+
+  const handleTriggerKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      prefetchMegaMenuPortal();
+      if (!open) {
+        syncPanelTop();
+        setHasOpenedPortal(true);
+        setOpenForPath(pathname);
+      }
+      window.requestAnimationFrame(() => {
+        const firstLink = panelRef.current?.querySelector<HTMLAnchorElement>("a[href]");
+        firstLink?.focus();
+      });
+    }
+  };
+
+  const handlePanelKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const links = Array.from(
+      panelRef.current?.querySelectorAll<HTMLAnchorElement>("a[href]") ?? [],
+    );
+    if (links.length === 0) return;
+
+    const currentIndex = links.findIndex((el) => el === document.activeElement);
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      event.preventDefault();
+      const next = currentIndex >= 0 ? (currentIndex + 1) % links.length : 0;
+      links[next]?.focus();
+    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      event.preventDefault();
+      const prev =
+        currentIndex >= 0 ? (currentIndex - 1 + links.length) % links.length : links.length - 1;
+      links[prev]?.focus();
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      links[0]?.focus();
+    } else if (event.key === "End") {
+      event.preventDefault();
+      links[links.length - 1]?.focus();
+    }
+  };
+
+  const navLinkClass = (active: boolean) =>
+    cn(
+      "relative inline-flex h-[72px] shrink-0 items-center text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent",
+      "after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:origin-left after:bg-accent after:transition-transform after:duration-200 after:ease-out",
+      active
+        ? "text-text after:scale-x-100"
+        : "text-text-2 hover:text-text after:scale-x-0 hover:after:scale-x-100",
+    );
+
+  const isAllJewelleryActive = pathname === "/collections";
+  const isCollectionsActive = open || pathname.startsWith("/collections/");
+  const isGuidesActive = pathname.startsWith("/guides");
+  const isAtelierActive = pathname === "/about";
+  const isConciergeActive = pathname === "/contact";
+
   return (
-    <nav
-      aria-label="Primary collections"
-      className="hidden lg:flex lg:flex-wrap lg:items-center lg:justify-center lg:gap-0.5 xl:gap-1"
-    >
-      {categories.slice(0, 5).map((category) => {
-        const hasChildren = category.children.length > 0;
-        const isOpen = openId === category.id;
+    <nav aria-label="Primary" className="hidden items-center gap-6 lg:flex">
+      <Link href="/collections" className={navLinkClass(isAllJewelleryActive)}>
+        All Jewellery
+      </Link>
 
-        return (
-          <div
-            key={category.id}
-            className="relative"
-            onMouseEnter={() => hasChildren && openCategory(category.id)}
-            onMouseLeave={scheduleClose}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") setOpenId(null);
-            }}
-          >
-            <div className="flex items-center">
-              <Link
-                href={`/collections/${category.path}`}
-                className="inline-flex min-h-11 items-center gap-1 px-2.5 text-sm font-medium tracking-wide whitespace-nowrap text-foreground transition-colors hover:text-accent-text xl:px-3"
-              >
-                {category.name}
-              </Link>
-              {hasChildren && (
-                <button
-                  type="button"
-                  aria-label={`Toggle ${category.name} submenu`}
-                  aria-expanded={isOpen}
-                  onClick={() => setOpenId(isOpen ? null : category.id)}
-                  className="-ml-2 inline-flex size-8 cursor-pointer items-center justify-center rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-                >
-                  <ChevronDown
-                    className={cn("size-3.5 transition-transform", isOpen && "rotate-180")}
-                    aria-hidden="true"
-                  />
-                </button>
-              )}
-            </div>
-
-            {hasChildren && isOpen && (
-              <div
-                role="region"
-                aria-label={`${category.name} categories`}
-                className="absolute top-full left-0 z-40 mt-1 w-72 rounded-md border border-border bg-card p-5 shadow-soft"
-              >
-                <p className="mb-3 text-editorial-label text-accent-text">{category.name}</p>
-                <ul className="grid gap-1.5">
-                  {category.children.map((sub) => (
-                    <li key={sub.id}>
-                      <Link
-                        href={`/collections/${sub.path}`}
-                        onClick={() => setOpenId(null)}
-                        className="block rounded-sm px-2.5 py-2 text-sm text-foreground transition-colors hover:bg-muted hover:text-accent-text"
-                      >
-                        {sub.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-4 border-t border-border pt-3">
-                  <Link
-                    href={`/collections/${category.path}`}
-                    onClick={() => setOpenId(null)}
-                    className="text-xs font-medium tracking-wider text-accent-text uppercase underline-offset-4 hover:underline"
-                  >
-                    Explore all {category.name}
-                  </Link>
-                </div>
-              </div>
+      <div
+        onMouseEnter={handleMouseEnterZone}
+        onMouseLeave={handleMouseLeaveZone}
+        className="relative flex items-center"
+      >
+        <button
+          ref={triggerRef}
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          aria-haspopup="true"
+          onClick={handleTriggerClick}
+          onKeyDown={handleTriggerKeyDown}
+          className={cn(navLinkClass(isCollectionsActive), "cursor-pointer gap-1")}
+        >
+          <span>Collections</span>
+          <ChevronDown
+            className={cn(
+              "size-4 text-muted-foreground transition-transform duration-150",
+              open && "rotate-180 text-foreground",
             )}
-          </div>
-        );
-      })}
+            strokeWidth={1.5}
+            aria-hidden="true"
+          />
+        </button>
+      </div>
+
+      <Link href="/guides" className={navLinkClass(isGuidesActive)}>
+        Guides
+      </Link>
+      <Link href="/about" className={navLinkClass(isAtelierActive)}>
+        Atelier
+      </Link>
+      <Link href="/contact" className={navLinkClass(isConciergeActive)}>
+        Concierge
+      </Link>
+
+      {mounted && (hasOpenedPortal || open) ? (
+        <LazyMegaMenuPortal
+          open={open}
+          panelTop={panelTop}
+          panelId={panelId}
+          panelRef={panelRef}
+          reducedMotion={reducedMotion}
+          categoryGroups={categoryGroups}
+          collections={collections}
+          closeMenu={closeMenu}
+          handleMouseEnterZone={handleMouseEnterZone}
+          handleMouseLeaveZone={handleMouseLeaveZone}
+          handlePanelKeyDown={handlePanelKeyDown}
+        />
+      ) : null}
+    </nav>
+  );
+}
+
+export function MegaMenuFallback() {
+  return (
+    <nav aria-label="Primary" className="hidden items-center gap-6 lg:flex">
       <Link
         href="/collections"
-        className="inline-flex min-h-11 items-center px-2.5 text-sm font-medium tracking-wide whitespace-nowrap text-foreground transition-colors hover:text-accent-text xl:px-3"
+        className="inline-flex h-[72px] items-center text-sm font-medium text-muted-foreground"
       >
         All Jewellery
       </Link>
       <Link
+        href="/collections"
+        className="inline-flex h-[72px] items-center text-sm font-medium text-muted-foreground"
+      >
+        Collections
+      </Link>
+      <Link
         href="/guides"
-        className="inline-flex min-h-11 items-center px-2.5 text-sm font-medium tracking-wide whitespace-nowrap text-foreground transition-colors hover:text-accent-text xl:px-3"
+        className="inline-flex h-[72px] items-center text-sm font-medium text-muted-foreground"
       >
         Guides
+      </Link>
+      <Link
+        href="/about"
+        className="inline-flex h-[72px] items-center text-sm font-medium text-muted-foreground"
+      >
+        Atelier
+      </Link>
+      <Link
+        href="/contact"
+        className="inline-flex h-[72px] items-center text-sm font-medium text-muted-foreground"
+      >
+        Concierge
       </Link>
     </nav>
   );

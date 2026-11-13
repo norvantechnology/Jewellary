@@ -1,4 +1,5 @@
 import * as React from "react";
+import { AlertCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
@@ -50,8 +51,13 @@ export function FormField({
         </p>
       )}
       {error && (
-        <p id={errorId} role="alert" className="text-xs font-medium text-destructive">
-          {error}
+        <p
+          id={errorId}
+          role="alert"
+          className="flex items-start gap-1.5 text-xs font-medium text-destructive"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+          <span>{error}</span>
         </p>
       )}
     </div>

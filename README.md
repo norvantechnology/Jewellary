@@ -1,4 +1,4 @@
-# Maison Aurelia — Fine Jewellery E-Commerce Platform
+# Fine Jewellery E-Commerce Platform
 
 Complete production-ready fine jewellery storefront, luxury admin studio, and transactional backend built in a unified **Next.js 16.4 + TypeScript** codebase.
 
@@ -115,8 +115,8 @@ Webhook endpoints:
 The included multi-stage [`Dockerfile`](./Dockerfile) builds Next.js standalone output (`output: "standalone"`) alongside `public/`, `.next/static/`, `prisma/`, and `content/`:
 
 ```bash
-docker build -t maison-aurelia:latest .
-docker run --rm -p 3000:3000 --env-file .env.production maison-aurelia:latest
+docker build -t jewellery-platform:latest .
+docker run --rm -p 3000:3000 --env-file .env.production jewellery-platform:latest
 ```
 
 Before routing production traffic to a new release, run forward-only migrations (`npx prisma migrate deploy`) and `npm run db:seed` (with `SEED_DEMO_DATA="false"`).
@@ -127,11 +127,33 @@ Before routing production traffic to a new release, run forward-only migrations 
 2. Configure environment variables per `.env.example` (`PAYMENT_TEST_SANDBOX="false"`, `SEED_DEMO_DATA="false"`).
 3. Deploy via CI/CD (`.github/workflows/ci.yml` runs lint, typecheck, format check, integration/unit tests, Next build, Playwright E2E/axe/SEO checks, and dependency audit).
 
+## How to Rebrand
+
+All public-facing copy, transactional emails, JSON-LD entities, Open Graph cards, and CSV export filenames derive from environment configuration and database `StoreSetting`:
+
+1. **Environment Brand Configuration (`.env`)**:
+   - `NEXT_PUBLIC_SITE_NAME`: Brand name shown in metadata fallback templates, emails, Open Graph alt text, and default store seed.
+   - `NEXT_PUBLIC_SITE_URL`: Canonical origin used across sitemaps, `robots.txt`, JSON-LD IDs, and verification links.
+   - `EMAIL_FROM` and `ADMIN_NOTIFY_EMAIL`: Sender and studio concierge inbox addresses.
+   - `ADMIN_SEED_EMAIL` / `ADMIN_SEED_NAME` / `ADMIN_SEED_PASSWORD`: Initial administrator credentials created by `prisma/seed.ts`.
+2. **Runtime Store Identity (`/admin/settings`)**:
+   - Update `Store Name`, `Tagline`, custom `Logo / Wordmark` image, `Concierge Email / Phone / Hours`, `Announcement Bar`, `SEO Default Title Pattern`, `Social Channels`, and `Physical Boutique / Salon` without rebuilding.
+   - Configure default `ISO Currency Code`, `Supported Countries`, `Tax Rate`, `Free Insured Shipping Threshold`, and `Courier Shipping Zones`.
+3. **Typography, Palette & Visual Marks**:
+   - Adjust semantic CSS design tokens (ivory/champagne surfaces, ink foregrounds, gold/bronze accents) inside [`src/app/globals.css`](./src/app/globals.css) while preserving WCAG AA contrast in both Light and Dark themes.
+   - Replace the geometric diamond emblem or wordmark typography in [`src/components/shared/Logo.tsx`](./src/components/shared/Logo.tsx) and Open Graph layouts under [`src/app/opengraph-image.tsx`](./src/app/opengraph-image.tsx) if needed.
+   - Edit storefront brand narrative copy inside [`content/about.md`](./content/about.md) (`{{siteName}}` and `{{contactEmail}}` interpolate automatically).
+
 ## Documentation Index
 
 - [`PROJECT_REQUIREMENTS.md`](./PROJECT_REQUIREMENTS.md) — Authoritative platform specification
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — System architecture, data flows, and trust boundaries
 - [`docs/PLAN.md`](./docs/PLAN.md) — Phased implementation architecture plan
-- [`docs/DECISIONS.md`](./docs/DECISIONS.md) — Recorded architectural decisions (`DEC-01`..`DEC-12`)
-- [`docs/PROGRESS.md`](./docs/PROGRESS.md) — Phase 0–9 completion log
-- [`docs/RUNBOOKS.md`](./docs/RUNBOOKS.md) — Production operations, disaster recovery, security & SEO runbooks
+- [`docs/DECISIONS.md`](./docs/DECISIONS.md) — Recorded architectural decisions
+- [`docs/PROGRESS.md`](./docs/PROGRESS.md) — Phase 0–9 & gap-closure progress log
+- [`docs/PERFORMANCE.md`](./docs/PERFORMANCE.md) — Bundle analysis & Lighthouse optimisation report
+- [`docs/SEO_RUNBOOK.md`](./docs/SEO_RUNBOOK.md) — Bot rendering verification & indexing checklist
+- [`docs/QA_CHECKLIST.md`](./docs/QA_CHECKLIST.md) — Pre-launch verification & manual QA checklist
+- [`docs/CONTENT_TODO.md`](./docs/CONTENT_TODO.md) — Pre-launch editorial & photography placeholders
+- [`docs/RUNBOOKS.md`](./docs/RUNBOOKS.md) — Production operations, disaster recovery, & security runbooks
 - [`docs/FINAL_AUDIT.md`](./docs/FINAL_AUDIT.md) — Complete requirement traceability and gate audit report

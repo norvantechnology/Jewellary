@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: "Studio Overview",
 };
 
+// Rendered per request (signed-in / URL-driven); a blocking navigation is intended.
+export const instant = false;
+
 export default async function AdminDashboardPage({
   searchParams,
 }: {

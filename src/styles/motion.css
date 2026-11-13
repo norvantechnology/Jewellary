@@ -1,0 +1,832 @@
+/* Shared GPU-composited CSS motion system (transform & opacity only) */
+
+@view-transition {
+  navigation: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-vt="header"] {
+    view-transition-name: site-header;
+  }
+
+  [data-vt="footer"] {
+    view-transition-name: site-footer;
+  }
+
+  ::view-transition-old(site-header),
+  ::view-transition-new(site-header),
+  ::view-transition-old(site-footer),
+  ::view-transition-new(site-footer) {
+    animation: none;
+  }
+
+  ::view-transition-old(root) {
+    animation: ma-vt-out 180ms var(--ease-out) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: ma-vt-in 230ms var(--ease-out) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root) {
+    animation: ma-fade-out 120ms ease-out both;
+  }
+
+  ::view-transition-new(root) {
+    animation: ma-fade-in 120ms ease-out both;
+  }
+}
+
+/* Keyframes (transform & opacity only) */
+@keyframes ma-vt-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0);
+  }
+}
+
+@keyframes ma-vt-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes ma-fade-in {
+  from {
+    opacity: 0.01;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ma-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes ma-hero-rise {
+  from {
+    opacity: 0.12;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes ma-hero-scale {
+  from {
+    transform: scale3d(1.04, 1.04, 1);
+  }
+  to {
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes ma-page-rise {
+  from {
+    opacity: 0.01;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes ma-shimmer {
+  0% {
+    transform: translate3d(-100%, 0, 0);
+  }
+  100% {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes ma-float {
+  0%,
+  100% {
+    transform: translate3d(0, calc(var(--float-y, 8px) * -0.5), 0)
+      rotate(calc(var(--float-rot, 1.5deg) * -0.5));
+  }
+  50% {
+    transform: translate3d(0, calc(var(--float-y, 8px) * 0.5), 0)
+      rotate(calc(var(--float-rot, 1.5deg) * 0.5));
+  }
+}
+
+@keyframes ma-glint {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: scale3d(0.75, 0.75, 1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale3d(1.1, 1.1, 1);
+  }
+}
+
+@keyframes ma-shake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  50% {
+    transform: translate3d(4px, 0, 0);
+  }
+  75% {
+    transform: translate3d(-3px, 0, 0);
+  }
+}
+
+@keyframes ma-sheen {
+  from {
+    transform: translate3d(-120%, 0, 0) skewX(-18deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.4;
+  }
+  to {
+    transform: translate3d(220%, 0, 0) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
+@keyframes ma-heart-pop {
+  0% {
+    transform: scale3d(0.8, 0.8, 1);
+  }
+  55% {
+    transform: scale3d(1.18, 1.18, 1);
+  }
+  100% {
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes ma-bag-bump {
+  0% {
+    transform: scale3d(1, 1, 1);
+  }
+  45% {
+    transform: scale3d(1.16, 1.16, 1);
+  }
+  100% {
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes ma-badge-pop {
+  0% {
+    transform: scale3d(0.65, 0.65, 1);
+  }
+  65% {
+    transform: scale3d(1.15, 1.15, 1);
+  }
+  100% {
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes ma-scroll-reveal {
+  from {
+    opacity: 0.01;
+    transform: translate3d(0, var(--motion-travel, 16px), 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Smooth colour transitions scoped strictly to key layout surfaces */
+html.ma-theme-switching,
+html.ma-theme-switching body,
+html.ma-theme-switching header,
+html.ma-theme-switching footer,
+html.ma-theme-switching main,
+html.ma-theme-switching [data-theme-surface] {
+  transition-property: background-color, color, border-color;
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-out);
+}
+
+/* Hero progressive CSS animations (SSR HTML stays visible at opacity > 0) */
+@media (prefers-reduced-motion: no-preference) {
+  .ma-hero-line {
+    animation: ma-hero-rise 450ms var(--ease-out) var(--ma-delay, 0ms) both;
+  }
+
+  .ma-hero-media {
+    animation: ma-hero-scale 600ms var(--ease-out) both;
+  }
+
+  .ma-page-enter {
+    animation: ma-page-rise 220ms var(--ease-out) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ma-page-enter {
+    animation: ma-fade-in 120ms ease-out both;
+  }
+}
+
+/* Float + Sparkles (paused when offscreen or document hidden) */
+.ma-float {
+  animation: ma-float var(--float-duration, 7s) ease-in-out var(--float-delay, 0s) infinite;
+  will-change: transform;
+}
+
+.ma-glint {
+  animation: ma-glint var(--glint-duration, 5s) ease-in-out var(--glint-delay, 0s) infinite;
+}
+
+.ma-float[data-paused="true"],
+.ma-glint[data-paused="true"] {
+  animation-play-state: paused;
+  will-change: auto;
+}
+
+/* Shared transform-based gradient shimmer for skeletons */
+.ma-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--surface-3);
+}
+
+.ma-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translate3d(-100%, 0, 0);
+  background: linear-gradient(90deg, transparent 0%, var(--surface-2) 50%, transparent 100%);
+  animation: ma-shimmer 1.6s var(--ease-in-out) infinite;
+}
+
+/* CSS grid-rows smooth accordion without JS height measurement */
+.ma-accordion-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    grid-template-rows 200ms var(--ease-out),
+    opacity 150ms var(--ease-out),
+    visibility 0s linear 200ms;
+}
+
+.ma-accordion-content[hidden] {
+  display: grid !important;
+}
+
+.ma-accordion-content[data-state="open"],
+.ma-accordion-content[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    grid-template-rows 200ms var(--ease-out),
+    opacity 200ms var(--ease-out),
+    visibility 0s linear 0s;
+}
+
+.ma-accordion-content[data-state="closed"],
+.ma-accordion-content[data-open="false"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.ma-accordion-inner {
+  overflow: hidden;
+}
+
+/* Header GPU-only scroll state */
+.ma-header {
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.ma-header-surface {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--header-bg);
+  backdrop-filter: blur(12px);
+  transform-origin: top center;
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.ma-header-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-out);
+}
+
+.ma-header-inner {
+  transition: transform var(--duration-base) var(--ease-out);
+  transform-origin: center center;
+}
+
+[data-scrolled="true"] .ma-header-surface {
+  background-color: var(--header-bg);
+}
+
+[data-scrolled="true"] .ma-header-surface::after {
+  opacity: 1;
+}
+
+@media (min-width: 1024px) {
+  [data-scrolled="true"] .ma-header-surface {
+    transform: scaleY(0.92);
+  }
+
+  [data-scrolled="true"] .ma-header-inner {
+    transform: translate3d(0, -3px, 0) scale3d(0.992, 0.992, 1);
+  }
+}
+
+@media (max-width: 1023px) {
+  .ma-header[data-hidden="true"]:not(:focus-within) {
+    transform: translate3d(0, -100%, 0);
+  }
+}
+
+/* Overlay / Modal / Popover / Dropdown Radix state keyframes */
+@keyframes ma-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ma-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes ma-popover-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale3d(0.98, 0.98, 1);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
+  }
+}
+
+@keyframes ma-popover-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0) scale3d(0.98, 0.98, 1);
+  }
+}
+
+@keyframes ma-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale3d(0.97, 0.97, 1);
+  }
+  to {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes ma-dialog-out {
+  from {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+  to {
+    opacity: 0;
+    transform: scale3d(0.98, 0.98, 1);
+  }
+}
+
+@keyframes ma-sheet-up-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes ma-sheet-up-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+}
+
+.ma-overlay[data-state="open"] {
+  animation: ma-overlay-in 180ms var(--ease-out) both;
+}
+
+.ma-overlay[data-state="closed"] {
+  animation: ma-overlay-out 150ms var(--ease-out) both;
+}
+
+.ma-dialog[data-state="open"] {
+  animation: ma-dialog-in 200ms var(--ease-out) both;
+}
+
+.ma-dialog[data-state="closed"] {
+  animation: ma-dialog-out 150ms var(--ease-out) both;
+}
+
+.ma-popover[data-state="open"] {
+  animation: ma-popover-in 180ms var(--ease-out) both;
+}
+
+.ma-popover[data-state="closed"] {
+  animation: ma-popover-out 140ms var(--ease-out) both;
+}
+
+@media (max-width: 639px) {
+  .ma-dialog[data-state="open"] {
+    animation: ma-sheet-up-in 220ms var(--ease-out) both;
+  }
+
+  .ma-dialog[data-state="closed"] {
+    animation: ma-sheet-up-out 160ms var(--ease-out) both;
+  }
+}
+
+/* Links: animated underline from left via transform: scaleX */
+.ma-link-underline {
+  position: relative;
+  text-decoration: none;
+}
+
+.ma-link-underline::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -2px;
+  left: 0;
+  height: 1px;
+  background-color: currentColor;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--duration-fast) var(--ease-out);
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ma-link-underline:hover::after,
+  .ma-link-underline:focus-visible::after {
+    transform: scaleX(1);
+  }
+}
+
+.ma-link-underline[data-active="true"]::after {
+  transform: scaleX(1);
+}
+
+/* Pre-rendered opacity shadow layer & GPU-composited card hover (desktop only) */
+.ma-card-elevate {
+  position: relative;
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.ma-card-elevate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+  transition: opacity var(--duration-base) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ma-card-elevate:hover {
+    transform: translate3d(0, -2px, 0);
+  }
+
+  .ma-card-elevate:hover::after {
+    opacity: 1;
+  }
+
+  .ma-card-lift-lg:hover {
+    transform: translate3d(0, -4px, 0);
+  }
+}
+
+/* Button tactile feedback + desktop primary sheen */
+.ma-btn {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out);
+}
+
+.ma-btn:active:not(:disabled) {
+  transform: scale3d(0.98, 0.98, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ma-btn:hover:not(:disabled) {
+    transform: translate3d(0, -1px, 0);
+  }
+
+  .ma-btn-sheen::after {
+    content: "";
+    position: absolute;
+    inset-block: -20%;
+    left: -35%;
+    width: 35%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--primary-foreground) 18%, transparent) 50%,
+      transparent 100%
+    );
+    transform: translate3d(-120%, 0, 0) skewX(-18deg);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ma-btn-sheen:hover:not(:disabled)::after {
+    animation: ma-sheen 650ms var(--ease-out) 1;
+  }
+}
+
+/* Product card hover enhancements (desktop pointer only) */
+.ma-product-media-img {
+  transition:
+    transform 400ms var(--ease-out),
+    opacity var(--duration-base) var(--ease-out);
+}
+
+.ma-product-secondary-img {
+  opacity: 0;
+  transition:
+    transform 400ms var(--ease-out),
+    opacity var(--duration-base) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .group:hover .ma-product-media-img {
+    transform: scale3d(1.03, 1.03, 1);
+  }
+
+  .group:hover .ma-product-has-alt {
+    opacity: 0;
+  }
+
+  .group:hover .ma-product-secondary-img {
+    opacity: 1;
+    transform: scale3d(1.03, 1.03, 1);
+  }
+
+  .group:hover .ma-collection-img {
+    transform: scale3d(1.04, 1.04, 1);
+  }
+
+  .ma-product-quick-action {
+    transform: translate3d(0, 5px, 0);
+    transition:
+      transform var(--duration-base) var(--ease-out),
+      opacity var(--duration-fast) var(--ease-out);
+  }
+
+  .group:hover .ma-product-quick-action,
+  .group:focus-within .ma-product-quick-action {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.ma-collection-img {
+  transition: transform 400ms var(--ease-out);
+}
+
+/* Micro-interactions */
+.ma-heart-pop {
+  animation: ma-heart-pop 300ms var(--ease-out) 1;
+}
+
+.ma-bag-bump {
+  animation: ma-bag-bump 320ms var(--ease-out) 1;
+}
+
+.ma-badge-pop {
+  animation: ma-badge-pop 280ms var(--ease-out) 1;
+}
+
+.ma-error-shake {
+  animation: ma-shake 200ms var(--ease-out) 1;
+}
+
+/* Progress fill via GPU scaleX */
+.ma-progress-fill {
+  transform-origin: left center;
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+
+/* Progressive scroll reveals (never opacity:0 in initial SSR HTML) */
+[data-ma-reveal="armed"] {
+  opacity: 0;
+  transform: translate3d(0, var(--ma-travel, var(--motion-travel, 16px)), 0);
+}
+
+[data-ma-reveal="armed"][data-ma-variant="fade"] {
+  transform: none;
+}
+
+[data-ma-reveal="armed"][data-ma-variant="scale"] {
+  transform: scale3d(0.96, 0.96, 1);
+}
+
+[data-ma-reveal="visible"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
+  transition:
+    opacity var(--ma-duration, 350ms) var(--ease-out) var(--ma-delay, 0ms),
+    transform var(--ma-duration, 350ms) var(--ease-out) var(--ma-delay, 0ms);
+}
+
+/* Staggered grid children (only first 8 items animate; 9+ appear immediately) */
+[data-ma-stagger="armed"] > :nth-child(-n + 8) {
+  opacity: 0;
+  transform: translate3d(0, var(--motion-travel, 16px), 0);
+}
+
+[data-ma-stagger="visible"] > :nth-child(-n + 8) {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  transition:
+    opacity 320ms var(--ease-out) var(--stagger-delay, 0ms),
+    transform 320ms var(--ease-out) var(--stagger-delay, 0ms);
+}
+
+[data-ma-stagger="visible"] > :nth-child(1) {
+  --stagger-delay: 0ms;
+}
+[data-ma-stagger="visible"] > :nth-child(2) {
+  --stagger-delay: 60ms;
+}
+[data-ma-stagger="visible"] > :nth-child(3) {
+  --stagger-delay: 120ms;
+}
+[data-ma-stagger="visible"] > :nth-child(4) {
+  --stagger-delay: 180ms;
+}
+[data-ma-stagger="visible"] > :nth-child(5) {
+  --stagger-delay: 240ms;
+}
+[data-ma-stagger="visible"] > :nth-child(6) {
+  --stagger-delay: 300ms;
+}
+[data-ma-stagger="visible"] > :nth-child(7) {
+  --stagger-delay: 360ms;
+}
+[data-ma-stagger="visible"] > :nth-child(8) {
+  --stagger-delay: 420ms;
+}
+
+/* CSS scroll-driven hero parallax (desktop fine pointer + no-preference + @supports) */
+@keyframes ma-hero-parallax {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 22px, 0);
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .ma-hero-parallax {
+      animation: ma-hero-parallax linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0px 560px;
+    }
+  }
+}
+
+/* Reduced motion & low-end device guards */
+@media (prefers-reduced-motion: reduce) {
+  .ma-float,
+  .ma-glint,
+  .ma-skeleton::after,
+  .ma-hero-line,
+  .ma-hero-media,
+  .ma-hero-parallax,
+  .ma-heart-pop,
+  .ma-bag-bump,
+  .ma-badge-pop,
+  .ma-error-shake,
+  .ma-btn-sheen::after {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  [data-ma-reveal="armed"],
+  [data-ma-reveal="visible"],
+  [data-ma-stagger="armed"] > :nth-child(-n + 8),
+  [data-ma-stagger="visible"] > :nth-child(-n + 8) {
+    transform: none !important;
+    transition-property: opacity !important;
+    transition-duration: 120ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  .ma-card-elevate:hover,
+  .ma-btn:hover:not(:disabled),
+  .ma-btn:active:not(:disabled),
+  .group:hover .ma-product-media-img,
+  .group:hover .ma-collection-img {
+    transform: none !important;
+  }
+
+  .ma-accordion-content {
+    transition-property: opacity !important;
+    transition-duration: 120ms !important;
+  }
+}
+
+/* Top navigation progress bar (NavigationProgress.tsx): fast start, then crawls until the route renders. */
+@keyframes nav-progress {
+  0% {
+    transform: translateX(-100%) scaleX(0.3);
+  }
+  40% {
+    transform: translateX(-30%) scaleX(0.6);
+  }
+  100% {
+    transform: translateX(-5%) scaleX(0.95);
+  }
+}
+.nav-progress-bar {
+  transform-origin: left;
+  animation: nav-progress 4s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress-bar {
+    animation: none;
+    transform: none;
+    opacity: 0.6;
+  }
+}

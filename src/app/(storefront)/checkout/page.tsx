@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Container, Section } from "@/components/shared/primitives";
 import { CheckoutClient } from "@/components/storefront/CheckoutClient";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NOINDEX_NOFOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import {
   getCheckoutBootstrapData,
@@ -13,7 +14,7 @@ import { isCancellableBeforeSettlement } from "@/modules/orders/state-machine";
 
 export const metadata: Metadata = buildMetadata({
   title: "Checkout",
-  description: "Complete your insured jewellery commission cleanly and securely.",
+  description: "Secure checkout with insured delivery.",
   pathname: "/checkout",
   canonical: "/checkout",
   robots: NOINDEX_NOFOLLOW_ROBOTS,
@@ -46,7 +47,11 @@ async function CheckoutBody({
   }
 
   return (
-    <Section spacing="sm">
+    <Section
+      spacing="md"
+      data-focus-layout=""
+      className="pt-4 pb-28 sm:pt-6 md:pt-6 lg:pt-8 lg:pb-24"
+    >
       <Container>
         <Breadcrumbs
           items={[
@@ -56,11 +61,8 @@ async function CheckoutBody({
           ]}
         />
 
-        <header className="mt-2 mb-8 border-b border-border pb-6">
-          <p className="font-sans text-editorial-label text-accent-text">
-            Insured Vault Reservation
-          </p>
-          <h1 className="mt-1 font-display text-4xl font-medium tracking-tight text-foreground">
+        <header className="mt-2 mb-4 md:mt-2 md:mb-6 md:border-b md:border-border md:pb-4">
+          <h1 className="type-h1 font-semibold text-foreground">
             {initialRetryOrder ? "Complete Payment Authorization" : "Secure Checkout"}
           </h1>
         </header>
@@ -79,9 +81,23 @@ export default function CheckoutPage({
   return (
     <Suspense
       fallback={
-        <Section spacing="sm">
+        <Section spacing="md" className="pt-8 pb-20 lg:pb-24">
           <Container>
-            <div className="py-12 text-sm text-muted-foreground">Preparing insured checkout…</div>
+            <Skeleton className="h-4 w-44" />
+            <div className="mt-4 mb-8 space-y-3 border-b border-border pb-6">
+              <Skeleton className="h-3.5 w-36" />
+              <Skeleton className="h-10 w-64" />
+            </div>
+            <Skeleton className="mb-6 h-16 w-full rounded-xl" />
+            <div className="grid gap-6 lg:grid-cols-12">
+              <div className="space-y-6 lg:col-span-7">
+                <Skeleton className="h-40 w-full rounded-xl" />
+                <Skeleton className="h-80 w-full rounded-xl" />
+              </div>
+              <div className="lg:col-span-5">
+                <Skeleton className="h-96 w-full rounded-xl" />
+              </div>
+            </div>
           </Container>
         </Section>
       }

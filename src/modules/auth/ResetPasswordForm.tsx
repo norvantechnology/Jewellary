@@ -72,7 +72,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       {serverError && (
         <div
           role="alert"
-          className="rounded-sm border border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive"
+          className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
         >
           {serverError}
         </div>

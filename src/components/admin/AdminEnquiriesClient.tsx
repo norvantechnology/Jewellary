@@ -50,7 +50,7 @@ export function AdminEnquiriesClient({ enquiries }: { enquiries: AdminEnquiryDTO
     setSubject(
       enq.productName
         ? `Regarding ${enq.productName} — Concierge Response`
-        : `Your ${enq.type.toLowerCase()} enquiry with Maison Aurelia`,
+        : `Your ${enq.type.toLowerCase()} concierge enquiry`,
     );
     setReplyMessage("");
     setNextStatus("RESOLVED");
@@ -176,7 +176,7 @@ export function AdminEnquiriesClient({ enquiries }: { enquiries: AdminEnquiryDTO
                   )}
                 </FormField>
               </div>
-              <div className="sm:col-span-7">
+              <div className="sm:col-span-6">
                 <FormField id={`enq-note-${enq.id}`} label="Internal Concierge Notes">
                   {(fp) => (
                     <Textarea
@@ -191,11 +191,11 @@ export function AdminEnquiriesClient({ enquiries }: { enquiries: AdminEnquiryDTO
                   )}
                 </FormField>
               </div>
-              <div className="flex items-end sm:col-span-2">
+              <div className="flex items-end sm:col-span-3">
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full"
+                  className="w-full px-3"
                   loading={pendingId === enq.id}
                   onClick={() => handleSaveNoteAndStatus(enq)}
                 >

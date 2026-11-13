@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
-import { toast } from "sonner";
+import { notifyError, notifySuccess } from "@/lib/notify";
+import { FadeIn } from "@/components/motion/Reveal";
+import { AbuseProtectionFields } from "@/components/shared/AbuseProtectionFields";
 import { FormField } from "@/components/shared/FormField";
+import { useAbuseProtection } from "@/hooks/use-abuse-protection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -40,6 +42,7 @@ export function EnquiryForm({
 }: EnquiryFormProps) {
   const [submittedRef, setSubmittedRef] = React.useState<string | null>(null);
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const abuse = useAbuseProtection();
 
   const form = useForm({
     resolver: zodResolver(createEnquirySchema),
@@ -57,16 +60,23 @@ export function EnquiryForm({
   const onSubmit = form.handleSubmit(async (rawValues) => {
     const values = rawValues as CreateEnquiryInput;
     setServerError(null);
-    const result = await submitEnquiryAction(values);
+    const result = await submitEnquiryAction({
+      ...values,
+      website: abuse.website || values.website || "",
+      timingToken: abuse.timingToken,
+      turnstileToken: abuse.turnstileToken,
+    });
 
     if (!result.ok) {
       setServerError(result.error.message);
-      toast.error(result.error.message);
+      void notifyError(result.error.message);
+      abuse.refreshToken();
       return;
     }
 
     setSubmittedRef(result.data.id);
-    toast.success("Your concierge note has been received.");
+    void notifySuccess("Your concierge note has been received.");
+    abuse.refreshToken();
     form.reset({
       type: defaultType,
       name: "",
@@ -81,28 +91,47 @@ export function EnquiryForm({
 
   if (submittedRef) {
     return (
-      <div
-        role="status"
-        className="rounded-md border border-accent/40 bg-card p-6 text-center shadow-card"
-      >
-        <CheckCircle2 className="mx-auto size-8 text-accent" aria-hidden="true" />
-        <h3 className="mt-3 font-display text-2xl font-medium text-foreground">
-          Thank You for Reaching Out
-        </h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          A senior gemologist from our private concierge has received your enquiry (Reference:{" "}
-          <span className="font-mono text-foreground">{submittedRef.slice(-8).toUpperCase()}</span>)
-          and will respond within one business day.
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-5"
-          onClick={() => setSubmittedRef(null)}
+      <FadeIn>
+        <div
+          role="status"
+          className="rounded-lg border border-accent/40 bg-card p-6 text-center shadow-card"
         >
-          Send Another Note
-        </Button>
-      </div>
+          <span
+            aria-hidden="true"
+            className="mx-auto flex size-11 items-center justify-center rounded-full border border-success/40 bg-success/10 text-success"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="size-5"
+            >
+              <path d="M5 13l4 4L19 7" className="ma-check-draw" />
+            </svg>
+          </span>
+          <h3 className="mt-3 text-xl font-semibold tracking-[-0.015em] text-foreground sm:text-2xl">
+            Thank You for Reaching Out
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            A senior gemologist from our private concierge has received your enquiry (Reference:{" "}
+            <span className="font-mono text-foreground">
+              {submittedRef.slice(-8).toUpperCase()}
+            </span>
+            ) and will respond within one business day.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-5"
+            onClick={() => setSubmittedRef(null)}
+          >
+            Send Another Note
+          </Button>
+        </div>
+      </FadeIn>
     );
   }
 
@@ -111,15 +140,16 @@ export function EnquiryForm({
       {serverError && (
         <div
           role="alert"
-          className="rounded-sm border border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive"
+          className="ma-error-shake rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
         >
           {serverError}
         </div>
       )}
 
       {productName && (
-        <div className="rounded-sm border border-border bg-muted/40 px-3.5 py-2.5 text-xs text-muted-foreground">
-          Regarding creation: <strong className="text-foreground">{productName}</strong>
+        <div className="rounded-md border border-border bg-surface-2 px-4 py-3 text-xs text-muted-foreground">
+          Regarding creation:{" "}
+          <strong className="font-semibold text-foreground">{productName}</strong>
         </div>
       )}
 
@@ -151,7 +181,7 @@ export function EnquiryForm({
         )}
       </FormField>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 min-[480px]:grid-cols-2">
         <FormField
           id="enquiry-name"
           label="Full Name"
@@ -178,6 +208,7 @@ export function EnquiryForm({
             <Input
               {...aria}
               type="email"
+              inputMode="email"
               autoComplete="email"
               placeholder="you@example.com"
               {...form.register("email")}
@@ -196,6 +227,7 @@ export function EnquiryForm({
           <Input
             {...aria}
             type="tel"
+            inputMode="tel"
             autoComplete="tel"
             placeholder="+1 212 555 0140"
             {...form.register("phone")}
@@ -219,13 +251,11 @@ export function EnquiryForm({
         )}
       </FormField>
 
-      <input
-        type="text"
-        tabIndex={-1}
-        aria-hidden="true"
-        autoComplete="off"
-        className="sr-only"
-        {...form.register("website")}
+      <AbuseProtectionFields
+        website={abuse.website}
+        onWebsiteChange={abuse.setWebsite}
+        turnstileSiteKey={abuse.turnstileSiteKey}
+        onTurnstileToken={abuse.setTurnstileToken}
       />
 
       <Button

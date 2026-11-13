@@ -1,13 +1,14 @@
 "use server";
 
 import { subscribeNewsletterSchema } from "@/modules/newsletter/newsletter.schemas";
+import {
+  requestNewsletterSubscription,
+  type SubscribeNewsletterResult,
+} from "@/modules/newsletter/newsletter.service";
+import { assertHumanSubmission } from "@/server/abuse";
 import { createAction } from "@/server/create-action";
-import { db } from "@/server/db";
 
-export interface SubscribeNewsletterResult {
-  status: "subscribed" | "already_subscribed";
-  email: string;
-}
+export type { SubscribeNewsletterResult };
 
 export const subscribeNewsletterAction = createAction(
   {
@@ -16,28 +17,14 @@ export const subscribeNewsletterAction = createAction(
     auth: "public",
     rateLimit: { tier: "newsletter" },
   },
-  async ({ email, source }): Promise<SubscribeNewsletterResult> => {
-    const existing = await db.newsletterSubscriber.findUnique({
-      where: { email },
-      select: { id: true, unsubscribedAt: true },
+  async ({ email, source, website, timingToken, turnstileToken }, ctx) => {
+    await assertHumanSubmission({
+      website,
+      timingToken,
+      turnstileToken,
+      ip: ctx.ip,
     });
 
-    if (existing && existing.unsubscribedAt === null) {
-      return { status: "already_subscribed", email };
-    }
-
-    await db.newsletterSubscriber.upsert({
-      where: { email },
-      create: {
-        email,
-        source,
-      },
-      update: {
-        unsubscribedAt: null,
-        source,
-      },
-    });
-
-    return { status: "subscribed", email };
+    return requestNewsletterSubscription({ email, source });
   },
 );

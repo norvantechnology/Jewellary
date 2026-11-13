@@ -1,22 +1,43 @@
 import type { MetadataRoute } from "next";
-import { env } from "@/lib/env";
+import { BRAND_PALETTE } from "@/lib/brand-palette";
+import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
-export default function manifest(): MetadataRoute.Manifest {
-  const siteName = env.NEXT_PUBLIC_SITE_NAME;
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const settings = await getPublicStoreSettings().catch(() => null);
+  const name = settings?.storeName ?? "Maison Aurelia";
+
   return {
-    name: `${siteName} — Fine Jewellery & Certified Diamonds`,
-    short_name: siteName,
+    name,
+    short_name: name,
     description:
-      "Handcrafted 18K gold and platinum fine jewellery featuring GIA and IGI certified diamonds.",
+      settings?.tagline ??
+      "Certified diamond engagement rings and fine jewellery crafted in 18K gold and 950 platinum.",
     start_url: "/",
     display: "standalone",
-    background_color: "#FAF7F0",
-    theme_color: "#9A7532",
+    background_color: BRAND_PALETTE.light.bg,
+    theme_color: BRAND_PALETTE.light.bg,
     icons: [
       {
-        src: "/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/icon-48.png",
+        sizes: "48x48",
+        type: "image/png",
+      },
+      {
+        src: "/icon-96.png",
+        sizes: "96x96",
+        type: "image/png",
+      },
+      {
+        src: "/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
       },
     ],
   };

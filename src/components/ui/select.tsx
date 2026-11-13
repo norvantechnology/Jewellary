@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { Select as RadixSelect } from "radix-ui";
 import { cn } from "@/lib/utils";
 
@@ -17,14 +17,18 @@ export function SelectTrigger({
   return (
     <RadixSelect.Trigger
       className={cn(
-        "flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-sm border border-input bg-card px-3.5 py-2 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+        "transition-ui flex h-12 min-h-12 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border-strong bg-surface px-3.5 text-base text-text focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-tint focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45 data-[placeholder]:text-text-muted md:h-11 md:min-h-11 md:text-sm",
         className,
       )}
       {...props}
     >
-      {children}
+      <span className="truncate">{children}</span>
       <RadixSelect.Icon asChild>
-        <ChevronDown className="size-4 text-muted-foreground" aria-hidden="true" />
+        <ChevronDown
+          className="size-4 shrink-0 text-muted-foreground"
+          strokeWidth={1.5}
+          aria-hidden="true"
+        />
       </RadixSelect.Icon>
     </RadixSelect.Trigger>
   );
@@ -34,34 +38,25 @@ export function SelectContent({
   className,
   children,
   position = "popper",
+  sideOffset = 6,
+  collisionPadding = 12,
   ...props
 }: React.ComponentProps<typeof RadixSelect.Content>) {
   return (
     <RadixSelect.Portal>
       <RadixSelect.Content
         position={position}
+        sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
         className={cn(
-          "relative z-50 max-h-96 min-w-32 overflow-hidden rounded-sm border border-border bg-popover text-popover-foreground shadow-soft",
-          position === "popper" && "translate-y-1",
+          "ma-popover z-[var(--z-dropdown)] max-h-[min(var(--radix-select-content-available-height),18rem)] w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-1.5rem)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md sm:max-h-72",
           className,
         )}
         {...props}
       >
-        <RadixSelect.ScrollUpButton className="flex cursor-default items-center justify-center py-1">
-          <ChevronUp className="size-4" aria-hidden="true" />
-        </RadixSelect.ScrollUpButton>
-        <RadixSelect.Viewport
-          className={cn(
-            "p-1",
-            position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]",
-          )}
-        >
+        <RadixSelect.Viewport className="max-h-[min(var(--radix-select-content-available-height),18rem)] overflow-y-auto p-1">
           {children}
         </RadixSelect.Viewport>
-        <RadixSelect.ScrollDownButton className="flex cursor-default items-center justify-center py-1">
-          <ChevronDown className="size-4" aria-hidden="true" />
-        </RadixSelect.ScrollDownButton>
       </RadixSelect.Content>
     </RadixSelect.Portal>
   );
@@ -75,14 +70,14 @@ export function SelectItem({
   return (
     <RadixSelect.Item
       className={cn(
-        "relative flex min-h-10 w-full cursor-pointer items-center rounded-sm py-2 pr-3 pl-8 text-sm outline-none select-none focus:bg-muted focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "relative flex min-h-11 w-full cursor-pointer items-center rounded-md py-2 pr-3 pl-9 text-base text-popover-foreground transition-colors outline-none select-none focus:bg-surface-2 focus:text-text data-[disabled]:pointer-events-none data-[disabled]:opacity-45 data-[state=checked]:font-medium sm:min-h-9 sm:py-1.5 sm:pl-8 sm:text-sm",
         className,
       )}
       {...props}
     >
-      <span className="absolute left-2.5 flex size-4 items-center justify-center">
+      <span className="pointer-events-none absolute left-2.5 flex size-4 items-center justify-center">
         <RadixSelect.ItemIndicator>
-          <Check className="size-4 text-accent-text" aria-hidden="true" />
+          <Check className="size-4 text-accent-text" strokeWidth={2} aria-hidden="true" />
         </RadixSelect.ItemIndicator>
       </span>
       <RadixSelect.ItemText>{children}</RadixSelect.ItemText>
@@ -96,7 +91,7 @@ export function SelectLabel({
 }: React.ComponentProps<typeof RadixSelect.Label>) {
   return (
     <RadixSelect.Label
-      className={cn("px-2 py-1.5 text-xs font-medium text-muted-foreground", className)}
+      className={cn("px-3 py-1.5 text-xs font-medium text-muted-foreground", className)}
       {...props}
     />
   );

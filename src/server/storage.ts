@@ -13,6 +13,12 @@ import { createId } from "@paralleldrive/cuid2";
 import { fileTypeFromBuffer } from "file-type";
 import sharp from "sharp";
 import { env } from "@/lib/env";
+import {
+  IMAGE_QUALITY_BUDGETS,
+  IMAGE_RESPONSIVE_WIDTHS,
+  type ResponsiveVariantSet,
+  buildSeoImageStem,
+} from "@/lib/seo/images";
 import { ValidationError } from "@/server/errors";
 import { logger } from "@/server/logger";
 
@@ -30,11 +36,20 @@ export type UploadFolder = "products" | "categories" | "banners" | "articles" | 
 const TMP_LOCAL_DIR = path.join(process.cwd(), ".tmp-uploads");
 const PUBLIC_LOCAL_DIR = path.join(process.cwd(), "public", "uploads");
 
-function getS3Client(): S3Client | null {
+let cachedS3Client: S3Client | null | undefined;
+let cachedS3Signature: string | null = null;
+let s3ReachabilityCache: { endpoint: string; reachable: boolean; expiresAt: number } | null = null;
+
+export function getS3Client(): S3Client | null {
   if (!env.S3_ACCESS_KEY_ID || !env.S3_SECRET_ACCESS_KEY || !env.S3_ENDPOINT) {
     return null;
   }
-  return new S3Client({
+  const sig = `${env.S3_REGION}:${env.S3_ENDPOINT}:${env.S3_ACCESS_KEY_ID}`;
+  if (cachedS3Client && cachedS3Signature === sig) {
+    return cachedS3Client;
+  }
+  cachedS3Signature = sig;
+  cachedS3Client = new S3Client({
     region: env.S3_REGION,
     endpoint: env.S3_ENDPOINT,
     forcePathStyle: true,
@@ -43,22 +58,33 @@ function getS3Client(): S3Client | null {
       secretAccessKey: env.S3_SECRET_ACCESS_KEY,
     },
   });
+  return cachedS3Client;
 }
 
-async function isS3Reachable(client: S3Client): Promise<boolean> {
+export async function isS3Reachable(client: S3Client): Promise<boolean> {
   if (!env.S3_ENDPOINT) return false;
   // In non-localhost endpoints (real R2/S3), assume configured endpoint is reachable.
   const endpointUrl = new URL(env.S3_ENDPOINT);
   if (endpointUrl.hostname !== "localhost" && endpointUrl.hostname !== "127.0.0.1") {
     return true;
   }
+  const now = Date.now();
+  if (
+    s3ReachabilityCache &&
+    s3ReachabilityCache.endpoint === env.S3_ENDPOINT &&
+    s3ReachabilityCache.expiresAt > now
+  ) {
+    return s3ReachabilityCache.reachable && Boolean(client);
+  }
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 350);
     await fetch(env.S3_ENDPOINT, { method: "HEAD", signal: ctrl.signal });
     clearTimeout(timer);
+    s3ReachabilityCache = { endpoint: env.S3_ENDPOINT, reachable: true, expiresAt: now + 30_000 };
     return Boolean(client);
   } catch {
+    s3ReachabilityCache = { endpoint: env.S3_ENDPOINT, reachable: false, expiresAt: now + 30_000 };
     return false;
   }
 }
@@ -180,15 +206,29 @@ async function deleteStagedObject(
   }
 }
 
+export interface ImageSeoUploadMetadata {
+  slug?: string;
+  productName?: string;
+  metal?: string;
+  carat?: string;
+  viewType?: string;
+  copyrightNotice?: string;
+}
+
 export async function processAndPersistImageUpload(input: {
   tempKey: string;
   folder: UploadFolder;
   mode: "s3" | "local";
+  seo?: ImageSeoUploadMetadata;
 }): Promise<{
   storageKey: string;
   url: string;
   mediumUrl: string;
   thumbUrl: string;
+  avifUrl: string;
+  jpegUrl: string;
+  responsiveVariants: ResponsiveVariantSet;
+  warnings: string[];
   width: number;
   height: number;
 }> {
@@ -206,25 +246,341 @@ export async function processAndPersistImageUpload(input: {
     throw new ValidationError("Uploaded file magic bytes do not match an allowed raster image.");
   }
 
-  // Strip EXIF/metadata via Sharp re-encode & generate WebP variants
-  const pipeline = sharp(buffer, { limitInputPixels: 40_000_000 }).rotate();
+  const copyrightText =
+    input.seo?.copyrightNotice?.trim() ||
+    `© ${new Date().getFullYear()} ${env.NEXT_PUBLIC_SITE_NAME}`;
+
+  // Strip GPS/camera EXIF while preserving ICC profile & writing copyright notice
+  const basePipeline = sharp(buffer, { limitInputPixels: 40_000_000 })
+    .rotate()
+    .keepIccProfile()
+    .withExif({
+      IFD0: {
+        Copyright: copyrightText,
+        Artist: env.NEXT_PUBLIC_SITE_NAME,
+      },
+    });
+
+  const sourceMeta = await basePipeline.clone().metadata();
+  const origWidth = sourceMeta.width ?? 1200;
+  const origHeight = sourceMeta.height ?? 1200;
+  const longEdge = Math.max(origWidth, origHeight);
+
+  const warnings: string[] = [];
+  if (longEdge < IMAGE_QUALITY_BUDGETS.warningMinEdgePx) {
+    warnings.push(
+      `Image resolution (${origWidth}×${origHeight}px) is below 800px; upload >= 1200px for crisp zoom and Google Shopping.`,
+    );
+  } else if (longEdge < IMAGE_QUALITY_BUDGETS.recommendedMinEdgePx) {
+    warnings.push(
+      `Image resolution (${origWidth}×${origHeight}px) is under the recommended 1200px long edge.`,
+    );
+  }
+
+  const hashSuffix = createId().slice(0, 8);
+  const seoStem = buildSeoImageStem({
+    slug: input.seo?.slug,
+    productName: input.seo?.productName,
+    metal: input.seo?.metal,
+    carat: input.seo?.carat,
+    viewType: input.seo?.viewType,
+    hashSuffix,
+  });
+
+  const [fullWebp, mediumBuffer, thumbBuffer, fullAvif, fullJpeg] = await Promise.all([
+    basePipeline
+      .clone()
+      .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 84 })
+      .toBuffer({ resolveWithObject: true }),
+    basePipeline
+      .clone()
+      .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer(),
+    basePipeline
+      .clone()
+      .resize(400, 400, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 78 })
+      .toBuffer(),
+    basePipeline
+      .clone()
+      .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
+      .avif({ quality: 58 })
+      .toBuffer(),
+    basePipeline
+      .clone()
+      .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 84, mozjpeg: true })
+      .toBuffer(),
+  ]);
+
+  if (fullAvif.byteLength > IMAGE_QUALITY_BUDGETS.heroAvifMaxBytes) {
+    warnings.push(
+      `AVIF hero payload is ${Math.round(fullAvif.byteLength / 1024)} KB (budget <= 200 KB).`,
+    );
+  }
+
+  // Generate responsive breakpoint variants (320..2000px capped by source dimensions)
+  const targetWidths = IMAGE_RESPONSIVE_WIDTHS.filter((w) => w <= Math.max(origWidth, 800));
+  const extraFiles: Array<{
+    filename: string;
+    key: string;
+    body: Buffer;
+    contentType: string;
+    width: number;
+    fmt: "avif" | "webp" | "jpeg";
+  }> = [];
+
+  await Promise.all(
+    targetWidths.map(async (targetW) => {
+      const [wBuf, aBuf] = await Promise.all([
+        basePipeline
+          .clone()
+          .resize(targetW, targetW, { fit: "inside", withoutEnlargement: true })
+          .webp({ quality: 80 })
+          .toBuffer(),
+        basePipeline
+          .clone()
+          .resize(targetW, targetW, { fit: "inside", withoutEnlargement: true })
+          .avif({ quality: 55 })
+          .toBuffer(),
+      ]);
+      extraFiles.push(
+        {
+          filename: `${seoStem}-${targetW}w.webp`,
+          key: `public/${input.folder}/${seoStem}-${targetW}w.webp`,
+          body: wBuf,
+          contentType: "image/webp",
+          width: targetW,
+          fmt: "webp",
+        },
+        {
+          filename: `${seoStem}-${targetW}w.avif`,
+          key: `public/${input.folder}/${seoStem}-${targetW}w.avif`,
+          body: aBuf,
+          contentType: "image/avif",
+          width: targetW,
+          fmt: "avif",
+        },
+      );
+    }),
+  );
+
+  const baseKey = `public/${input.folder}/${seoStem}`;
+  const fullKey = `${baseKey}.webp`;
+  const medKey = `${baseKey}-med.webp`;
+  const thumbKey = `${baseKey}-thumb.webp`;
+  const avifKey = `${baseKey}.avif`;
+  const jpegKey = `${baseKey}.jpg`;
+
+  const makePublicUrl = (key: string, filename: string) => {
+    if (input.mode === "s3" && s3) {
+      const cdn = env.NEXT_PUBLIC_IMAGE_CDN_URL.replace(/\/$/, "");
+      return `${cdn}/${key}`;
+    }
+    return `/uploads/${input.folder}/${filename}`;
+  };
+
+  if (input.mode === "s3" && s3) {
+    await Promise.all([
+      s3.send(
+        new PutObjectCommand({
+          Bucket: env.S3_BUCKET,
+          Key: fullKey,
+          Body: fullWebp.data,
+          ContentType: "image/webp",
+          CacheControl: "public, max-age=31536000, immutable",
+        }),
+      ),
+      s3.send(
+        new PutObjectCommand({
+          Bucket: env.S3_BUCKET,
+          Key: medKey,
+          Body: mediumBuffer,
+          ContentType: "image/webp",
+          CacheControl: "public, max-age=31536000, immutable",
+        }),
+      ),
+      s3.send(
+        new PutObjectCommand({
+          Bucket: env.S3_BUCKET,
+          Key: thumbKey,
+          Body: thumbBuffer,
+          ContentType: "image/webp",
+          CacheControl: "public, max-age=31536000, immutable",
+        }),
+      ),
+      s3.send(
+        new PutObjectCommand({
+          Bucket: env.S3_BUCKET,
+          Key: avifKey,
+          Body: fullAvif,
+          ContentType: "image/avif",
+          CacheControl: "public, max-age=31536000, immutable",
+        }),
+      ),
+      s3.send(
+        new PutObjectCommand({
+          Bucket: env.S3_BUCKET,
+          Key: jpegKey,
+          Body: fullJpeg,
+          ContentType: "image/jpeg",
+          CacheControl: "public, max-age=31536000, immutable",
+        }),
+      ),
+      ...extraFiles.map((item) =>
+        s3.send(
+          new PutObjectCommand({
+            Bucket: env.S3_BUCKET,
+            Key: item.key,
+            Body: item.body,
+            ContentType: item.contentType,
+            CacheControl: "public, max-age=31536000, immutable",
+          }),
+        ),
+      ),
+    ]);
+    await deleteStagedObject(input.tempKey, "s3", s3);
+  } else {
+    const localSubdir = path.join(PUBLIC_LOCAL_DIR, input.folder);
+    await mkdir(localSubdir, { recursive: true });
+    await Promise.all([
+      writeFile(path.join(localSubdir, `${seoStem}.webp`), fullWebp.data),
+      writeFile(path.join(localSubdir, `${seoStem}-med.webp`), mediumBuffer),
+      writeFile(path.join(localSubdir, `${seoStem}-thumb.webp`), thumbBuffer),
+      writeFile(path.join(localSubdir, `${seoStem}.avif`), fullAvif),
+      writeFile(path.join(localSubdir, `${seoStem}.jpg`), fullJpeg),
+      ...extraFiles.map((item) => writeFile(path.join(localSubdir, item.filename), item.body)),
+    ]);
+    await deleteStagedObject(input.tempKey, "local", null);
+  }
+
+  const widthsMap: ResponsiveVariantSet["widths"] = {};
+  for (const item of extraFiles) {
+    const k = String(item.width);
+    if (!widthsMap[k]) widthsMap[k] = {};
+    widthsMap[k][item.fmt] = makePublicUrl(item.key, item.filename);
+  }
+
+  return {
+    storageKey: fullKey,
+    url: makePublicUrl(fullKey, `${seoStem}.webp`),
+    mediumUrl: makePublicUrl(medKey, `${seoStem}-med.webp`),
+    thumbUrl: makePublicUrl(thumbKey, `${seoStem}-thumb.webp`),
+    avifUrl: makePublicUrl(avifKey, `${seoStem}.avif`),
+    jpegUrl: makePublicUrl(jpegKey, `${seoStem}.jpg`),
+    responsiveVariants: {
+      widths: widthsMap,
+      seoFilenameStem: seoStem,
+      byteSizes: {
+        avif: fullAvif.byteLength,
+        webp: fullWebp.data.byteLength,
+        jpeg: fullJpeg.byteLength,
+      },
+    },
+    warnings,
+    width: fullWebp.info.width,
+    height: fullWebp.info.height,
+  };
+}
+
+function resolvePublicRelativePath(url: string | null | undefined): string | null {
+  if (!url || !url.startsWith("/")) return null;
+  const cleaned = path.posix.normalize(url).replace(/^\/+/, "");
+  if (cleaned.includes("..") || cleaned.startsWith(".")) return null;
+  if (!cleaned.startsWith("uploads/") && !cleaned.startsWith("images/")) {
+    return null;
+  }
+  return path.join(process.cwd(), "public", cleaned);
+}
+
+async function readSourceImageBytes(input: {
+  storageKey?: string | null;
+  url: string;
+}): Promise<Buffer | null> {
+  const localPath = resolvePublicRelativePath(input.url);
+  if (localPath) {
+    try {
+      return await readFile(localPath);
+    } catch {
+      // Fallback below
+    }
+  }
+
+  const s3 = getS3Client();
+  if (s3 && input.storageKey && (await isS3Reachable(s3))) {
+    try {
+      const safeKey = assertSafeKey(input.storageKey);
+      const res = await s3.send(new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: safeKey }));
+      if (res.Body) {
+        return Buffer.from(await res.Body.transformToByteArray());
+      }
+    } catch (err) {
+      logger.warn({ storageKey: input.storageKey, err }, "Failed reading S3 asset for copy");
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Duplicates a product image object under a fresh storage key so deleting either product
+ * never breaks or removes the other product's assets.
+ */
+export async function copyImageAsset(input: {
+  storageKey?: string | null;
+  url: string;
+  mediumUrl?: string | null;
+  thumbUrl?: string | null;
+  folder: UploadFolder;
+  width: number;
+  height: number;
+}): Promise<{
+  storageKey: string;
+  url: string;
+  mediumUrl: string;
+  thumbUrl: string;
+  width: number;
+  height: number;
+}> {
+  const sourceBytes = await readSourceImageBytes({
+    storageKey: input.storageKey,
+    url: input.url,
+  });
+
+  if (!sourceBytes) {
+    // Fallback if external CDN URL or missing seed binary in CI
+    const syntheticKey = `copy/${input.folder}/${createId()}`;
+    return {
+      storageKey: syntheticKey,
+      url: input.url,
+      mediumUrl: input.mediumUrl ?? input.url,
+      thumbUrl: input.thumbUrl ?? input.mediumUrl ?? input.url,
+      width: input.width,
+      height: input.height,
+    };
+  }
+
+  const pipeline = sharp(sourceBytes, { limitInputPixels: 40_000_000 }).rotate();
   const fullProcessed = await pipeline
     .clone()
     .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
     .webp({ quality: 85 })
     .toBuffer({ resolveWithObject: true });
 
-  const mediumBuffer = await pipeline
-    .clone()
-    .resize(800, 800, { fit: "inside", withoutEnlargement: true })
-    .webp({ quality: 82 })
-    .toBuffer();
-
-  const thumbBuffer = await pipeline
-    .clone()
-    .resize(400, 400, { fit: "inside", withoutEnlargement: true })
-    .webp({ quality: 78 })
-    .toBuffer();
+  const [mediumBuffer, thumbBuffer] = await Promise.all([
+    pipeline
+      .clone()
+      .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer(),
+    pipeline
+      .clone()
+      .resize(400, 400, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 78 })
+      .toBuffer(),
+  ]);
 
   const assetId = createId();
   const baseKey = `public/${input.folder}/${assetId}`;
@@ -232,7 +588,8 @@ export async function processAndPersistImageUpload(input: {
   const medKey = `${baseKey}-med.webp`;
   const thumbKey = `${baseKey}-thumb.webp`;
 
-  if (input.mode === "s3" && s3) {
+  const s3 = getS3Client();
+  if (s3 && (await isS3Reachable(s3))) {
     await Promise.all([
       s3.send(
         new PutObjectCommand({
@@ -262,7 +619,6 @@ export async function processAndPersistImageUpload(input: {
         }),
       ),
     ]);
-    await deleteStagedObject(input.tempKey, "s3", s3);
 
     const cdn = env.NEXT_PUBLIC_IMAGE_CDN_URL.replace(/\/$/, "");
     return {
@@ -275,7 +631,6 @@ export async function processAndPersistImageUpload(input: {
     };
   }
 
-  // Persist processed assets locally under public/uploads/{folder}/
   const localSubdir = path.join(PUBLIC_LOCAL_DIR, input.folder);
   await mkdir(localSubdir, { recursive: true });
   await Promise.all([
@@ -283,7 +638,6 @@ export async function processAndPersistImageUpload(input: {
     writeFile(path.join(localSubdir, `${assetId}-med.webp`), mediumBuffer),
     writeFile(path.join(localSubdir, `${assetId}-thumb.webp`), thumbBuffer),
   ]);
-  await deleteStagedObject(input.tempKey, "local", null);
 
   return {
     storageKey: fullKey,
@@ -293,4 +647,55 @@ export async function processAndPersistImageUpload(input: {
     width: fullProcessed.info.width,
     height: fullProcessed.info.height,
   };
+}
+
+/**
+ * Deletes uploaded product assets from local storage or S3 (preserving shared /images/seed assets).
+ */
+export async function deleteImageAssets(
+  assets: Array<{
+    storageKey?: string | null;
+    url: string;
+    mediumUrl?: string | null;
+    thumbUrl?: string | null;
+  }>,
+): Promise<void> {
+  if (assets.length === 0) return;
+  const s3 = getS3Client();
+  const s3Enabled = s3 ? await isS3Reachable(s3) : false;
+
+  const diskDeletes: Array<Promise<void>> = [];
+  const s3Keys: string[] = [];
+
+  for (const asset of assets) {
+    // Remove own local uploads (never delete shared /images/seed/ demo fixtures)
+    for (const candidateUrl of [asset.url, asset.mediumUrl, asset.thumbUrl]) {
+      if (!candidateUrl || !candidateUrl.startsWith("/uploads/")) continue;
+      const diskPath = resolvePublicRelativePath(candidateUrl);
+      if (diskPath) {
+        diskDeletes.push(
+          rm(diskPath, { force: true }).catch((err) => {
+            logger.warn({ diskPath, err }, "Failed to remove local image variant");
+          }),
+        );
+      }
+    }
+
+    if (s3 && s3Enabled && asset.storageKey && asset.storageKey.startsWith("public/")) {
+      const safeKey = assertSafeKey(asset.storageKey);
+      const base = safeKey.replace(/\.webp$/i, "");
+      s3Keys.push(safeKey, `${base}-med.webp`, `${base}-thumb.webp`);
+    }
+  }
+
+  await Promise.all([
+    ...diskDeletes,
+    ...(s3
+      ? s3Keys.map((key) =>
+          s3
+            .send(new DeleteObjectCommand({ Bucket: env.S3_BUCKET, Key: key }))
+            .catch((err) => logger.warn({ key, err }, "Failed removing S3 image variant")),
+        )
+      : []),
+  ]);
 }

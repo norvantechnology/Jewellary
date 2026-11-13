@@ -6,7 +6,8 @@ import type { Metadata } from "next";
 import { cacheLife, cacheTag } from "next/cache";
 import { formatMoney } from "@/lib/money";
 import { renderSafeMarkdown } from "@/lib/markdown";
-import { INDEXABLE_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
+import { INDEXABLE_ROBOTS, NOINDEX_FOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
+import { getStaticPageSeo } from "@/modules/seo/seo.service";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 import { CACHE_TAGS } from "@/server/cache-tags";
 
@@ -66,17 +67,25 @@ export async function getEditorialContentPage(slug: string): Promise<StaticEdito
 }
 
 export async function getEditorialMetadata(slug: string): Promise<Metadata> {
-  const [page, settings] = await Promise.all([
+  const [page, settings, override] = await Promise.all([
     getEditorialContentPage(slug),
     getPublicStoreSettings(),
+    getStaticPageSeo(`/${slug}`),
   ]);
   return buildMetadata({
-    title: page.title,
-    description: page.description,
+    title: override?.seoTitle ?? page.title,
+    description: override?.seoDescription ?? page.description,
+    keywords: override?.seoKeywords ?? undefined,
+    ogTitle: override?.ogTitle ?? undefined,
+    ogDescription: override?.ogDescription ?? undefined,
+    images: override?.ogImageUrl
+      ? [{ url: override.ogImageUrl, alt: page.title, width: 1200, height: 630 }]
+      : undefined,
     pathname: `/${page.slug}`,
+    canonical: override?.canonicalOverride ?? `/${page.slug}`,
     storeName: settings.storeName,
     siteDefaultOgImage: settings.defaultOgImageUrl,
-    robots: INDEXABLE_ROBOTS,
+    robots: override?.noindex ? NOINDEX_FOLLOW_ROBOTS : INDEXABLE_ROBOTS,
   });
 }
 

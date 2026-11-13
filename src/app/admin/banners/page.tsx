@@ -13,6 +13,9 @@ async function BannersContent() {
   return <BannersManager banners={banners} />;
 }
 
+// Rendered per request (signed-in / URL-driven); a blocking navigation is intended.
+export const instant = false;
+
 export default function AdminBannersPage() {
   return (
     <Suspense fallback={<Skeleton className="h-96 w-full" />}>

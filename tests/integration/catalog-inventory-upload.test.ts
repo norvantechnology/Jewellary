@@ -395,10 +395,14 @@ describe("Phase 3 Integration — Catalog, Inventory Ledger & Media Upload Pipel
     const diskFull = path.join(process.cwd(), "public", saved.url.replace(/^\/+/, ""));
     const diskMed = path.join(process.cwd(), "public", saved.mediumUrl.replace(/^\/+/, ""));
     const diskThumb = path.join(process.cwd(), "public", saved.thumbUrl.replace(/^\/+/, ""));
-    createdUploadPaths.push(diskFull, diskMed, diskThumb);
+    const diskAvif = path.join(process.cwd(), "public", saved.avifUrl.replace(/^\/+/, ""));
+    const diskJpeg = path.join(process.cwd(), "public", saved.jpegUrl.replace(/^\/+/, ""));
+    createdUploadPaths.push(diskFull, diskMed, diskThumb, diskAvif, diskJpeg);
 
     const outMeta = await sharp(await readFile(diskFull)).metadata();
     expect(outMeta.format).toBe("webp");
-    expect(outMeta.exif).toBeUndefined();
+    const exifText = outMeta.exif?.toString("latin1") ?? "";
+    expect(exifText).not.toContain("Secret Camera GPS Metadata");
+    expect(exifText).toContain("Maison Aurelia");
   });
 });

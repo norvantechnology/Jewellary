@@ -19,7 +19,7 @@ export function RadioGroupItem({
   return (
     <RadixRadioGroup.Item
       className={cn(
-        "aspect-square size-5 cursor-pointer rounded-full border border-input bg-card text-accent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-accent",
+        "transition-ui relative aspect-square size-5 cursor-pointer rounded-full border border-border-strong bg-surface text-accent-text before:absolute before:-inset-3 before:content-[''] focus-visible:ring-2 focus-visible:ring-accent-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-45 data-[state=checked]:border-accent-hover data-[state=checked]:bg-accent-tint dark:data-[state=checked]:border-accent",
         className,
       )}
       {...props}

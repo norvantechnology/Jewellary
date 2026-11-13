@@ -3,9 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AnimatePresence, m } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { CONSENT_COOKIE_NAME } from "@/lib/constants";
+import { fadeInVariants, MOTION_SPRING, useReducedMotionSafe } from "@/lib/motion";
 
 export interface ConsentState {
   necessary: true;
@@ -43,24 +45,49 @@ function getConsentVisibilitySnapshot(): boolean {
 }
 
 function writeConsentCookie(state: ConsentState) {
-  const maxAge = 60 * 60 * 24 * 180; // 180 days
+  const maxAge = 60 * 60 * 24 * 180;
   const encoded = encodeURIComponent(JSON.stringify(state));
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
   document.cookie = `${CONSENT_COOKIE_NAME}=${encoded}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
   window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: state }));
 }
 
-export function CookieBanner() {
+export function CookieBanner({ initialForceOpen = false }: { initialForceOpen?: boolean } = {}) {
   const pathname = usePathname();
-  const visible = React.useSyncExternalStore(
+  const missingCookie = React.useSyncExternalStore(
     subscribeConsent,
     getConsentVisibilitySnapshot,
     () => false,
   );
-  const [showPreferences, setShowPreferences] = React.useState(false);
-  const [analyticsEnabled, setAnalyticsEnabled] = React.useState(false);
+  const [forcedOpen, setForcedOpen] = React.useState(initialForceOpen);
+  const [showPreferences, setShowPreferences] = React.useState(initialForceOpen);
+  const [analyticsEnabled, setAnalyticsEnabled] = React.useState(() =>
+    initialForceOpen ? readConsentCookie()?.analytics === true : false,
+  );
+  const reducedMotion = useReducedMotionSafe();
 
-  if (!visible || pathname?.startsWith("/admin")) return null;
+  React.useEffect(() => {
+    const handleOpen = () => {
+      const existing = readConsentCookie();
+      setAnalyticsEnabled(existing?.analytics === true);
+      setShowPreferences(true);
+      setForcedOpen(true);
+    };
+    window.addEventListener("ma:open-cookie-settings", handleOpen);
+    return () => window.removeEventListener("ma:open-cookie-settings", handleOpen);
+  }, []);
+
+  const visible = (missingCookie || forcedOpen) && !pathname?.startsWith("/admin");
+
+  // Hide floating launchers (chat) while the banner occupies the bottom of the viewport.
+  React.useEffect(() => {
+    const root = document.documentElement;
+    if (visible) root.dataset.cookieBanner = "open";
+    else delete root.dataset.cookieBanner;
+    return () => {
+      delete root.dataset.cookieBanner;
+    };
+  }, [visible]);
 
   const saveConsent = (analytics: boolean) => {
     writeConsentCookie({
@@ -68,77 +95,93 @@ export function CookieBanner() {
       analytics,
       decidedAt: new Date().toISOString(),
     });
+    setForcedOpen(false);
   };
 
   return (
-    <aside
-      aria-label="Cookie preferences"
-      className="fixed right-4 bottom-4 left-4 z-50 mx-auto max-w-md rounded-md border border-border bg-card p-4 shadow-soft sm:left-auto sm:w-full sm:max-w-sm"
-    >
-      <div className="flex flex-col gap-3">
-        <div>
-          <h2 className="font-display text-lg font-medium text-foreground">
-            Privacy &amp; Cookie Preferences
-          </h2>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            We use strictly necessary cookies for your shopping bag, wishlist, and session security.
-            Optional analytics cookies help us improve discovery and are activated only with your
-            consent. Read our{" "}
-            <Link href="/privacy" className="text-accent-text underline underline-offset-4">
-              Privacy Policy
-            </Link>
-            .
-          </p>
-        </div>
+    <AnimatePresence>
+      {visible && (
+        <m.aside
+          key="cookie-banner"
+          aria-label="Cookie preferences"
+          data-print-hidden="true"
+          variants={reducedMotion ? fadeInVariants : undefined}
+          initial={reducedMotion ? false : { opacity: 1, y: 12 }}
+          animate={reducedMotion ? "visible" : { opacity: 1, y: 0 }}
+          exit={reducedMotion ? "exit" : { opacity: 0, y: 12 }}
+          transition={reducedMotion ? undefined : MOTION_SPRING.snappy}
+          className="fixed inset-x-0 bottom-[var(--sticky-cta-offset,0px)] z-[var(--z-drawer)] border-t border-border bg-surface px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] text-text shadow-md sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-full sm:max-w-md sm:rounded-xl sm:border sm:p-4"
+        >
+          <div className="flex flex-col gap-2.5">
+            <p className="text-sm text-text-2">
+              We use cookies to keep your bag and sign-in working, plus optional analytics.{" "}
+              <button
+                type="button"
+                onClick={() => setShowPreferences((prev) => !prev)}
+                className="inline-flex min-h-6 items-center font-medium text-text underline underline-offset-4 hover:text-accent-text"
+              >
+                {showPreferences ? "Hide choices" : "Manage"}
+              </button>
+              {" · "}
+              <Link
+                href="/privacy"
+                className="text-text underline underline-offset-4 hover:text-accent-text"
+              >
+                Privacy
+              </Link>
+            </p>
 
-        {showPreferences && (
-          <div className="grid gap-3 rounded-sm border border-border bg-muted/40 p-3 text-xs">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="font-medium text-foreground">Strictly Necessary</p>
-                <p className="text-muted-foreground">Session, cart, wishlist, and theme state.</p>
+            {showPreferences && (
+              <div className="space-y-2.5 rounded-md border border-border bg-surface-2 p-3 text-xs">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-medium text-text">Strictly Necessary</p>
+                    <p className="text-text-muted">Session, cart, wishlist, and theme state.</p>
+                  </div>
+                  <span className="font-medium text-accent-text">Always active</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 border-t border-border pt-2.5">
+                  <div>
+                    <p className="font-medium text-text">Analytics</p>
+                    <p className="text-text-muted">
+                      Helps measure collection interest without ads.
+                    </p>
+                  </div>
+                  <Switch
+                    aria-label="Enable analytics cookies"
+                    checked={analyticsEnabled}
+                    onCheckedChange={setAnalyticsEnabled}
+                  />
+                </div>
               </div>
-              <span className="font-medium text-accent-text">Always active</span>
-            </div>
-            <div className="flex items-center justify-between gap-4 border-t border-border pt-2.5">
-              <div>
-                <p className="font-medium text-foreground">Analytics</p>
-                <p className="text-muted-foreground">
-                  Helps measure collection interest without ads.
-                </p>
-              </div>
-              <Switch
-                aria-label="Enable analytics cookies"
-                checked={analyticsEnabled}
-                onCheckedChange={setAnalyticsEnabled}
-              />
+            )}
+
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11"
+                onClick={() => saveConsent(false)}
+              >
+                Essential only
+              </Button>
+              {showPreferences ? (
+                <Button
+                  type="button"
+                  className="min-h-11"
+                  onClick={() => saveConsent(analyticsEnabled)}
+                >
+                  Save choices
+                </Button>
+              ) : (
+                <Button type="button" className="min-h-11" onClick={() => saveConsent(true)}>
+                  Accept all
+                </Button>
+              )}
             </div>
           </div>
-        )}
-
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowPreferences((prev) => !prev)}
-          >
-            {showPreferences ? "Hide choices" : "Manage choices"}
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => saveConsent(false)}>
-            Essential only
-          </Button>
-          {showPreferences ? (
-            <Button type="button" size="sm" onClick={() => saveConsent(analyticsEnabled)}>
-              Save preferences
-            </Button>
-          ) : (
-            <Button type="button" size="sm" onClick={() => saveConsent(true)}>
-              Accept all
-            </Button>
-          )}
-        </div>
-      </div>
-    </aside>
+        </m.aside>
+      )}
+    </AnimatePresence>
   );
 }

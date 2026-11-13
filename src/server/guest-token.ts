@@ -3,6 +3,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { GUEST_COOKIE_NAME } from "@/lib/constants";
 import { env } from "@/lib/env";
+import { isSecureRequestCookie } from "@/server/request-protocol";
 
 const GUEST_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
@@ -46,13 +47,13 @@ export async function getOrCreateGuestTokenCookie(): Promise<string> {
 
   const tokenId = randomBytes(16).toString("hex");
   const signed = buildSignedGuestCookieValue(tokenId);
-  const store = await cookies();
+  const [store, secureCookie] = await Promise.all([cookies(), isSecureRequestCookie()]);
 
   store.set(GUEST_COOKIE_NAME, signed, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    secure: env.NEXT_PUBLIC_SITE_URL.startsWith("https://"),
+    secure: secureCookie,
     maxAge: GUEST_COOKIE_MAX_AGE_SECONDS,
   });
 

@@ -9,7 +9,7 @@ export function Checkbox({ className, ...props }: React.ComponentProps<typeof Ra
   return (
     <RadixCheckbox.Root
       className={cn(
-        "peer size-5 shrink-0 cursor-pointer rounded-sm border border-input bg-card text-primary-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary",
+        "peer transition-ui relative size-[18px] shrink-0 cursor-pointer rounded-sm border border-border-strong bg-surface text-on-accent before:absolute before:-inset-3.5 before:content-[''] focus-visible:ring-2 focus-visible:ring-accent-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-45 data-[state=checked]:border-accent-hover data-[state=checked]:bg-accent dark:data-[state=checked]:border-accent",
         className,
       )}
       {...props}

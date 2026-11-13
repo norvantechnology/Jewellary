@@ -58,4 +58,55 @@ test.describe("Phase 1 — Design system, themes, 7-viewport responsiveness & a1
       }
     }
   });
+
+  test("clicking the brand logo redirects to the home page across all route layouts", async ({
+    page,
+  }) => {
+    // 1. Desktop storefront header logo
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/collections");
+    await page
+      .locator("header")
+      .getByRole("link", { name: /homepage/i })
+      .click();
+    await expect(page).toHaveURL(/\/$/);
+
+    // 2. Customize route footer logo
+    await page.goto("/products/clairvoyant-four-prong-diamond-studs/customize");
+    await page
+      .locator("footer")
+      .getByRole("link", { name: /homepage/i })
+      .click();
+    await expect(page).toHaveURL(/\/$/);
+
+    // 3. Auth header logo
+    await page.goto("/login");
+    await page
+      .locator("header")
+      .getByRole("link", { name: /homepage/i })
+      .click();
+    await expect(page).toHaveURL(/\/$/);
+
+    // 4. Mobile navigation sheet logo (390px)
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/collections");
+    await page.getByRole("button", { name: "Open navigation menu" }).click();
+    const drawer = page.getByRole("dialog");
+    await expect(drawer).toBeVisible();
+    await drawer.getByRole("link", { name: /homepage/i }).click();
+    await expect(page).toHaveURL(/\/$/);
+
+    // 5. Admin sidebar logo
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/login?next=/admin");
+    await page.getByLabel(/Email Address/i).fill("admin@example.com");
+    await page.getByLabel(/Password/i).fill("AdminChangeMe123!");
+    await page.getByRole("button", { name: "Sign In" }).click();
+    await page.waitForURL((url) => url.pathname === "/admin");
+    await page
+      .locator("aside")
+      .getByRole("link", { name: /homepage/i })
+      .click();
+    await expect(page).toHaveURL(/\/$/);
+  });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
+import { AnimatedCounter } from "@/components/motion/AnimatedCounter";
 import { cn } from "@/lib/utils";
 
 interface QuantityStepperProps {
@@ -10,6 +11,7 @@ interface QuantityStepperProps {
   onChange: (next: number) => void;
   disabled?: boolean;
   label?: string;
+  size?: "default" | "compact";
   className?: string;
 }
 
@@ -20,14 +22,22 @@ export function QuantityStepper({
   onChange,
   disabled = false,
   label = "Quantity",
+  size = "default",
   className,
 }: QuantityStepperProps) {
   const canDecrement = !disabled && value > min;
   const canIncrement = !disabled && value < max;
+  const isCompact = size === "compact";
+  const buttonSizeClass = isCompact ? "size-9" : "size-11";
+  const iconSizeClass = isCompact ? "size-3.5" : "size-4";
+  const valueSizeClass = isCompact ? "min-w-8 text-sm" : "min-w-9 text-base";
 
   return (
     <div
-      className={cn("inline-flex items-center rounded-sm border border-input bg-card", className)}
+      className={cn(
+        "inline-flex items-center rounded-md border border-border-strong bg-surface",
+        className,
+      )}
       role="group"
       aria-label={label}
     >
@@ -36,24 +46,30 @@ export function QuantityStepper({
         onClick={() => canDecrement && onChange(value - 1)}
         disabled={!canDecrement}
         aria-label="Decrease quantity"
-        className="inline-flex size-11 cursor-pointer items-center justify-center text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+        className={cn(
+          "transition-ui inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-l-md text-text hover:bg-surface-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-40",
+          buttonSizeClass,
+        )}
       >
-        <Minus className="size-3.5" aria-hidden="true" />
+        <Minus className={iconSizeClass} strokeWidth={1.5} aria-hidden="true" />
       </button>
       <span
         aria-live="polite"
-        className="min-w-9 text-center text-sm font-medium text-foreground tabular-nums-price"
+        className={cn("tabular-nums-price text-center font-medium text-text", valueSizeClass)}
       >
-        {value}
+        <AnimatedCounter value={value} />
       </span>
       <button
         type="button"
         onClick={() => canIncrement && onChange(value + 1)}
         disabled={!canIncrement}
         aria-label="Increase quantity"
-        className="inline-flex size-11 cursor-pointer items-center justify-center text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+        className={cn(
+          "transition-ui inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-r-md text-text hover:bg-surface-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-40",
+          buttonSizeClass,
+        )}
       >
-        <Plus className="size-3.5" aria-hidden="true" />
+        <Plus className={iconSizeClass} strokeWidth={1.5} aria-hidden="true" />
       </button>
     </div>
   );

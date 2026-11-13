@@ -17,23 +17,30 @@ export function AccordionItem({
 export function AccordionTrigger({
   className,
   children,
+  headingLevel = "h3",
   ...props
-}: React.ComponentProps<typeof RadixAccordion.Trigger>) {
+}: React.ComponentProps<typeof RadixAccordion.Trigger> & {
+  headingLevel?: "h2" | "h3" | "h4";
+}) {
+  const HeadingTag = headingLevel;
   return (
-    <RadixAccordion.Header className="flex">
-      <RadixAccordion.Trigger
-        className={cn(
-          "flex min-h-12 flex-1 cursor-pointer items-center justify-between py-4 text-left font-sans text-sm font-medium text-foreground transition-colors hover:text-accent-text [&[data-state=open]>svg]:rotate-180",
-          className,
-        )}
-        {...props}
-      >
-        {children}
-        <ChevronDown
-          className="size-4 shrink-0 text-muted-foreground transition-transform duration-200"
-          aria-hidden="true"
-        />
-      </RadixAccordion.Trigger>
+    <RadixAccordion.Header asChild>
+      <HeadingTag className="flex">
+        <RadixAccordion.Trigger
+          className={cn(
+            "transition-ui flex min-h-12 flex-1 cursor-pointer items-center justify-between gap-4 py-3 text-left font-sans text-sm font-semibold text-text hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&[data-state=open]>svg]:rotate-180",
+            className,
+          )}
+          {...props}
+        >
+          {children}
+          <ChevronDown
+            className="size-5 shrink-0 text-text-muted transition-transform duration-200 ease-out"
+            strokeWidth={1.5}
+            aria-hidden="true"
+          />
+        </RadixAccordion.Trigger>
+      </HeadingTag>
     </RadixAccordion.Header>
   );
 }
@@ -45,10 +52,13 @@ export function AccordionContent({
 }: React.ComponentProps<typeof RadixAccordion.Content>) {
   return (
     <RadixAccordion.Content
-      className={cn("overflow-hidden text-sm text-muted-foreground", className)}
+      forceMount
+      className={cn("ma-accordion-content text-sm text-text-2", className)}
       {...props}
     >
-      <div className="pt-0 pb-4">{children}</div>
+      <div className="ma-accordion-inner">
+        <div className="pt-0 pb-4">{children}</div>
+      </div>
     </RadixAccordion.Content>
   );
 }

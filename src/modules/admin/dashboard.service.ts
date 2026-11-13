@@ -1,5 +1,5 @@
 import "server-only";
-import type { OrderStatus } from "@/generated/prisma/client";
+import { Prisma, type OrderStatus } from "@/generated/prisma/client";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 import { db } from "@/server/db";
 
@@ -13,6 +13,10 @@ const SETTLED_REVENUE_STATUSES: OrderStatus[] = [
   "DELIVERED",
   "REFUNDED",
 ];
+
+const SETTLED_REVENUE_STATUS_SQL = Prisma.join(
+  SETTLED_REVENUE_STATUSES.map((s) => Prisma.sql`${s}::"OrderStatus"`),
+);
 
 function resolvePeriodDates(period: DashboardPeriod) {
   const now = new Date();
@@ -119,39 +123,38 @@ export async function getAdminDashboardAnalytics(
 
   const [
     settings,
-    currentOrders,
-    prevOrders,
+    currentSeriesRows,
+    prevAggRows,
     newCustomers,
     prevCustomers,
     ordersToFulfill,
     openEnquiries,
     activeProducts,
-    allVariants,
+    lowStockRows,
     recentOrders,
-    soldItems,
+    topProductRows,
   ] = await Promise.all([
     getPublicStoreSettings(),
-    db.order.findMany({
-      where: {
-        createdAt: { gte: start, lte: end },
-        status: { in: SETTLED_REVENUE_STATUSES },
-      },
-      select: {
-        total: true,
-        refundedAmount: true,
-        createdAt: true,
-      },
-    }),
-    db.order.findMany({
-      where: {
-        createdAt: { gte: prevStart, lte: prevEnd },
-        status: { in: SETTLED_REVENUE_STATUSES },
-      },
-      select: {
-        total: true,
-        refundedAmount: true,
-      },
-    }),
+    db.$queryRaw<Array<{ day: string; orders: number; revenue: number }>>(Prisma.sql`
+      SELECT
+        TO_CHAR(date_trunc('day', "createdAt" AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day,
+        COUNT(*)::int AS orders,
+        COALESCE(SUM(GREATEST(0, "total" - "refundedAmount")), 0)::float8 AS revenue
+      FROM "Order"
+      WHERE "createdAt" >= ${start}
+        AND "createdAt" <= ${end}
+        AND "status" IN (${SETTLED_REVENUE_STATUS_SQL})
+      GROUP BY 1
+    `),
+    db.$queryRaw<Array<{ orders: number; revenue: number }>>(Prisma.sql`
+      SELECT
+        COUNT(*)::int AS orders,
+        COALESCE(SUM(GREATEST(0, "total" - "refundedAmount")), 0)::float8 AS revenue
+      FROM "Order"
+      WHERE "createdAt" >= ${prevStart}
+        AND "createdAt" <= ${prevEnd}
+        AND "status" IN (${SETTLED_REVENUE_STATUS_SQL})
+    `),
     db.user.count({
       where: {
         role: "CUSTOMER",
@@ -175,19 +178,32 @@ export async function getAdminDashboardAnalytics(
     db.product.count({
       where: { deletedAt: null, status: "ACTIVE" },
     }),
-    db.productVariant.findMany({
-      where: { product: { deletedAt: null } },
-      select: {
-        id: true,
-        sku: true,
-        stockQty: true,
-        reservedQty: true,
-        lowStockThreshold: true,
-        product: { select: { id: true, name: true } },
-      },
-      orderBy: { stockQty: "asc" },
-      take: 100,
-    }),
+    db.$queryRaw<
+      Array<{
+        variantId: string;
+        productId: string;
+        productName: string;
+        sku: string;
+        available: number;
+        threshold: number;
+        totalLowStock: number;
+      }>
+    >(Prisma.sql`
+      SELECT
+        v."id" AS "variantId",
+        p."id" AS "productId",
+        p."name" AS "productName",
+        v."sku",
+        GREATEST(0, v."stockQty" - v."reservedQty")::int AS "available",
+        v."lowStockThreshold"::int AS "threshold",
+        COUNT(*) OVER()::int AS "totalLowStock"
+      FROM "ProductVariant" v
+      INNER JOIN "Product" p ON p."id" = v."productId"
+      WHERE p."deletedAt" IS NULL
+        AND (v."stockQty" - v."reservedQty") <= v."lowStockThreshold"
+      ORDER BY (v."stockQty" - v."reservedQty") ASC, v."updatedAt" DESC
+      LIMIT 8
+    `),
     db.order.findMany({
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -202,35 +218,27 @@ export async function getAdminDashboardAnalytics(
         shippingAddress: true,
       },
     }),
-    db.orderItem.findMany({
-      where: {
-        order: {
-          createdAt: { gte: start, lte: end },
-          status: { in: SETTLED_REVENUE_STATUSES },
-        },
-      },
-      select: {
-        productId: true,
-        titleSnapshot: true,
-        quantity: true,
-        lineTotal: true,
-      },
-    }),
+    db.$queryRaw<
+      Array<{ productId: string; title: string; unitsSold: number; revenue: number }>
+    >(Prisma.sql`
+      SELECT
+        oi."productId",
+        MAX(oi."titleSnapshot") AS title,
+        COALESCE(SUM(oi."quantity"), 0)::int AS "unitsSold",
+        COALESCE(SUM(oi."lineTotal"), 0)::float8 AS revenue
+      FROM "OrderItem" oi
+      INNER JOIN "Order" o ON o."id" = oi."orderId"
+      WHERE o."createdAt" >= ${start}
+        AND o."createdAt" <= ${end}
+        AND o."status" IN (${SETTLED_REVENUE_STATUS_SQL})
+      GROUP BY oi."productId"
+      ORDER BY revenue DESC
+      LIMIT 5
+    `),
   ]);
 
   let currentRevenue = 0;
-  for (const o of currentOrders) {
-    currentRevenue += Math.max(0, Number(o.total) - Number(o.refundedAmount));
-  }
-  let prevRevenue = 0;
-  for (const o of prevOrders) {
-    prevRevenue += Math.max(0, Number(o.total) - Number(o.refundedAmount));
-  }
-
-  const currentCount = currentOrders.length;
-  const prevCount = prevOrders.length;
-  const currentAov = currentCount > 0 ? currentRevenue / currentCount : 0;
-  const prevAov = prevCount > 0 ? prevRevenue / prevCount : 0;
+  let currentCount = 0;
 
   // Build continuous daily time series buckets
   const bucketMap = new Map<
@@ -244,54 +252,39 @@ export async function getAdminDashboardAnalytics(
     bucketMap.set(isoDay, { date: isoDay, label, revenue: 0, orders: 0 });
   }
 
-  for (const o of currentOrders) {
-    const isoDay = o.createdAt.toISOString().slice(0, 10);
-    const bucket = bucketMap.get(isoDay);
+  for (const row of currentSeriesRows) {
+    const rowRev = Number(row.revenue ?? 0);
+    const rowOrders = Number(row.orders ?? 0);
+    currentRevenue += rowRev;
+    currentCount += rowOrders;
+    const bucket = bucketMap.get(row.day);
     if (bucket) {
-      bucket.revenue = Number(
-        (bucket.revenue + Math.max(0, Number(o.total) - Number(o.refundedAmount))).toFixed(2),
-      );
-      bucket.orders += 1;
+      bucket.revenue = Number(rowRev.toFixed(2));
+      bucket.orders = rowOrders;
     }
   }
 
-  const productAgg = new Map<string, { title: string; unitsSold: number; revenue: number }>();
-  for (const line of soldItems) {
-    const existing = productAgg.get(line.productId);
-    const rev = Number(line.lineTotal);
-    if (existing) {
-      existing.unitsSold += line.quantity;
-      existing.revenue += rev;
-    } else {
-      productAgg.set(line.productId, {
-        title: line.titleSnapshot,
-        unitsSold: line.quantity,
-        revenue: rev,
-      });
-    }
-  }
+  const prevRevenue = Number(prevAggRows[0]?.revenue ?? 0);
+  const prevCount = Number(prevAggRows[0]?.orders ?? 0);
+  const currentAov = currentCount > 0 ? currentRevenue / currentCount : 0;
+  const prevAov = prevCount > 0 ? prevRevenue / prevCount : 0;
 
-  const topProducts = Array.from(productAgg.entries())
-    .map(([productId, val]) => ({
-      productId,
-      title: val.title,
-      unitsSold: val.unitsSold,
-      revenue: Number(val.revenue.toFixed(2)),
-    }))
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 5);
+  const topProducts = topProductRows.map((row) => ({
+    productId: row.productId,
+    title: row.title,
+    unitsSold: Number(row.unitsSold ?? 0),
+    revenue: Number(Number(row.revenue ?? 0).toFixed(2)),
+  }));
 
-  const lowStockAlerts = allVariants
-    .map((v) => ({
-      variantId: v.id,
-      productId: v.product.id,
-      productName: v.product.name,
-      sku: v.sku,
-      available: Math.max(0, v.stockQty - v.reservedQty),
-      threshold: v.lowStockThreshold,
-    }))
-    .filter((v) => v.available <= v.threshold)
-    .slice(0, 8);
+  const lowStockCount = Number(lowStockRows[0]?.totalLowStock ?? 0);
+  const lowStockAlerts = lowStockRows.map((v) => ({
+    variantId: v.variantId,
+    productId: v.productId,
+    productName: v.productName,
+    sku: v.sku,
+    available: v.available,
+    threshold: v.threshold,
+  }));
 
   return {
     period,
@@ -309,7 +302,7 @@ export async function getAdminDashboardAnalytics(
     operations: {
       ordersToFulfill,
       openEnquiries,
-      lowStockCount: lowStockAlerts.length,
+      lowStockCount,
       activeProducts,
     },
     series: Array.from(bucketMap.values()),

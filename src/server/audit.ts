@@ -64,8 +64,10 @@ export interface AuditLogInput {
 
 export async function writeAuditLog(input: AuditLogInput): Promise<void> {
   try {
-    const ipAddress = input.ipAddress ?? (await getClientIp());
-    const userAgent = input.userAgent ?? (await getClientUserAgent());
+    const [ipAddress, userAgent] = await Promise.all([
+      input.ipAddress !== undefined ? Promise.resolve(input.ipAddress) : getClientIp(),
+      input.userAgent !== undefined ? Promise.resolve(input.userAgent) : getClientUserAgent(),
+    ]);
 
     await db.auditLog.create({
       data: {

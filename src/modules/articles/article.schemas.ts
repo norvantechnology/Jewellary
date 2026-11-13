@@ -15,9 +15,32 @@ export const articleUpsertSchema = z
     coverImageUrl: z.string().trim().optional().nullable(),
     coverAltText: z.string().trim().max(250).optional().nullable(),
     authorName: z.string().trim().min(2, "Author name is required.").max(120),
+    authorJobTitle: z.string().trim().max(120).optional().nullable(),
+    authorCredentials: z.string().trim().max(240).optional().nullable(),
+    authorBio: z.string().trim().max(600).optional().nullable(),
+    authorSameAs: z.array(z.string().trim().url()).max(6).optional().default([]),
+    articleSection: z.string().trim().max(120).optional().nullable(),
     isPublished: z.boolean().default(false),
     seoTitle: z.string().trim().max(120).optional().nullable(),
     seoDescription: z.string().trim().max(320).optional().nullable(),
+    seoKeywords: z.string().trim().max(300).optional().nullable(),
+    seoFaqs: z
+      .array(
+        z
+          .object({
+            question: z.string().trim().min(5).max(280),
+            answer: z.string().trim().min(5).max(1200),
+          })
+          .strict(),
+      )
+      .max(15)
+      .optional()
+      .default([]),
+    ogTitle: z.string().trim().max(140).optional().nullable(),
+    ogDescription: z.string().trim().max(320).optional().nullable(),
+    ogImageUrl: z.string().trim().max(500).optional().nullable(),
+    canonicalOverride: z.string().trim().max(500).optional().nullable(),
+    noindex: z.boolean().default(false),
     relatedCategorySlug: z.string().trim().max(120).optional().nullable(),
   })
   .strict();

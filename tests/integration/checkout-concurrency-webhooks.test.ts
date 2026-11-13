@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { deleteTestOrders } from "../helpers/cleanup";
 import crypto from "node:crypto";
 import { createId } from "@paralleldrive/cuid2";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -36,7 +37,7 @@ describe("Phase 5 Integration — Concurrency Stock Reservation, Server Re-prici
       await db.inventoryTransaction.deleteMany({
         where: { referenceId: { in: createdOrderIds } },
       });
-      await db.order.deleteMany({ where: { id: { in: createdOrderIds } } });
+      await deleteTestOrders(createdOrderIds);
     }
     if (createdWebhookEventIds.length > 0) {
       await db.webhookEvent.deleteMany({

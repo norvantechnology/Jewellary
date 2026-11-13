@@ -13,6 +13,10 @@ export interface UploadedImageResult {
   url: string;
   mediumUrl: string;
   thumbUrl: string;
+  avifUrl?: string;
+  jpegUrl?: string;
+  responsiveVariants?: Record<string, unknown>;
+  warnings?: string[];
   width: number;
   height: number;
 }
@@ -21,6 +25,13 @@ interface ImageUploadFieldProps {
   id: string;
   folder: "products" | "categories" | "banners" | "articles" | "store";
   label?: string;
+  seoContext?: {
+    slug?: string;
+    productName?: string;
+    metal?: string;
+    carat?: string;
+    viewType?: string;
+  };
   onUploaded: (asset: UploadedImageResult) => void;
   currentUrl?: string;
   onUrlChange?: (url: string) => void;
@@ -31,6 +42,7 @@ export function ImageUploadField({
   id,
   folder,
   label = "Upload Image",
+  seoContext,
   onUploaded,
   currentUrl,
   onUrlChange,
@@ -82,6 +94,7 @@ export function ImageUploadField({
           tempKey: signJson.tempKey,
           folder,
           mode: signJson.mode,
+          ...(seoContext ? { seo: seoContext } : {}),
         }),
       });
 
@@ -93,7 +106,11 @@ export function ImageUploadField({
       }
 
       onUploaded(confirmJson);
-      toast.success("Image verified & optimized");
+      if (confirmJson.warnings && confirmJson.warnings.length > 0) {
+        toast.warning(confirmJson.warnings[0]);
+      } else {
+        toast.success("Image verified & optimized (AVIF + WebP + JPEG)");
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Upload failed");
     } finally {
@@ -134,7 +151,7 @@ export function ImageUploadField({
             value={currentUrl ?? ""}
             onChange={(e) => onUrlChange(e.target.value)}
             placeholder="/images/... or CDN URL"
-            className="min-w-[14rem] flex-1"
+            className="w-full min-w-0 sm:w-auto sm:min-w-[14rem] sm:flex-1"
           />
         )}
       </div>

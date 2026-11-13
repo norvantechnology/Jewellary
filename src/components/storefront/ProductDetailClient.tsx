@@ -1,38 +1,52 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, m } from "motion/react";
 import {
-  Award,
+  Check,
   CheckCircle2,
   ExternalLink,
+  Loader2,
   MessageSquare,
-  RotateCcw,
-  ShieldCheck,
+  MessagesSquare,
+  Ruler,
   ShoppingBag,
-  Truck,
+  Sparkles,
 } from "lucide-react";
-import { toast } from "sonner";
+import { openAtelierChat, openAtelierCustomization } from "@/lib/atelier-events";
 import { Price } from "@/components/shared/Price";
 import { QuantityStepper } from "@/components/shared/QuantityStepper";
-import { EnquiryForm } from "@/components/storefront/EnquiryForm";
+import { useCurrency } from "@/components/providers/CurrencyProvider";
+import { RingSizeGuideSheet } from "@/components/storefront/RingSizeGuideSheet";
 import { WishlistToggleButton } from "@/components/storefront/WishlistToggleButton";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { flyThumbnailToBag } from "@/lib/fly-to-bag";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { formatMoney } from "@/lib/money";
+  MOTION_EASE,
+  MOTION_TRANSITIONS,
+  sheetBottomVariants,
+  useFlipIndicator,
+  useReducedMotionSafe,
+} from "@/lib/motion";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import { addToCartAction } from "@/modules/cart/cart.actions";
 import type { PublicProductDetailDTO } from "@/modules/catalog/catalog.public";
 import { visitorStore } from "@/modules/storefront/visitor-store";
+
+const LazyProductEnquiryDialog = dynamic(
+  () => import("@/components/storefront/ProductEnquiryDialog").then((m) => m.ProductEnquiryDialog),
+  { ssr: false },
+);
 
 interface ProductDetailClientProps {
   product: PublicProductDetailDTO;
@@ -44,12 +58,13 @@ interface ProductDetailClientProps {
 
 export function ProductDetailClient({
   product,
-  currency,
   freeShippingThreshold,
   signatureThreshold,
   returnWindowDays,
 }: ProductDetailClientProps) {
   const router = useRouter();
+  const { formatPrice } = useCurrency();
+  const reducedMotion = useReducedMotionSafe();
   const initialVariant = product.variants.find((v) => v.isDefault) ?? product.variants[0] ?? null;
 
   const [selectedVariantId, setSelectedVariantId] = React.useState<string | null>(
@@ -57,10 +72,85 @@ export function ProductDetailClient({
   );
   const [quantity, setQuantity] = React.useState(1);
   const [addingToBag, setAddingToBag] = React.useState(false);
+  const [addedRecently, setAddedRecently] = React.useState(false);
+  const [buyingNow, setBuyingNow] = React.useState(false);
+  const [liveStatus, setLiveStatus] = React.useState("");
   const [enquiryOpen, setEnquiryOpen] = React.useState(false);
+  const [hasOpenedEnquiry, setHasOpenedEnquiry] = React.useState(false);
+  const [ringSizeOpen, setRingSizeOpen] = React.useState(false);
+  const [showMobileStickyCta, setShowMobileStickyCta] = React.useState(false);
+  const [keyboardOpen, setKeyboardOpen] = React.useState(false);
+  const addedTimerRef = React.useRef<number | null>(null);
+  const variantGroupRef = React.useRef<HTMLDivElement>(null);
+  const primaryCtaSentinelRef = React.useRef<HTMLDivElement>(null);
+  const addToBagBtnRef = React.useRef<HTMLButtonElement>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (addedTimerRef.current !== null) window.clearTimeout(addedTimerRef.current);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    const checkViewport = () => {
+      if (!vv) return;
+      setKeyboardOpen(window.innerHeight - vv.height > 150);
+    };
+    const onFocusIn = (e: FocusEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+        setKeyboardOpen(true);
+      }
+    };
+    const onFocusOut = () => {
+      window.setTimeout(() => {
+        const activeTag = document.activeElement?.tagName;
+        if (activeTag !== "INPUT" && activeTag !== "TEXTAREA" && activeTag !== "SELECT") {
+          if (!vv || window.innerHeight - vv.height <= 150) {
+            setKeyboardOpen(false);
+          }
+        }
+      }, 60);
+    };
+
+    vv?.addEventListener("resize", checkViewport);
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
+    return () => {
+      vv?.removeEventListener("resize", checkViewport);
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    const sentinel = primaryCtaSentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        setShowMobileStickyCta(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
+  function openEnquiry() {
+    setHasOpenedEnquiry(true);
+    setEnquiryOpen(true);
+  }
 
   const selectedVariant =
     product.variants.find((v) => v.id === selectedVariantId) ?? initialVariant;
+
+  useFlipIndicator(variantGroupRef, selectedVariant?.id ?? null, reducedMotion);
 
   const availableStock = selectedVariant?.availableStock ?? 0;
   const maxSelectableQty = Math.min(10, Math.max(1, availableStock));
@@ -79,17 +169,47 @@ export function ProductDetailClient({
     setAddingToBag(false);
 
     if (!result.ok) {
-      toast.error(result.error.message);
+      setLiveStatus(result.error.message);
+      void notifyError(result.error.message);
       return;
     }
 
-    visitorStore.setBagCount(result.data.itemCount);
-    toast.success(`${product.name} (${selectedVariant.title}) added to bag.`, {
-      action: {
-        label: "View Bag",
-        onClick: () => router.push("/cart"),
-      },
+    if (!reducedMotion) {
+      const activeStage = document.querySelector<HTMLElement>('[data-pdp-active-image="true"]');
+      const activeImg = activeStage?.querySelector<HTMLImageElement>("img");
+      const thumbUrl = activeImg?.currentSrc || activeImg?.getAttribute("src") || null;
+      flyThumbnailToBag(activeStage ?? addToBagBtnRef.current, thumbUrl);
+    }
+
+    visitorStore.setLatestCart(result.data);
+    visitorStore.openCartDrawer();
+    setAddedRecently(true);
+    setLiveStatus(`${product.name} (${selectedVariant.title}) added to bag.`);
+    if (addedTimerRef.current !== null) window.clearTimeout(addedTimerRef.current);
+    addedTimerRef.current = window.setTimeout(() => setAddedRecently(false), 2000);
+    void notifySuccess(`${product.name} (${selectedVariant.title}) added to bag.`);
+  }
+
+  async function handleBuyNow() {
+    if (!selectedVariant || product.priceMode !== "FIXED" || availableStock <= 0) {
+      return;
+    }
+
+    setBuyingNow(true);
+    const result = await addToCartAction({
+      variantId: selectedVariant.id,
+      quantity: safeQuantity,
     });
+    setBuyingNow(false);
+
+    if (!result.ok) {
+      setLiveStatus(result.error.message);
+      void notifyError(result.error.message);
+      return;
+    }
+
+    visitorStore.setLatestCart(result.data);
+    router.push("/checkout");
   }
 
   const specRows: Array<{ label: string; value: string }> = [];
@@ -159,35 +279,36 @@ export function ProductDetailClient({
   }
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-3 border-b border-border pb-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">{product.categoryName}</Badge>
+    <div className="space-y-6 pb-24 sm:space-y-8 sm:pb-0">
+      <div className="space-y-3 border-b border-border pb-6 sm:space-y-4">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
+            {product.categoryName}
+          </span>
           {product.certificationLab && (
-            <Badge variant="default" className="gap-1">
-              <Award className="size-3 text-accent" aria-hidden="true" />
-              <span>{product.certificationLab} Certified</span>
-            </Badge>
+            <Badge variant="outline">{product.certificationLab} Certified</Badge>
           )}
-          <span className="font-mono text-xs text-muted-foreground">
+          <span className="font-mono text-xs break-all text-muted-foreground">
             SKU: {selectedVariant?.sku ?? product.sku}
           </span>
         </div>
 
-        <h1 className="font-display text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
+        <h1 className="type-h1 font-display font-semibold break-words text-foreground">
           {product.name}
         </h1>
 
         {product.subtitle && (
-          <p className="text-base leading-relaxed text-muted-foreground">{product.subtitle}</p>
+          <p className="prose-limit text-base leading-relaxed text-muted-foreground">
+            {product.subtitle}
+          </p>
         )}
 
-        <div className="pt-2">
+        <div className="pt-1">
           <Price
             amount={selectedVariant?.price ?? product.basePrice}
             compareAtAmount={selectedVariant?.compareAtPrice ?? product.compareAtPrice}
-            currency={currency}
             isPriceOnRequest={product.priceMode === "PRICE_ON_REQUEST"}
+            animate
             size="lg"
           />
         </div>
@@ -196,23 +317,26 @@ export function ProductDetailClient({
       {product.variants.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium tracking-[0.1em] text-foreground uppercase">
-              {product.hasSizing ? "Select Size & Specification" : "Select Option"}
+            <p className="text-sm font-medium text-foreground">
+              {product.hasSizing ? "Size & specification" : "Select option"}
             </p>
             {product.hasSizing && (
-              <Link
-                href="/ring-size-guide"
-                className="text-xs font-medium text-accent-text underline-offset-4 hover:underline"
+              <button
+                type="button"
+                onClick={() => setRingSizeOpen(true)}
+                className="ma-link-underline inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-xs font-medium text-accent-text"
               >
-                Ring Size Guide
-              </Link>
+                <Ruler className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                <span>Ring Size Guide</span>
+              </button>
             )}
           </div>
 
           <div
+            ref={variantGroupRef}
             role="radiogroup"
             aria-label="Product options"
-            className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+            className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
           >
             {product.variants.map((variant) => {
               const selected = variant.id === selectedVariant?.id;
@@ -225,23 +349,30 @@ export function ProductDetailClient({
                   aria-checked={selected}
                   onClick={() => setSelectedVariantId(variant.id)}
                   className={cn(
-                    "flex min-h-12 cursor-pointer items-center justify-between rounded-sm border px-3.5 py-2.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-ring",
+                    "transition-ui relative flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
                     selected
-                      ? "border-accent bg-accent/10 text-foreground"
-                      : "border-border bg-card text-foreground hover:border-accent/60",
+                      ? "border-transparent text-text"
+                      : "border-border bg-surface text-text hover:border-border-strong",
                     outOfStock && !selected ? "opacity-70" : "",
                   )}
                 >
-                  <div>
-                    <span className="block text-sm font-medium">{variant.title}</span>
+                  {selected ? (
+                    <span
+                      data-ma-indicator="true"
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 rounded-lg border-[1.5px] border-accent bg-accent-tint ring-1 ring-accent"
+                    />
+                  ) : null}
+                  <div className="relative z-10 min-w-0">
+                    <span className="block truncate text-sm font-medium">{variant.title}</span>
                     {variant.stoneSpec && (
-                      <span className="block text-xs text-muted-foreground">
+                      <span className="block truncate text-xs text-text-muted">
                         {variant.stoneSpec}
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground tabular-nums-price">
-                    {outOfStock ? "Out of stock" : `${variant.availableStock} ready`}
+                  <span className="tabular-nums-price relative z-10 shrink-0 text-xs text-text-muted">
+                    {outOfStock ? "Out of stock" : "In stock"}
                   </span>
                 </button>
               );
@@ -251,66 +382,116 @@ export function ProductDetailClient({
       )}
 
       {selectedVariant && product.priceMode === "FIXED" && (
-        <div className="rounded-sm border border-border/80 bg-muted/35 px-4 py-3 text-sm">
+        <div className="rounded-lg border border-border bg-surface-2 px-4 py-3.5 text-sm">
           {availableStock > selectedVariant.lowStockThreshold && (
-            <p className="flex items-center gap-2 text-foreground">
-              <CheckCircle2 className="size-4 shrink-0 text-accent" aria-hidden="true" />
-              <span>
-                In vault and ready for insured dispatch
-                {product.leadTimeDays
-                  ? ` (ships in 1–2 days; custom orders ${product.leadTimeDays} days)`
-                  : ""}
-                .
-              </span>
+            <p className="flex items-start gap-2.5 text-text">
+              <CheckCircle2
+                className="mt-0.5 size-5 shrink-0 text-accent-text"
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+              <span>In stock · ships in 1–2 days</span>
             </p>
           )}
           {availableStock > 0 && availableStock <= selectedVariant.lowStockThreshold && (
-            <p className="flex items-center gap-2 font-medium text-warning">
-              <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
-              <span>Only {availableStock} remaining in this specification.</span>
+            <p className="flex items-start gap-2.5 font-medium text-warning">
+              <CheckCircle2
+                className="mt-0.5 size-5 shrink-0"
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+              <span>Only {availableStock} left in stock.</span>
             </p>
           )}
           {availableStock <= 0 && (
             <p className="text-muted-foreground">
-              Currently reserved or out of stock. Request a bespoke studio build below
-              {product.leadTimeDays ? ` (${product.leadTimeDays}-day crafting window)` : ""}.
+              Out of stock. We can make it to order
+              {product.leadTimeDays ? ` in about ${product.leadTimeDays} days` : ""}.
             </p>
           )}
         </div>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <div
+        ref={primaryCtaSentinelRef}
+        className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
+      >
+        <div aria-live="polite" className="sr-only">
+          {liveStatus}
+        </div>
         {product.priceMode === "FIXED" && availableStock > 0 ? (
           <>
-            <QuantityStepper
-              value={safeQuantity}
-              min={1}
-              max={maxSelectableQty}
-              onChange={setQuantity}
-            />
+            <div className="col-span-2 flex items-center justify-between gap-4 sm:border-0 sm:bg-transparent sm:p-0">
+              <span className="text-sm font-medium text-foreground sm:sr-only">Quantity</span>
+              <QuantityStepper
+                value={safeQuantity}
+                min={1}
+                max={maxSelectableQty}
+                onChange={setQuantity}
+              />
+            </div>
             <Button
+              ref={addToBagBtnRef}
               type="button"
               size="lg"
-              disabled={addingToBag || !selectedVariant}
+              disabled={addingToBag || buyingNow || !selectedVariant}
               onClick={handleAddToBag}
-              className="flex-1 gap-2 sm:min-w-48"
+              className="col-span-2 w-full gap-2 sm:min-w-44 sm:flex-1"
             >
-              <ShoppingBag className="size-4" aria-hidden="true" />
-              <span>{addingToBag ? "Adding to Bag…" : "Add to Bag"}</span>
+              <AnimatePresence mode="popLayout" initial={false}>
+                <m.span
+                  key={addingToBag ? "adding" : addedRecently ? "added" : "idle"}
+                  initial={reducedMotion ? { opacity: 0.4 } : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                  transition={
+                    reducedMotion
+                      ? MOTION_TRANSITIONS.reduced
+                      : { duration: 0.2, ease: MOTION_EASE.out }
+                  }
+                  className="inline-flex items-center gap-2"
+                >
+                  {addingToBag ? (
+                    <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+                  ) : addedRecently ? (
+                    <Check className="size-5" aria-hidden="true" />
+                  ) : (
+                    <ShoppingBag className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                  )}
+                  <span>
+                    {addingToBag ? "Adding to Bag…" : addedRecently ? "Added ✓" : "Add to Bag"}
+                  </span>
+                </m.span>
+              </AnimatePresence>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              disabled={addingToBag || buyingNow || !selectedVariant}
+              onClick={() => void handleBuyNow()}
+              className="w-full px-3 sm:w-auto sm:min-w-36 sm:px-6"
+            >
+              {buyingNow ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  <span>Preparing…</span>
+                </>
+              ) : (
+                <span>Buy Now</span>
+              )}
             </Button>
           </>
         ) : (
           <Button
             type="button"
             size="lg"
-            onClick={() => setEnquiryOpen(true)}
-            className="flex-1 gap-2 sm:min-w-56"
+            onClick={openEnquiry}
+            className="col-span-2 w-full gap-2 sm:min-w-56 sm:flex-1"
           >
-            <MessageSquare className="size-4" aria-hidden="true" />
+            <MessageSquare className="size-5" strokeWidth={1.5} aria-hidden="true" />
             <span>
-              {product.priceMode === "PRICE_ON_REQUEST"
-                ? "Request Private Valuation"
-                : "Commission Made-to-Order"}
+              {product.priceMode === "PRICE_ON_REQUEST" ? "Request a Price" : "Order Made-to-Order"}
             </span>
           </Button>
         )}
@@ -319,127 +500,209 @@ export function ProductDetailClient({
           variantId={selectedVariant?.id ?? product.defaultVariantId}
           productName={product.name}
           mode="button"
+          className={cn(
+            "w-full px-3 sm:w-auto sm:px-6",
+            !(product.priceMode === "FIXED" && availableStock > 0) && "col-span-2",
+          )}
         />
 
-        {product.priceMode === "FIXED" && availableStock > 0 && (
-          <Dialog open={enquiryOpen} onOpenChange={setEnquiryOpen}>
-            <DialogTrigger asChild>
-              <Button type="button" variant="ghost" size="lg" className="gap-2">
-                <MessageSquare className="size-4" aria-hidden="true" />
-                <span>Concierge Advice</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-xl">
-              <DialogHeader>
-                <DialogTitle>Private Concierge</DialogTitle>
-                <DialogDescription>
-                  Ask a gemologist about stone certificates, custom metal finishes, or sizing.
-                </DialogDescription>
-              </DialogHeader>
-              <EnquiryForm
-                defaultType="PRODUCT"
-                productId={product.id}
-                productName={product.name}
-                onSuccess={() => setEnquiryOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+        {product.isCustomizable && (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={() => openAtelierCustomization(product.slug)}
+            className="col-span-2 w-full gap-2 sm:w-auto"
+          >
+            <Sparkles className="size-5 stroke-[1.5]" aria-hidden="true" />
+            <span>Customize this piece</span>
+          </Button>
         )}
 
-        {(product.priceMode !== "FIXED" || availableStock <= 0) && (
-          <Dialog open={enquiryOpen} onOpenChange={setEnquiryOpen}>
-            <DialogContent className="max-w-xl">
-              <DialogHeader>
-                <DialogTitle>
-                  {product.priceMode === "PRICE_ON_REQUEST"
-                    ? "High Jewellery Consultation"
-                    : "Bespoke Commission Enquiry"}
-                </DialogTitle>
-                <DialogDescription>
-                  Receive personalised stone specifications, studio imagery, and availability
-                  directly from our private client team.
-                </DialogDescription>
-              </DialogHeader>
-              <EnquiryForm
-                defaultType="BESPOKE"
-                productId={product.id}
-                productName={product.name}
-                onSuccess={() => setEnquiryOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
-        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            openAtelierChat({
+              contextType: "PRODUCT",
+              contextRefId: product.id,
+              title: product.name,
+            })
+          }
+          className="col-span-2 min-h-11 w-full gap-1.5 text-text-2 sm:w-auto"
+        >
+          <MessagesSquare className="size-4" strokeWidth={1.5} aria-hidden="true" />
+          <span>Ask an expert</span>
+        </Button>
+
+        {hasOpenedEnquiry ? (
+          <LazyProductEnquiryDialog
+            open={enquiryOpen}
+            onOpenChange={setEnquiryOpen}
+            productId={product.id}
+            productName={product.name}
+            priceMode={product.priceMode}
+            availableStock={availableStock}
+          />
+        ) : null}
       </div>
 
-      {product.description && (
-        <section className="space-y-2 border-t border-border pt-6">
-          <h2 className="font-sans text-editorial-label text-foreground">
-            Design &amp; Provenance
-          </h2>
-          <p className="text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
+      <section className="space-y-4 border-t border-border pt-6">
+        {product.description && (
+          <p className="prose-limit text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
             {product.description}
           </p>
-        </section>
-      )}
-
-      {specRows.length > 0 && (
-        <section className="space-y-3 border-t border-border pt-6">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-sans text-editorial-label text-foreground">
-              Gemological Dossier &amp; Craft Specifications
-            </h2>
-            {product.certificateUrl && (
-              <a
-                href={product.certificateUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-accent-text hover:underline"
-              >
-                <span>View Lab Report</span>
-                <ExternalLink className="size-3" aria-hidden="true" />
-              </a>
-            )}
-          </div>
-          <dl className="divide-y divide-border rounded-md border border-border bg-card">
-            {specRows.map((row) => (
-              <div
-                key={row.label}
-                className="grid grid-cols-1 gap-1 px-4 py-2.5 text-sm sm:grid-cols-2 sm:gap-4"
-              >
-                <dt className="text-muted-foreground">{row.label}</dt>
-                <dd className="font-medium text-foreground">{row.value}</dd>
+        )}
+        <Accordion
+          type="single"
+          collapsible
+          className="rounded-xl border border-border bg-surface px-3.5 shadow-sm sm:px-5"
+        >
+          <AccordionItem value="details">
+            <AccordionTrigger
+              headingLevel="h2"
+              className="min-h-14 py-4 text-left text-base font-medium"
+            >
+              Details &amp; Specifications
+            </AccordionTrigger>
+            <AccordionContent className="space-y-5 pt-1 pb-4">
+              <div className="space-y-2.5">
+                <h3 className="text-sm font-semibold text-foreground">Specifications</h3>
+                {specRows.length > 0 ? (
+                  <dl className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface-2">
+                    {specRows.map((row) => (
+                      <div
+                        key={row.label}
+                        className="flex items-baseline justify-between gap-3 px-3 py-2 text-[13px] sm:px-4 sm:py-2.5 sm:text-sm"
+                      >
+                        <dt className="shrink-0 text-muted-foreground">{row.label}</dt>
+                        <dd className="tabular-nums-price min-w-0 text-right font-medium break-words text-foreground">
+                          {row.value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Crafted in small atelier batches with hallmarked precious metals.
+                  </p>
+                )}
               </div>
-            ))}
-          </dl>
-        </section>
-      )}
+            </AccordionContent>
+          </AccordionItem>
 
-      <section className="grid gap-3 border-t border-border pt-6 sm:grid-cols-3">
-        <div className="rounded-sm border border-border bg-card p-3.5">
-          <ShieldCheck className="size-4 text-accent" aria-hidden="true" />
-          <p className="mt-2 text-xs font-medium text-foreground">Independent Certification</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Accompanied by official diamond dossier verification.
-          </p>
-        </div>
-        <div className="rounded-sm border border-border bg-card p-3.5">
-          <Truck className="size-4 text-accent" aria-hidden="true" />
-          <p className="mt-2 text-xs font-medium text-foreground">Insured Courier</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {freeShippingThreshold
-              ? `Complimentary over ${formatMoney(freeShippingThreshold, currency)}. `
-              : ""}
-            Signature required from {formatMoney(signatureThreshold, currency)}.
-          </p>
-        </div>
-        <div className="rounded-sm border border-border bg-card p-3.5">
-          <RotateCcw className="size-4 text-accent" aria-hidden="true" />
-          <p className="mt-2 text-xs font-medium text-foreground">{returnWindowDays}-Day Returns</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Complimentary insured returns &amp; annual care inspection.
-          </p>
-        </div>
+          <AccordionItem value="certification">
+            <AccordionTrigger
+              headingLevel="h2"
+              className="min-h-14 py-4 text-left text-base font-medium"
+            >
+              Certification
+            </AccordionTrigger>
+            <AccordionContent className="space-y-3 pt-1 pb-4 text-sm text-muted-foreground">
+              <p className="prose-limit leading-relaxed">
+                {product.certificationLab
+                  ? `This creation is accompanied by its official ${product.certificationLab} grading dossier${product.certificateNumber ? ` (#${product.certificateNumber})` : ""}, stamped metal purity mark${product.metalPurity ? ` (${product.metalPurity})` : ""}, and laser girdle inscription verification.`
+                  : `Hallmarked for recycled ${product.metalType ?? "precious metal"}${product.metalPurity ? ` (${product.metalPurity})` : ""} purity and verified by master gemologists under 10× magnification.`}
+              </p>
+              {product.certificateUrl && (
+                <a
+                  href={product.certificateUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-11 items-center gap-1.5 font-medium text-accent-text hover:underline"
+                >
+                  <span>View Lab Report</span>
+                  <ExternalLink className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                </a>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="shipping" className="border-b-0">
+            <AccordionTrigger
+              headingLevel="h2"
+              className="min-h-14 py-4 text-left text-base font-medium"
+            >
+              Shipping &amp; Returns
+            </AccordionTrigger>
+            <AccordionContent className="space-y-2.5 pt-1 pb-4 text-sm text-muted-foreground">
+              <p className="prose-limit leading-relaxed">
+                {freeShippingThreshold
+                  ? `Complimentary insured delivery on orders above ${formatPrice(freeShippingThreshold)}. `
+                  : ""}
+                Signature-required insured transit from {formatPrice(signatureThreshold)}.
+              </p>
+              <p className="prose-limit leading-relaxed">
+                Unworn creations qualify for complimentary sizing adjustment and returns within{" "}
+                {returnWindowDays} days of delivery.
+              </p>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </section>
+
+      <RingSizeGuideSheet open={ringSizeOpen} onOpenChange={setRingSizeOpen} />
+
+      {/* Mobile sticky bottom CTA — slides up after scrolling past primary Add to Bag button; hides on keyboard */}
+      <AnimatePresence>
+        {showMobileStickyCta && !keyboardOpen ? (
+          <m.div
+            data-sticky-cta="true"
+            variants={sheetBottomVariants}
+            initial={reducedMotion ? { opacity: 0 } : "hidden"}
+            animate={
+              reducedMotion ? { opacity: 1, transition: MOTION_TRANSITIONS.reduced } : "visible"
+            }
+            exit={reducedMotion ? { opacity: 0, transition: MOTION_TRANSITIONS.reduced } : "exit"}
+            className="safe-area-pb fixed inset-x-0 bottom-0 z-[var(--z-sticky)] border-t border-border bg-header-bg px-4 py-2.5 shadow-md backdrop-blur-md sm:hidden"
+          >
+            <div className="flex items-center justify-between gap-2.5">
+              <div className="min-w-0">
+                <p className="truncate text-xs text-muted-foreground">{product.name}</p>
+                <Price
+                  amount={selectedVariant?.price ?? product.basePrice}
+                  isPriceOnRequest={product.priceMode === "PRICE_ON_REQUEST"}
+                  animate
+                  size="md"
+                />
+              </div>
+              {product.priceMode === "FIXED" && availableStock > 0 ? (
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    type="button"
+                    size="md"
+                    disabled={addingToBag || buyingNow || !selectedVariant}
+                    onClick={handleAddToBag}
+                    className="min-h-11 shrink-0 gap-1.5 px-5"
+                  >
+                    {addingToBag ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    ) : addedRecently ? (
+                      <Check className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                    ) : (
+                      <ShoppingBag className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                    )}
+                    <span>
+                      {addingToBag ? "Adding…" : addedRecently ? "Added ✓" : "Add to Bag"}
+                    </span>
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  size="md"
+                  onClick={openEnquiry}
+                  className="min-h-11 shrink-0 gap-2"
+                >
+                  <MessageSquare className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                  <span>Enquire</span>
+                </Button>
+              )}
+            </div>
+          </m.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

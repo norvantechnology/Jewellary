@@ -3,8 +3,11 @@ import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Container, Section } from "@/components/shared/primitives";
 import { CartPageClient } from "@/components/storefront/CartPageClient";
+import { RecentlyViewedProducts } from "@/components/storefront/RecentlyViewedProducts";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NOINDEX_NOFOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { getCurrentCartSummary } from "@/modules/cart/cart.service";
+import { getServerRequestCurrency } from "@/modules/currencies/currency.service";
 import { calculateCheckoutQuote } from "@/modules/orders/checkout-quote";
 import { getAllShippingZones, getPublicStoreSettings } from "@/modules/settings/settings.service";
 
@@ -17,10 +20,11 @@ export const metadata: Metadata = buildMetadata({
 });
 
 async function CartPageBody() {
-  const [cart, settings, zones] = await Promise.all([
+  const [cart, settings, zones, resolvedCurrency] = await Promise.all([
     getCurrentCartSummary(),
     getPublicStoreSettings(),
     getAllShippingZones(true),
+    getServerRequestCurrency(),
   ]);
 
   const quoteRes =
@@ -30,19 +34,17 @@ async function CartPageBody() {
           shippingCountry: settings.defaultCountry,
           zones,
           settings,
+          targetCurrency: resolvedCurrency.currency,
         })
       : null;
 
   return (
-    <Section spacing="sm">
+    <Section spacing="md" className="pt-8 pb-10 sm:pt-10 sm:pb-16 lg:pb-24">
       <Container>
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Shopping Bag" }]} />
 
-        <header className="mt-2 mb-8 border-b border-border pb-6">
-          <p className="font-sans text-editorial-label text-accent-text">Insured Studio Order</p>
-          <h1 className="mt-1 font-display text-4xl font-medium tracking-tight text-foreground">
-            Your Shopping Bag
-          </h1>
+        <header className="mt-3 mb-6 border-b border-border pb-5 md:mb-8 md:pb-6">
+          <h1 className="type-h1 font-semibold text-foreground">Your Shopping Bag</h1>
         </header>
 
         <CartPageClient
@@ -50,6 +52,8 @@ async function CartPageBody() {
           initialQuote={quoteRes?.ok ? quoteRes.quote : null}
           supportedCountries={settings.supportedCountries}
         />
+
+        <RecentlyViewedProducts currency={settings.currency} prioritizeFirst />
       </Container>
     </Section>
   );
@@ -59,9 +63,22 @@ export default function CartPage() {
   return (
     <Suspense
       fallback={
-        <Section spacing="sm">
+        <Section spacing="md" className="pt-8 pb-10 sm:pb-16 lg:pb-24">
           <Container>
-            <div className="py-12 text-sm text-muted-foreground">Loading your shopping bag…</div>
+            <Skeleton className="h-4 w-44" />
+            <div className="mt-4 mb-8 space-y-3 border-b border-border pb-6">
+              <Skeleton className="h-3.5 w-32" />
+              <Skeleton className="h-10 w-64" />
+            </div>
+            <div className="grid gap-6 lg:grid-cols-12">
+              <div className="space-y-4 lg:col-span-8">
+                <Skeleton className="h-32 w-full rounded-xl" />
+                <Skeleton className="h-32 w-full rounded-xl" />
+              </div>
+              <div className="lg:col-span-4">
+                <Skeleton className="h-80 w-full rounded-xl" />
+              </div>
+            </div>
           </Container>
         </Section>
       }

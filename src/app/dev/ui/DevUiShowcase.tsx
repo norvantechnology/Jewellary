@@ -118,7 +118,7 @@ export function DevUiShowcase() {
               <div>
                 <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "UI Gallery" }]} />
                 <p className="text-editorial-label text-accent-text">Design System Showcase</p>
-                <h1 className="mt-1 font-display text-4xl font-medium text-foreground">
+                <h1 className="mt-1 text-3xl leading-[1.2] font-semibold tracking-[-0.02em] text-foreground sm:text-4xl">
                   Atelier Component Library
                 </h1>
               </div>
@@ -128,7 +128,10 @@ export function DevUiShowcase() {
             <div className="gold-hairline w-full" aria-hidden="true" />
 
             <section aria-labelledby="tokens-heading">
-              <h2 id="tokens-heading" className="font-display text-2xl font-medium text-foreground">
+              <h2
+                id="tokens-heading"
+                className="text-2xl leading-[1.2] font-semibold tracking-[-0.015em] text-foreground"
+              >
                 Buttons, Badges &amp; Typography
               </h2>
               <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -160,7 +163,7 @@ export function DevUiShowcase() {
                 <CardHeader>
                   <CardTitle>Form Controls</CardTitle>
                   <CardDescription>
-                    Accessible controls using warm champagne, bronze, and gold tokens.
+                    Accessible controls using neutral stone surfaces and warm gold tokens.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -358,7 +361,7 @@ export function DevUiShowcase() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center gap-4">
-                      <Skeleton className="size-14 rounded-sm" />
+                      <Skeleton className="size-14 rounded-md" />
                       <div className="flex-1 space-y-2">
                         <Skeleton className="h-4 w-3/4" />
                         <Skeleton className="h-3 w-1/2" />
@@ -387,7 +390,7 @@ export function DevUiShowcase() {
             />
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Sparkles className="size-4 text-accent" aria-hidden="true" />
+              <Sparkles className="size-5 stroke-[1.5] text-accent-text" aria-hidden="true" />
               <span>All semantic tokens verified in light and dark modes.</span>
             </div>
           </Stack>

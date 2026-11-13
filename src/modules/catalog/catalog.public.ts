@@ -7,12 +7,24 @@ import { getActiveBanners, type BannerDTO } from "@/modules/banners/banner.servi
 import { CACHE_TAGS } from "@/server/cache-tags";
 import { db } from "@/server/db";
 
+import type { ResponsiveVariantSet } from "@/lib/seo/images";
+import { parseSeoFaqs, type SeoFaqItem } from "@/modules/seo/seo.service";
+
 export interface PublicImageDTO {
   id: string;
   url: string;
   mediumUrl: string | null;
   thumbUrl: string | null;
+  avifUrl?: string | null;
+  jpegUrl?: string | null;
+  responsiveVariants?: ResponsiveVariantSet | null;
   altText: string;
+  viewType?: string;
+  title?: string | null;
+  caption?: string | null;
+  creditText?: string | null;
+  copyrightNotice?: string | null;
+  licenseUrl?: string | null;
   width: number;
   height: number;
   isPrimary: boolean;
@@ -31,6 +43,19 @@ export interface PublicVariantSummaryDTO {
   lowStockThreshold: number;
   isDefault: boolean;
   weightGrams: string | null;
+}
+
+export interface PublicCardVariantOptionDTO {
+  id: string;
+  sku: string;
+  title: string;
+  size: string | null;
+  metal: string | null;
+  stoneSpec: string | null;
+  price: string;
+  compareAtPrice: string | null;
+  availableStock: number;
+  isDefault: boolean;
 }
 
 export interface PublicProductCardDTO {
@@ -60,10 +85,12 @@ export interface PublicProductCardDTO {
   isFeatured: boolean;
   isNewArrival: boolean;
   isBestseller: boolean;
+  isCustomizable?: boolean;
   hasSizing: boolean;
   leadTimeDays: number | null;
   defaultVariantId: string | null;
   totalAvailableStock: number;
+  variants: PublicCardVariantOptionDTO[];
 }
 
 export interface PublicProductDetailDTO extends PublicProductCardDTO {
@@ -78,9 +105,16 @@ export interface PublicProductDetailDTO extends PublicProductCardDTO {
   certificateUrl: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  seoKeywords?: string | null;
+  seoFaqs?: SeoFaqItem[];
+  ogTitle?: string | null;
+  ogDescription?: string | null;
   ogImageUrl: string | null;
   canonicalOverride: string | null;
   noindex: boolean;
+  warrantyText?: string | null;
+  salePriceStartAt?: string | null;
+  salePriceEndAt?: string | null;
   gtin: string | null;
   mpn: string | null;
   googleProductCategory: string | null;
@@ -105,6 +139,15 @@ export interface PublicCategoryNodeDTO {
   imageUrl: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  seoKeywords?: string | null;
+  seoIntroCopy?: string | null;
+  seoIntroPosition?: "top" | "bottom";
+  seoFaqs?: SeoFaqItem[];
+  ogTitle?: string | null;
+  ogDescription?: string | null;
+  ogImageUrl?: string | null;
+  canonicalOverride?: string | null;
+  noindex?: boolean;
   parentId: string | null;
   productCount: number;
   children: Array<{
@@ -202,6 +245,12 @@ export const PUBLIC_PRODUCT_CARD_SELECT = {
   isFeatured: true,
   isNewArrival: true,
   isBestseller: true,
+  isCustomizable: true,
+  customizationConfig: {
+    select: {
+      enabled: true,
+    },
+  },
   hasSizing: true,
   leadTimeDays: true,
   category: {
@@ -231,6 +280,13 @@ export const PUBLIC_PRODUCT_CARD_SELECT = {
     orderBy: [{ isDefault: "desc" as const }, { sortOrder: "asc" as const }],
     select: {
       id: true,
+      sku: true,
+      title: true,
+      size: true,
+      metal: true,
+      stoneSpec: true,
+      priceOverride: true,
+      compareAtOverride: true,
       stockQty: true,
       reservedQty: true,
       isDefault: true,
@@ -274,19 +330,32 @@ export function mapProductRowToCardDTO(row: RawCardRow): PublicProductCardDTO {
     isFeatured: row.isFeatured,
     isNewArrival: row.isNewArrival,
     isBestseller: row.isBestseller,
+    isCustomizable: Boolean(row.isCustomizable && (row.customizationConfig?.enabled ?? true)),
     hasSizing: row.hasSizing,
     leadTimeDays: row.leadTimeDays,
     defaultVariantId: defaultVariant?.id ?? null,
     totalAvailableStock,
+    variants: row.variants.map((variant) => ({
+      id: variant.id,
+      sku: variant.sku,
+      title: variant.title,
+      size: variant.size,
+      metal: variant.metal,
+      stoneSpec: variant.stoneSpec,
+      price: (variant.priceOverride ?? row.basePrice).toString(),
+      compareAtPrice: (variant.compareAtOverride ?? row.compareAtPrice)?.toString() ?? null,
+      availableStock: Math.max(0, variant.stockQty - variant.reservedQty),
+      isDefault: variant.isDefault,
+    })),
   };
 }
 
-export async function getAllActiveCategoriesTree(): Promise<PublicCategoryNodeDTO[]> {
+async function getAllActiveCategoriesRaw() {
   "use cache";
   cacheLife("hours");
   cacheTag(CACHE_TAGS.categories, CACHE_TAGS.products);
 
-  const categories = await db.category.findMany({
+  return db.category.findMany({
     where: { isActive: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: {
@@ -298,6 +367,15 @@ export async function getAllActiveCategoriesTree(): Promise<PublicCategoryNodeDT
       imageUrl: true,
       seoTitle: true,
       seoDescription: true,
+      seoKeywords: true,
+      seoIntroCopy: true,
+      seoIntroPosition: true,
+      seoFaqs: true,
+      ogTitle: true,
+      ogDescription: true,
+      ogImageUrl: true,
+      canonicalOverride: true,
+      noindex: true,
       parentId: true,
       _count: {
         select: {
@@ -308,6 +386,14 @@ export async function getAllActiveCategoriesTree(): Promise<PublicCategoryNodeDT
       },
     },
   });
+}
+
+export async function getAllActiveCategoriesTree(): Promise<PublicCategoryNodeDTO[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.categories, CACHE_TAGS.products);
+
+  const categories = await getAllActiveCategoriesRaw();
 
   const childrenByParent = new Map<string, typeof categories>();
   for (const category of categories) {
@@ -367,20 +453,8 @@ export async function resolveCategoryByPath(pathStr: string): Promise<CategoryRe
   const normalized = pathStr.replace(/^\/+|\/+$/g, "");
   if (!normalized) return null;
 
-  const category = await db.category.findFirst({
-    where: { path: normalized, isActive: true },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      path: true,
-      description: true,
-      imageUrl: true,
-      seoTitle: true,
-      seoDescription: true,
-      parentId: true,
-    },
-  });
+  const allActive = await getAllActiveCategoriesRaw();
+  const category = allActive.find((item) => item.path === normalized);
 
   if (!category) {
     const redirect = await db.slugRedirect.findUnique({
@@ -397,10 +471,7 @@ export async function resolveCategoryByPath(pathStr: string): Promise<CategoryRe
     }
 
     if (!normalized.includes("/")) {
-      const leafMatch = await db.category.findFirst({
-        where: { slug: normalized, isActive: true },
-        select: { path: true },
-      });
+      const leafMatch = allActive.find((item) => item.slug === normalized);
       if (leafMatch && leafMatch.path !== normalized) {
         return { kind: "redirect", newPath: leafMatch.path };
       }
@@ -408,25 +479,6 @@ export async function resolveCategoryByPath(pathStr: string): Promise<CategoryRe
 
     return null;
   }
-
-  const allActive = await db.category.findMany({
-    where: { isActive: true },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      path: true,
-      description: true,
-      imageUrl: true,
-      parentId: true,
-      _count: {
-        select: {
-          products: { where: { status: "ACTIVE", deletedAt: null } },
-        },
-      },
-    },
-  });
 
   const byId = new Map(allActive.map((item) => [item.id, item]));
   const breadcrumbs: Array<{ name: string; path: string }> = [];
@@ -465,6 +517,15 @@ export async function resolveCategoryByPath(pathStr: string): Promise<CategoryRe
       imageUrl: category.imageUrl,
       seoTitle: category.seoTitle,
       seoDescription: category.seoDescription,
+      seoKeywords: category.seoKeywords,
+      seoIntroCopy: category.seoIntroCopy,
+      seoIntroPosition: category.seoIntroPosition === "bottom" ? "bottom" : "top",
+      seoFaqs: parseSeoFaqs(category.seoFaqs),
+      ogTitle: category.ogTitle,
+      ogDescription: category.ogDescription,
+      ogImageUrl: category.ogImageUrl,
+      canonicalOverride: category.canonicalOverride,
+      noindex: category.noindex,
       parentId: category.parentId,
       productCount,
       children: directChildren,
@@ -536,9 +597,40 @@ function buildFilterBuckets(
   };
 }
 
+async function getCollectionScopeFacets(categoryIdsKey: string): Promise<CollectionFacetsSummary> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.products, CACHE_TAGS.categories, CACHE_TAGS.facets);
+
+  const categoryIds = categoryIdsKey === "ALL" ? [] : categoryIdsKey.split(",").filter(Boolean);
+  const rows = await db.product.findMany({
+    where: {
+      status: "ACTIVE",
+      deletedAt: null,
+      ...(categoryIds.length > 0 ? { categoryId: { in: categoryIds } } : {}),
+    },
+    select: {
+      metalType: true,
+      stoneShape: true,
+      stoneOrigin: true,
+      colorGrade: true,
+      clarityGrade: true,
+      certificationLab: true,
+      basePrice: true,
+      caratTotal: true,
+    },
+  });
+
+  return buildFilterBuckets(rows);
+}
+
 export async function queryCollectionProducts(
   input: CollectionQueryInput & { categoryIds?: string[] },
 ): Promise<CollectionQueryResult> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(CACHE_TAGS.products, CACHE_TAGS.categories, CACHE_TAGS.facets);
+
   const pageSize = Math.min(48, Math.max(1, input.pageSize ?? PAGINATION_PAGE_SIZE));
   const page = Math.max(1, input.page ?? 1);
 
@@ -550,6 +642,16 @@ export async function queryCollectionProducts(
     }
   }
 
+  let inStockProductIds: string[] | undefined;
+  if (input.inStock) {
+    const stockRows = await db.$queryRaw<Array<{ productId: string }>>`
+      SELECT DISTINCT "productId"
+      FROM "ProductVariant"
+      WHERE "isActive" = true AND "stockQty" > "reservedQty"
+    `;
+    inStockProductIds = stockRows.map((r) => r.productId);
+  }
+
   const scopeWhere: Prisma.ProductWhereInput = {
     status: "ACTIVE",
     deletedAt: null,
@@ -558,6 +660,7 @@ export async function queryCollectionProducts(
 
   const where: Prisma.ProductWhereInput = {
     ...scopeWhere,
+    ...(input.inStock ? { id: { in: inStockProductIds ?? [] } } : {}),
     ...(input.metal && input.metal.length > 0 ? { metalType: { in: input.metal } } : {}),
     ...(input.shape && input.shape.length > 0 ? { stoneShape: { in: input.shape } } : {}),
     ...(input.origin && input.origin.length > 0 ? { stoneOrigin: { in: input.origin } } : {}),
@@ -585,15 +688,6 @@ export async function queryCollectionProducts(
     };
   }
 
-  if (input.inStock) {
-    where.variants = {
-      some: {
-        isActive: true,
-        stockQty: { gt: 0 },
-      },
-    };
-  }
-
   const orderBy: Prisma.ProductOrderByWithRelationInput[] =
     input.sort === "price-asc"
       ? [{ basePrice: "asc" }, { createdAt: "desc" }]
@@ -605,44 +699,41 @@ export async function queryCollectionProducts(
             ? [{ caratTotal: { sort: "desc", nulls: "last" } }, { basePrice: "desc" }]
             : [{ isFeatured: "desc" }, { isBestseller: "desc" }, { createdAt: "desc" }];
 
-  const [facetRows, matchedRows] = await Promise.all([
-    db.product.findMany({
-      where: scopeWhere,
-      select: {
-        metalType: true,
-        stoneShape: true,
-        stoneOrigin: true,
-        colorGrade: true,
-        clarityGrade: true,
-        certificationLab: true,
-        basePrice: true,
-        caratTotal: true,
-      },
-    }),
+  const scopeKey =
+    categoryIds && categoryIds.length > 0 ? [...categoryIds].sort().join(",") : "ALL";
+
+  const [facets, total, initialRows] = await Promise.all([
+    getCollectionScopeFacets(scopeKey),
+    db.product.count({ where }),
     db.product.findMany({
       where,
       orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: PUBLIC_PRODUCT_CARD_SELECT,
     }),
   ]);
 
-  const cards = matchedRows.map(mapProductRowToCardDTO);
-  const availabilityFiltered = input.inStock
-    ? cards.filter((item) => item.totalAvailableStock > 0)
-    : cards;
-
-  const total = availabilityFiltered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages);
-  const start = (safePage - 1) * pageSize;
+  const pageRows =
+    safePage !== page && total > 0
+      ? await db.product.findMany({
+          where,
+          orderBy,
+          skip: (safePage - 1) * pageSize,
+          take: pageSize,
+          select: PUBLIC_PRODUCT_CARD_SELECT,
+        })
+      : initialRows;
 
   return {
-    items: availabilityFiltered.slice(start, start + pageSize),
+    items: pageRows.map(mapProductRowToCardDTO),
     total,
     page: safePage,
     pageSize,
     totalPages,
-    facets: buildFilterBuckets(facetRows),
+    facets,
   };
 }
 
@@ -697,13 +788,26 @@ export async function getPublicProductBySlug(slug: string): Promise<PublicProduc
       isFeatured: true,
       isNewArrival: true,
       isBestseller: true,
+      isCustomizable: true,
+      customizationConfig: {
+        select: {
+          enabled: true,
+        },
+      },
       hasSizing: true,
       leadTimeDays: true,
       seoTitle: true,
       seoDescription: true,
+      seoKeywords: true,
+      seoFaqs: true,
+      ogTitle: true,
+      ogDescription: true,
       ogImageUrl: true,
       canonicalOverride: true,
       noindex: true,
+      warrantyText: true,
+      salePriceStartAt: true,
+      salePriceEndAt: true,
       gtin: true,
       mpn: true,
       googleProductCategory: true,
@@ -731,7 +835,16 @@ export async function getPublicProductBySlug(slug: string): Promise<PublicProduc
           url: true,
           mediumUrl: true,
           thumbUrl: true,
+          avifUrl: true,
+          jpegUrl: true,
+          responsiveVariants: true,
           altText: true,
+          viewType: true,
+          title: true,
+          caption: true,
+          creditText: true,
+          copyrightNotice: true,
+          licenseUrl: true,
           width: true,
           height: true,
           isPrimary: true,
@@ -882,8 +995,28 @@ export async function getPublicProductBySlug(slug: string): Promise<PublicProduc
       categoryName: product.category.name,
       categorySlug: product.category.slug,
       categoryPath: product.category.path,
-      primaryImage: product.images[0] ?? null,
-      secondaryImage: product.images[1] ?? null,
+      primaryImage: product.images[0]
+        ? {
+            ...product.images[0],
+            responsiveVariants:
+              product.images[0].responsiveVariants &&
+              typeof product.images[0].responsiveVariants === "object"
+                ? (product.images[0]
+                    .responsiveVariants as unknown as PublicImageDTO["responsiveVariants"])
+                : null,
+          }
+        : null,
+      secondaryImage: product.images[1]
+        ? {
+            ...product.images[1],
+            responsiveVariants:
+              product.images[1].responsiveVariants &&
+              typeof product.images[1].responsiveVariants === "object"
+                ? (product.images[1]
+                    .responsiveVariants as unknown as PublicImageDTO["responsiveVariants"])
+                : null,
+          }
+        : null,
       metalType: product.metalType,
       metalColor: product.metalColor,
       metalPurity: product.metalPurity,
@@ -904,13 +1037,23 @@ export async function getPublicProductBySlug(slug: string): Promise<PublicProduc
       isFeatured: product.isFeatured,
       isNewArrival: product.isNewArrival,
       isBestseller: product.isBestseller,
+      isCustomizable: Boolean(
+        product.isCustomizable && (product.customizationConfig?.enabled ?? true),
+      ),
       hasSizing: product.hasSizing,
       leadTimeDays: product.leadTimeDays,
       seoTitle: product.seoTitle,
       seoDescription: product.seoDescription,
+      seoKeywords: product.seoKeywords,
+      seoFaqs: parseSeoFaqs(product.seoFaqs),
+      ogTitle: product.ogTitle,
+      ogDescription: product.ogDescription,
       ogImageUrl: product.ogImageUrl,
       canonicalOverride: product.canonicalOverride,
       noindex: product.noindex,
+      warrantyText: product.warrantyText,
+      salePriceStartAt: product.salePriceStartAt?.toISOString() ?? null,
+      salePriceEndAt: product.salePriceEndAt?.toISOString() ?? null,
       gtin: product.gtin,
       mpn: product.mpn,
       googleProductCategory: product.googleProductCategory,
@@ -918,7 +1061,30 @@ export async function getPublicProductBySlug(slug: string): Promise<PublicProduc
       defaultVariantId: defaultVariant?.id ?? null,
       totalAvailableStock,
       breadcrumbs,
-      images: product.images,
+      images: product.images.map((img) => ({
+        id: img.id,
+        url: img.url,
+        mediumUrl: img.mediumUrl,
+        thumbUrl: img.thumbUrl,
+        avifUrl: img.avifUrl,
+        jpegUrl: img.jpegUrl,
+        responsiveVariants:
+          img.responsiveVariants &&
+          typeof img.responsiveVariants === "object" &&
+          !Array.isArray(img.responsiveVariants)
+            ? (img.responsiveVariants as unknown as ResponsiveVariantSet)
+            : null,
+        altText: img.altText,
+        viewType: img.viewType,
+        title: img.title,
+        caption: img.caption,
+        creditText: img.creditText,
+        copyrightNotice: img.copyrightNotice,
+        licenseUrl: img.licenseUrl,
+        width: img.width,
+        height: img.height,
+        isPrimary: img.isPrimary,
+      })),
       variants: mappedVariants,
       attributes,
     },
@@ -953,7 +1119,7 @@ export async function getHomepagePayload(): Promise<HomepagePayloadDTO> {
         take: 4,
         select: PUBLIC_PRODUCT_CARD_SELECT,
       }),
-      getPublishedArticles(),
+      getPublishedArticles(3),
     ]);
 
   return {
@@ -966,7 +1132,7 @@ export async function getHomepagePayload(): Promise<HomepagePayloadDTO> {
     featuredProducts: featuredRows.map(mapProductRowToCardDTO),
     newArrivals: newArrivalRows.map(mapProductRowToCardDTO),
     bestsellers: bestsellerRows.map(mapProductRowToCardDTO),
-    articles: articles.slice(0, 3),
+    articles,
   };
 }
 
@@ -979,19 +1145,40 @@ export interface SitemapCategoryItem {
 export async function getSitemapCategories(): Promise<SitemapCategoryItem[]> {
   "use cache";
   cacheLife("hours");
-  cacheTag(CACHE_TAGS.categories);
+  cacheTag(CACHE_TAGS.categories, CACHE_TAGS.products);
 
   const rows = await db.category.findMany({
-    where: { isActive: true },
+    where: { isActive: true, noindex: false },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: {
+      id: true,
+      parentId: true,
       path: true,
       imageUrl: true,
       updatedAt: true,
+      _count: {
+        select: {
+          products: {
+            where: { status: "ACTIVE", deletedAt: null },
+          },
+        },
+      },
     },
   });
 
-  return rows;
+  // Only include categories that contain at least 1 active product (directly or in a child)
+  return rows
+    .filter((cat) => {
+      if (cat._count.products > 0) return true;
+      return rows.some(
+        (other) => other.path.startsWith(`${cat.path}/`) && other._count.products > 0,
+      );
+    })
+    .map((row) => ({
+      path: row.path,
+      imageUrl: row.imageUrl,
+      updatedAt: row.updatedAt,
+    }));
 }
 
 export interface SitemapProductItem {
@@ -1187,4 +1374,147 @@ export async function getMerchantFeedItems(): Promise<MerchantFeedItemDTO[]> {
   }
 
   return items;
+}
+
+async function getPublicProductsByIdsCached(sortedKey: string): Promise<PublicProductCardDTO[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(CACHE_TAGS.products, CACHE_TAGS.categories);
+
+  const ids = sortedKey.split(",").filter(Boolean);
+  if (ids.length === 0) return [];
+
+  const rows = await db.product.findMany({
+    where: {
+      id: { in: ids },
+      status: "ACTIVE",
+      deletedAt: null,
+      category: { isActive: true },
+    },
+    select: PUBLIC_PRODUCT_CARD_SELECT,
+  });
+
+  return rows.map(mapProductRowToCardDTO);
+}
+
+export async function listPublicProductsByIds(ids: string[]): Promise<PublicProductCardDTO[]> {
+  const cleanIds = Array.from(
+    new Set(ids.map((id) => id.trim()).filter((id) => id.length > 0)),
+  ).slice(0, 12);
+
+  if (cleanIds.length === 0) {
+    return [];
+  }
+
+  const cachedCards = await getPublicProductsByIdsCached([...cleanIds].sort().join(","));
+  const byId = new Map(cachedCards.map((card) => [card.id, card]));
+  return cleanIds
+    .map((id) => byId.get(id))
+    .filter((item): item is PublicProductCardDTO => Boolean(item));
+}
+
+export async function getMerchantFeedProductsForXml(): Promise<
+  import("@/lib/seo/feeds").MerchantFeedProductInput[]
+> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.products, CACHE_TAGS.categories, CACHE_TAGS.settings);
+
+  const products = await db.product.findMany({
+    where: {
+      status: "ACTIVE",
+      deletedAt: null,
+      noindex: false,
+    },
+    orderBy: [{ updatedAt: "desc" }],
+    select: {
+      id: true,
+      sku: true,
+      name: true,
+      slug: true,
+      subtitle: true,
+      description: true,
+      priceMode: true,
+      basePrice: true,
+      compareAtPrice: true,
+      salePriceStartAt: true,
+      salePriceEndAt: true,
+      metalType: true,
+      metalColor: true,
+      metalPurity: true,
+      stoneOrigin: true,
+      caratTotal: true,
+      certificationLab: true,
+      isFeatured: true,
+      gtin: true,
+      mpn: true,
+      googleProductCategory: true,
+      category: {
+        select: {
+          name: true,
+          path: true,
+          parent: { select: { name: true } },
+        },
+      },
+      images: {
+        orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+        select: { url: true, isPrimary: true },
+      },
+      variants: {
+        where: { isActive: true },
+        orderBy: [{ isDefault: "desc" }, { sortOrder: "asc" }],
+        select: {
+          id: true,
+          sku: true,
+          title: true,
+          size: true,
+          metal: true,
+          priceOverride: true,
+          stockQty: true,
+          reservedQty: true,
+        },
+      },
+    },
+  });
+
+  return products.map((p) => ({
+    id: p.id,
+    sku: p.sku,
+    slug: p.slug,
+    name: p.name,
+    description: p.description || p.subtitle || p.name,
+    categoryPath: p.category.path,
+    categoryBreadcrumb: [
+      ...(p.category.parent?.name ? [p.category.parent.name] : []),
+      p.category.name,
+    ],
+    googleProductCategory: p.googleProductCategory,
+    basePrice: p.basePrice.toString(),
+    compareAtPrice: p.compareAtPrice?.toString() ?? null,
+    salePriceStartAt: p.salePriceStartAt?.toISOString() ?? null,
+    salePriceEndAt: p.salePriceEndAt?.toISOString() ?? null,
+    priceMode: p.priceMode,
+    gtin: p.gtin,
+    mpn: p.mpn,
+    metalType: [p.metalPurity, p.metalType].filter(Boolean).join(" ") || p.metalType,
+    metalColor: p.metalColor,
+    stoneOrigin: p.stoneOrigin,
+    caratTotal: p.caratTotal?.toString() ?? null,
+    certificationLab: p.certificationLab,
+    isFeatured: p.isFeatured,
+    images: p.images,
+    variants: p.variants.map((v) => ({
+      id: v.id,
+      sku: v.sku,
+      title: v.title,
+      ringSize: v.size,
+      metalOverride: v.metal,
+      priceDelta: v.priceOverride
+        ? (Number(v.priceOverride.toString()) - Number(p.basePrice.toString())).toFixed(2)
+        : "0",
+      stockOnHand: v.stockQty,
+      stockReserved: v.reservedQty,
+      backorderable: false,
+    })),
+  }));
 }

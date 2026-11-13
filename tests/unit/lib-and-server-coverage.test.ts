@@ -172,9 +172,9 @@ describe("lib utility coverage", () => {
       "Custom SEO",
     );
     expect(formatProductMetaTitle({ name: "Solitaire", metalType: "18K Gold" })).toBe(
-      "Solitaire — 18K Gold",
+      "Solitaire – 18K Gold | Maison Aurelia",
     );
-    expect(formatProductMetaTitle({ name: "Band" })).toBe("Band");
+    expect(formatProductMetaTitle({ name: "Band" })).toBe("Band | Maison Aurelia");
 
     expect(
       formatProductMetaDescription({ name: "Ring", seoDescription: "Direct SEO summary" }, 30),
@@ -190,8 +190,8 @@ describe("lib utility coverage", () => {
       },
       30,
     );
-    expect(longDesc.length).toBeLessThanOrEqual(160);
-    expect(longDesc.endsWith("...")).toBe(true);
+    expect(longDesc.length).toBeLessThanOrEqual(158);
+    expect(longDesc.length).toBeGreaterThanOrEqual(110);
   });
 });
 

@@ -3,6 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { CustomizedSpecsBadge } from "@/components/shared/CustomizedSpecsBadge";
 import {
   AlertTriangle,
   Bookmark,
@@ -11,7 +12,10 @@ import {
   ShoppingBag,
   Trash2,
 } from "lucide-react";
-import { toast } from "sonner";
+import { notifyError, notifySuccess } from "@/lib/notify";
+import { AnimatePresence, m } from "motion/react";
+import { AnimatedCounter } from "@/components/motion/AnimatedCounter";
+import { useCurrency } from "@/components/providers/CurrencyProvider";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Price } from "@/components/shared/Price";
 import { QuantityStepper } from "@/components/shared/QuantityStepper";
@@ -25,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { formatCountryName } from "@/lib/countries";
 import { formatMoneyExact } from "@/lib/money";
+import { MOTION_TRANSITIONS, staggerItemVariants, useReducedMotionSafe } from "@/lib/motion";
 import {
   estimateCartQuoteAction,
   removeCartItemAction,
@@ -46,6 +51,8 @@ export function CartPageClient({
   initialQuote,
   supportedCountries,
 }: CartPageClientProps) {
+  const { currency, formatPrice } = useCurrency();
+  const reducedMotion = useReducedMotionSafe();
   const [cart, setCart] = React.useState(initialCart);
   const [quote, setQuote] = React.useState<CheckoutQuoteDTO | null>(initialQuote);
   const [selectedCountry, setSelectedCountry] = React.useState(
@@ -55,52 +62,79 @@ export function CartPageClient({
   const [isEstimating, setIsEstimating] = React.useState(false);
 
   React.useEffect(() => {
-    visitorStore.setBagCount(initialCart.itemCount);
-  }, [initialCart.itemCount]);
+    visitorStore.setLatestCart(initialCart);
+  }, [initialCart]);
 
-  const refreshQuote = React.useCallback(async (country: string) => {
-    setIsEstimating(true);
-    const res = await estimateCartQuoteAction({ shippingCountry: country });
-    setIsEstimating(false);
-    if (res.ok) {
-      setQuote(res.data);
-    }
-  }, []);
+  const refreshQuote = React.useCallback(
+    async (country: string, currencyCode: string = currency.code) => {
+      setIsEstimating(true);
+      const res = await estimateCartQuoteAction({
+        shippingCountry: country,
+        currency: currencyCode,
+      });
+      setIsEstimating(false);
+      if (res.ok) {
+        setQuote(res.data);
+      }
+    },
+    [currency.code],
+  );
 
-  async function handleQuantityChange(variantId: string, nextQty: number) {
-    setBusyVariantId(variantId);
-    const result = await updateCartItemQtyAction({ variantId, quantity: nextQty });
+  React.useEffect(() => {
+    if (cart.items.length === 0) return;
+    if (quote?.currency === currency.code) return;
+    let active = true;
+    void estimateCartQuoteAction({
+      shippingCountry: selectedCountry,
+      currency: currency.code,
+    }).then((res) => {
+      if (!active) return;
+      if (res.ok) {
+        setQuote(res.data);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [cart.items.length, currency.code, quote?.currency, selectedCountry]);
+
+  async function handleQuantityChange(variantId: string, nextQty: number, cartItemId?: string) {
+    setBusyVariantId(cartItemId ?? variantId);
+    const result = await updateCartItemQtyAction({ variantId, cartItemId, quantity: nextQty });
     setBusyVariantId(null);
 
     if (!result.ok) {
-      toast.error(result.error.message);
+      void notifyError(result.error.message);
       return;
     }
 
     setCart(result.data);
-    visitorStore.setBagCount(result.data.itemCount);
+    visitorStore.setLatestCart(result.data);
     await refreshQuote(selectedCountry);
   }
 
-  async function handleRemove(variantId: string, name: string) {
-    setBusyVariantId(variantId);
-    const result = await removeCartItemAction({ variantId });
+  async function handleRemove(variantId: string, name: string, cartItemId?: string) {
+    setBusyVariantId(cartItemId ?? variantId);
+    const result = await removeCartItemAction({ variantId, cartItemId });
     setBusyVariantId(null);
 
     if (!result.ok) {
-      toast.error(result.error.message);
+      void notifyError(result.error.message);
       return;
     }
 
-    const updatedItems = cart.items.filter((item) => item.variantId !== variantId);
-    setCart({
+    const updatedItems = cart.items.filter((item) =>
+      cartItemId ? item.id !== cartItemId : item.variantId !== variantId,
+    );
+    const updatedCart = {
       ...cart,
       itemCount: result.data.itemCount,
       subtotal: result.data.subtotal,
       items: updatedItems,
-    });
-    visitorStore.setBagCount(result.data.itemCount);
-    toast.success(`${name} removed from your bag.`);
+    };
+    setCart(updatedCart);
+    visitorStore.setLatestCart(updatedCart);
+    void notifySuccess(`${name} removed from your bag.`);
     if (updatedItems.length > 0) {
       await refreshQuote(selectedCountry);
     } else {
@@ -108,20 +142,20 @@ export function CartPageClient({
     }
   }
 
-  async function handleSaveForLater(variantId: string, name: string) {
-    setBusyVariantId(variantId);
-    const result = await saveCartItemForLaterAction({ variantId });
+  async function handleSaveForLater(variantId: string, name: string, cartItemId?: string) {
+    setBusyVariantId(cartItemId ?? variantId);
+    const result = await saveCartItemForLaterAction({ variantId, cartItemId });
     setBusyVariantId(null);
 
     if (!result.ok) {
-      toast.error(result.error.message);
+      void notifyError(result.error.message);
       return;
     }
 
     setCart(result.data.cart);
-    visitorStore.setBagCount(result.data.cart.itemCount);
+    visitorStore.setLatestCart(result.data.cart);
     visitorStore.setWishlistVariantIds(result.data.wishlistVariantIds);
-    toast.success(`${name} moved to your saved wishlist.`);
+    void notifySuccess(`${name} moved to your saved wishlist.`);
     if (result.data.cart.items.length > 0) {
       await refreshQuote(selectedCountry);
     } else {
@@ -150,10 +184,12 @@ export function CartPageClient({
   const hasStockIssues = cart.items.some((i) => i.hasStockIssue || i.availableStock <= 0);
   const outOfStockItems = cart.items.some((i) => i.availableStock <= 0);
 
+  const activeQuote = quote && quote.currency === currency.code ? quote : null;
+
   let progressPct = 100;
-  if (quote?.freeShippingThreshold) {
-    const thresholdNum = Number(quote.freeShippingThreshold);
-    const subtotalNum = Number(cart.subtotal);
+  if (activeQuote?.freeShippingThreshold) {
+    const thresholdNum = Number(activeQuote.freeShippingThreshold);
+    const subtotalNum = Number(activeQuote.subtotal);
     if (thresholdNum > 0) {
       progressPct = Math.min(100, Math.max(0, Math.round((subtotalNum / thresholdNum) * 100)));
     }
@@ -164,14 +200,16 @@ export function CartPageClient({
       {(hasPriceUpdates || hasStockIssues) && (
         <div
           role="status"
-          className="flex items-start gap-3 rounded-md border border-accent/40 bg-card p-4 text-sm"
+          className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm"
         >
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+          <AlertTriangle
+            className="mt-0.5 size-5 shrink-0 stroke-[1.5] text-warning"
+            aria-hidden="true"
+          />
           <div className="space-y-1">
             {hasPriceUpdates && (
-              <p className="text-foreground">
-                Pricing on one or more pieces in your bag was refreshed to current live atelier
-                rates.
+              <p className="font-medium text-foreground">
+                Prices for some items in your bag have been updated.
               </p>
             )}
             {hasStockIssues && (
@@ -184,134 +222,180 @@ export function CartPageClient({
         </div>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-12">
+      <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
         <div className="space-y-4 lg:col-span-8">
-          {cart.items.map((item) => {
-            const busy = busyVariantId === item.variantId;
-            return (
-              <div
-                key={item.id}
-                className="flex flex-col gap-4 rounded-md border border-border bg-card p-4 sm:flex-row sm:items-center"
-              >
-                <Link
-                  href={`/products/${item.productSlug}`}
-                  className="relative size-24 shrink-0 overflow-hidden rounded-sm border border-border bg-muted"
+          <AnimatePresence initial={false}>
+            {cart.items.map((item, itemIndex) => {
+              const busy = busyVariantId === item.id || busyVariantId === item.variantId;
+              const isSeedImage = item.imageUrl?.startsWith("/images/seed/") ?? false;
+              const formattedLineTotal = formatPrice(item.lineTotal, { exact: true });
+              return (
+                <m.div
+                  key={item.id}
+                  variants={staggerItemVariants}
+                  initial={false}
+                  exit={
+                    reducedMotion
+                      ? { opacity: 0, transition: MOTION_TRANSITIONS.reduced }
+                      : { opacity: 0, scale: 0.97, y: -6, transition: MOTION_TRANSITIONS.fast }
+                  }
+                  className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-5"
                 >
-                  {item.imageUrl ? (
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.imageAltText ?? item.productName}
-                      fill
-                      sizes="96px"
-                      className="object-cover"
-                    />
-                  ) : null}
-                </Link>
-
-                <div className="min-w-0 flex-1 space-y-1">
-                  <h2 className="font-display text-xl font-medium text-foreground">
-                    <Link href={`/products/${item.productSlug}`} className="hover:underline">
-                      {item.productName}
+                  <div className="flex items-start gap-3 sm:contents">
+                    <Link
+                      href={`/products/${item.productSlug}`}
+                      className="ma-media-placeholder relative size-[72px] shrink-0 overflow-hidden rounded-lg border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:size-24"
+                    >
+                      {item.imageUrl ? (
+                        <Image
+                          loading={itemIndex === 0 ? "eager" : "lazy"}
+                          src={item.imageUrl}
+                          alt={item.imageAltText ?? item.productName}
+                          fill
+                          sizes="96px"
+                          className={
+                            isSeedImage
+                              ? "object-cover object-center dark:brightness-90"
+                              : "object-cover object-center"
+                          }
+                        />
+                      ) : null}
                     </Link>
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    {item.variantTitle} · SKU {item.variantSku}
-                  </p>
-                  <Price amount={item.unitPrice} currency={cart.currency} size="sm" />
-                  {item.availableStock <= 0 ? (
-                    <p className="text-xs font-medium text-destructive">
-                      Currently sold out in vault — remove or save for later
-                    </p>
-                  ) : item.hasStockIssue ? (
-                    <p className="text-xs font-medium text-destructive">
-                      Only {item.availableStock} left in vault — reduce quantity to proceed
-                    </p>
-                  ) : null}
-                </div>
 
-                <div className="flex items-center justify-between gap-4 sm:justify-end">
-                  <QuantityStepper
-                    value={item.quantity}
-                    min={1}
-                    max={Math.min(10, Math.max(1, item.availableStock))}
-                    disabled={busy || item.availableStock <= 0}
-                    onChange={(next) => handleQuantityChange(item.variantId, next)}
-                  />
-
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-foreground tabular-nums-price">
-                      {formatMoneyExact(item.lineTotal, cart.currency)}
-                    </p>
-                    <div className="mt-1.5 flex items-center justify-end gap-3">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleSaveForLater(item.variantId, item.productName)}
-                        className="inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-accent-text"
-                      >
-                        <Bookmark className="size-3" aria-hidden="true" />
-                        <span>Save for later</span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleRemove(item.variantId, item.productName)}
-                        className="inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="size-3" aria-hidden="true" />
-                        <span>Remove</span>
-                      </button>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <h2 className="line-clamp-2 text-base leading-[1.35] font-semibold text-foreground sm:text-lg">
+                        <Link
+                          href={`/products/${item.productSlug}`}
+                          className="rounded-sm underline-offset-4 hover:text-accent-text hover:underline"
+                        >
+                          {item.productName}
+                        </Link>
+                      </h2>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {item.variantTitle} · SKU {item.variantSku}
+                      </p>
+                      {item.isCustomized ? (
+                        <CustomizedSpecsBadge
+                          requestId={item.customizationRequestId}
+                          requestNumber={item.customizationRequestNumber}
+                          summaryLines={item.customizationSummaryLines}
+                        />
+                      ) : null}
+                      <Price amount={item.unitPrice} currency={cart.currency} size="sm" />
+                      {item.availableStock <= 0 ? (
+                        <p className="pt-0.5 text-xs font-medium text-destructive">
+                          Sold out — remove it to continue
+                        </p>
+                      ) : item.hasStockIssue ? (
+                        <p className="pt-0.5 text-xs font-medium text-destructive">
+                          Only {item.availableStock} left — reduce the quantity to continue
+                        </p>
+                      ) : null}
                     </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 sm:justify-end sm:gap-4 sm:border-t-0 sm:pt-0">
+                    {item.isCustomized ? (
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Custom piece · Qty 1
+                      </span>
+                    ) : (
+                      <QuantityStepper
+                        value={item.quantity}
+                        min={1}
+                        max={Math.min(10, Math.max(1, item.availableStock))}
+                        disabled={busy || item.availableStock <= 0}
+                        onChange={(next) => handleQuantityChange(item.variantId, next, item.id)}
+                      />
+                    )}
+
+                    <div className="text-right">
+                      <p className="tabular-nums-price text-base font-semibold text-foreground sm:text-lg">
+                        <AnimatedCounter value={formattedLineTotal} />
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() =>
+                            handleSaveForLater(item.variantId, item.productName, item.id)
+                          }
+                          className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-medium text-text-muted transition-colors duration-150 ease-out hover:text-accent-text focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Bookmark className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                          <span>Save for later</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => handleRemove(item.variantId, item.productName, item.id)}
+                          className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-medium text-text-muted transition-colors duration-150 ease-out hover:text-destructive focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Trash2 className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                          <span>Remove</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </m.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
 
         <aside className="lg:col-span-4">
-          <div className="rounded-md border border-border bg-card p-6">
-            <h2 className="font-display text-2xl font-medium text-foreground">Order Summary</h2>
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-6 lg:sticky lg:top-24">
+            <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
+              Order Summary
+            </h2>
 
-            {quote?.freeShippingThreshold && (
-              <div className="mt-4 rounded-sm border border-border bg-muted/40 p-3">
+            {activeQuote?.freeShippingThreshold && (
+              <div className="mt-4 rounded-md border border-border bg-surface-2 p-3.5">
                 <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-                  {quote.isFreeShipping ? (
+                  {activeQuote.isFreeShipping ? (
                     <>
-                      <CheckCircle2 className="size-4 shrink-0 text-accent" aria-hidden="true" />
+                      <CheckCircle2
+                        className="size-5 shrink-0 stroke-[1.5] text-success"
+                        aria-hidden="true"
+                      />
                       <span>You qualify for complimentary insured shipping</span>
                     </>
                   ) : (
                     <span>
                       Add{" "}
-                      <strong className="tabular-nums-price">
-                        {formatMoneyExact(quote.amountToFreeShipping ?? "0.00", cart.currency)}
+                      <strong className="tabular-nums-price font-semibold">
+                        {formatMoneyExact(
+                          activeQuote.amountToFreeShipping ?? "0.00",
+                          activeQuote.currency,
+                          "en-US",
+                          activeQuote.currencyDecimals,
+                        )}
                       </strong>{" "}
                       more for complimentary insured express shipping
                     </span>
                   )}
                 </div>
                 <div
-                  className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border"
+                  className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-border"
                   aria-hidden="true"
                 >
                   <div
-                    className="h-full bg-accent transition-[width] duration-300"
-                    style={{ width: `${progressPct}%` }}
+                    className="ma-progress-fill h-full w-full bg-accent"
+                    style={{ transform: `scaleX(${progressPct / 100})` }}
                   />
                 </div>
               </div>
             )}
 
-            <div className="mt-4 space-y-1.5">
+            <div className="mt-4 space-y-2">
               <label
                 htmlFor="cart-estimate-country"
-                className="text-xs font-medium tracking-wider text-muted-foreground uppercase"
+                className="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
               >
                 Estimate Shipping Destination
               </label>
               <Select value={selectedCountry} onValueChange={handleCountryChange}>
-                <SelectTrigger id="cart-estimate-country" className="bg-background">
+                <SelectTrigger id="cart-estimate-country" className="h-12 bg-background md:h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -324,51 +408,84 @@ export function CartPageClient({
               </Select>
             </div>
 
-            <dl className="mt-4 space-y-3 border-t border-border pt-4 text-sm">
-              <div className="flex items-center justify-between">
+            <dl className="mt-5 space-y-3 border-t border-border pt-4 text-sm">
+              <div className="flex items-center justify-between gap-3">
                 <dt className="text-muted-foreground">Items ({cart.itemCount})</dt>
-                <dd className="font-medium text-foreground tabular-nums-price">
-                  {formatMoneyExact(cart.subtotal, cart.currency)}
+                <dd className="tabular-nums-price font-medium text-foreground">
+                  <AnimatedCounter
+                    value={
+                      activeQuote
+                        ? formatMoneyExact(
+                            activeQuote.subtotal,
+                            activeQuote.currency,
+                            "en-US",
+                            activeQuote.currencyDecimals,
+                          )
+                        : formatPrice(cart.subtotal, { exact: true })
+                    }
+                  />
                 </dd>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <dt className="text-muted-foreground">
-                  {quote ? quote.selectedZone.name : "Insured Delivery"}
+                  {activeQuote ? activeQuote.selectedZone.name : "Insured Delivery"}
                 </dt>
-                <dd className="font-medium text-foreground tabular-nums-price">
+                <dd className="tabular-nums-price font-medium text-foreground">
                   {isEstimating
                     ? "Calculating…"
-                    : quote
-                      ? quote.isFreeShipping
+                    : activeQuote
+                      ? activeQuote.isFreeShipping
                         ? "Complimentary"
-                        : formatMoneyExact(quote.shippingCost, cart.currency)
+                        : formatMoneyExact(
+                            activeQuote.shippingCost,
+                            activeQuote.currency,
+                            "en-US",
+                            activeQuote.currencyDecimals,
+                          )
                       : "Calculated at checkout"}
                 </dd>
               </div>
-              {quote && (
-                <div className="flex items-center justify-between">
+              {activeQuote && (
+                <div className="flex items-center justify-between gap-3">
                   <dt className="text-muted-foreground">
-                    {quote.taxLabel}
-                    {quote.taxInclusive ? " (Included)" : ""}
+                    {activeQuote.taxLabel}
+                    {activeQuote.taxInclusive ? " (Included)" : ""}
                   </dt>
-                  <dd className="font-medium text-foreground tabular-nums-price">
-                    {formatMoneyExact(quote.taxAmount, cart.currency)}
+                  <dd className="tabular-nums-price font-medium text-foreground">
+                    {formatMoneyExact(
+                      activeQuote.taxAmount,
+                      activeQuote.currency,
+                      "en-US",
+                      activeQuote.currencyDecimals,
+                    )}
                   </dd>
                 </div>
               )}
-              <div className="flex items-center justify-between border-t border-border pt-3 text-base">
-                <dt className="font-display text-lg font-medium text-foreground">
-                  Estimated Total
-                </dt>
-                <dd className="font-display text-xl font-medium text-foreground tabular-nums-price">
-                  {formatMoneyExact(quote ? quote.total : cart.subtotal, cart.currency)}
+              <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+                <dt className="text-base font-semibold text-foreground">Estimated Total</dt>
+                <dd className="tabular-nums-price text-xl font-semibold text-foreground">
+                  <AnimatedCounter
+                    value={
+                      activeQuote
+                        ? formatMoneyExact(
+                            activeQuote.total,
+                            activeQuote.currency,
+                            "en-US",
+                            activeQuote.currencyDecimals,
+                          )
+                        : formatPrice(cart.subtotal, { exact: true })
+                    }
+                  />
                 </dd>
               </div>
             </dl>
 
             {(quote?.signatureRequired ?? cart.signatureRequired) && (
-              <p className="mt-4 flex items-start gap-2 rounded-sm border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+              <p className="mt-4 flex items-start gap-2.5 rounded-md border border-border bg-surface-2 p-3.5 text-xs leading-relaxed text-muted-foreground">
+                <ShieldCheck
+                  className="mt-0.5 size-5 shrink-0 stroke-[1.5] text-accent-text"
+                  aria-hidden="true"
+                />
                 <span>
                   Adult signature verification is included automatically for insured security on
                   this order.
@@ -390,9 +507,12 @@ export function CartPageClient({
                 <Link href="/collections">Continue Exploring</Link>
               </Button>
               <p className="pt-1 text-center text-xs text-muted-foreground">
-                Prefer bespoke assistance?{" "}
-                <Link href="/contact?type=PRODUCT" className="text-accent-text underline">
-                  Speak with Private Concierge
+                Need help choosing?{" "}
+                <Link
+                  href="/contact?type=PRODUCT"
+                  className="inline-flex min-h-11 items-center font-medium text-accent-text underline underline-offset-4"
+                >
+                  Contact us
                 </Link>
               </p>
             </div>

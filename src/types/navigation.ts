@@ -17,6 +17,8 @@ export interface SiteHeaderConfig {
   announcementEnabled: boolean;
   announcementText?: string | null;
   announcementHref?: string | null;
+  freeShippingThreshold?: string | null;
+  baseCurrency?: string;
   contactEmail: string;
   contactPhone?: string | null;
   socialLinks?: { label: string; href: string }[];

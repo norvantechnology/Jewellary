@@ -1,6 +1,11 @@
+"use client";
+
+import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Gem } from "lucide-react";
 import { Price } from "@/components/shared/Price";
+import { ProductCardActions } from "@/components/storefront/ProductCardActions";
 import { WishlistToggleButton } from "@/components/storefront/WishlistToggleButton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -9,14 +14,36 @@ import type { PublicProductCardDTO } from "@/modules/catalog/catalog.public";
 interface ProductCardProps {
   product: PublicProductCardDTO;
   currency?: string;
+  headingLevel?: "h2" | "h3";
   priority?: boolean;
   preload?: boolean;
   className?: string;
 }
 
-export function ProductCard({
+interface CardBadgeMeta {
+  label: string;
+  variant: "primary" | "new" | "signature";
+}
+
+function getCardBadge(product: PublicProductCardDTO): CardBadgeMeta | null {
+  if (product.priceMode === "PRICE_ON_REQUEST") {
+    return { label: "On request", variant: "primary" };
+  }
+  if (product.isNewArrival) {
+    return { label: "New", variant: "new" };
+  }
+  if (product.isBestseller || product.isFeatured) {
+    return { label: "Signature", variant: "signature" };
+  }
+  return null;
+}
+
+const LOW_STOCK_THRESHOLD = 5;
+
+export const ProductCard = React.memo(function ProductCard({
   product,
   currency = "USD",
+  headingLevel = "h3",
   priority = false,
   preload = false,
   className,
@@ -25,113 +52,146 @@ export function ProductCard({
   const primary = product.primaryImage;
   const secondary = product.secondaryImage;
 
-  const metaParts: string[] = [];
-  if (product.metalType) metaParts.push(product.metalType);
-  if (product.caratTotal) metaParts.push(`${Number(product.caratTotal).toFixed(2)} ct`);
-  if (product.certificationLab) metaParts.push(product.certificationLab);
+  const primaryMetaParts: string[] = [];
+  if (product.metalType) primaryMetaParts.push(product.metalType);
+  if (product.caratTotal) primaryMetaParts.push(`${Number(product.caratTotal).toFixed(2)} ct`);
+  const primaryMeta = primaryMetaParts.join(" · ");
+  const fullMetaTitle = [primaryMeta, product.certificationLab].filter(Boolean).join(" · ");
 
-  let badgeText: string | null = null;
-  if (product.priceMode === "PRICE_ON_REQUEST") {
-    badgeText = "High Jewellery";
-  } else if (product.isNewArrival) {
-    badgeText = "New Arrival";
-  } else if (product.isBestseller) {
-    badgeText = "Signature";
-  }
+  const badge = getCardBadge(product);
+  const isPriceOnRequest = product.priceMode === "PRICE_ON_REQUEST";
+  const isOutOfStock =
+    !isPriceOnRequest &&
+    (product.totalAvailableStock <= 0 ||
+      product.variants.every((variant) => variant.availableStock <= 0));
+  const showLowStock =
+    !isPriceOnRequest &&
+    !isOutOfStock &&
+    product.totalAvailableStock > 0 &&
+    product.totalAvailableStock <= LOW_STOCK_THRESHOLD;
+  const Heading = headingLevel;
 
   return (
     <article
       className={cn(
-        "group relative flex flex-col rounded-md border border-border/70 bg-card transition-colors hover:border-accent/60",
+        "relative flex h-full scroll-mt-[calc(var(--site-header-h)+1rem)] flex-col rounded-xl border border-border bg-surface shadow-sm transition-[border-color,box-shadow,background-color] duration-200",
+        !isOutOfStock &&
+          "group lg:hover:border-border-strong lg:hover:shadow-md dark:lg:hover:bg-surface-2",
         className,
       )}
     >
-      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-t-md bg-muted/60">
-        <Link
-          href={href}
-          aria-label={`View ${product.name}`}
-          className="block size-full focus-visible:outline-2 focus-visible:outline-ring"
-        >
-          {primary ? (
-            <>
-              <Image
-                src={primary.mediumUrl ?? primary.url}
-                alt={primary.altText}
-                fill
-                preload={preload}
-                fetchPriority={priority || preload ? "high" : undefined}
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                className={cn(
-                  "object-cover transition-all duration-500 group-hover:scale-[1.03]",
-                  secondary ? "group-hover:opacity-0" : "",
-                )}
-              />
-              {secondary && (
-                <Image
-                  src={secondary.mediumUrl ?? secondary.url}
-                  alt={secondary.altText}
-                  fill
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  className="object-cover opacity-0 transition-all duration-500 group-hover:scale-[1.03] group-hover:opacity-100"
-                />
+      {/* 4:5 Studio Image Container */}
+      <div
+        data-product-media="true"
+        className="ma-media-placeholder relative aspect-[4/5] w-full overflow-hidden rounded-t-xl"
+      >
+        {primary ? (
+          <>
+            <Image
+              src={primary.mediumUrl ?? primary.url}
+              alt={primary.altText ?? product.name}
+              fill
+              preload={priority || preload}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className={cn(
+                "object-cover object-center dark:brightness-90",
+                isOutOfStock ? "opacity-75 grayscale-[25%]" : "ma-product-media-img",
+                !isOutOfStock && secondary && "ma-product-has-alt",
               )}
-            </>
-          ) : (
-            <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
-              Imagery forthcoming
-            </div>
-          )}
-        </Link>
-
-        {badgeText && (
-          <Badge
-            variant="default"
-            className="pointer-events-none absolute top-3 left-3 z-10 border border-border/70 bg-card/90 text-[10px] tracking-[0.08em] uppercase backdrop-blur-sm"
+            />
+            {!isOutOfStock && secondary && (
+              <Image
+                src={secondary.mediumUrl ?? secondary.url}
+                alt={secondary.altText ?? `${product.name} alternate view`}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                className="ma-product-secondary-img object-cover object-center dark:brightness-90"
+              />
+            )}
+          </>
+        ) : (
+          <div
+            className={cn(
+              "flex size-full items-center justify-center",
+              isOutOfStock && "opacity-75",
+            )}
           >
-            {badgeText}
+            <Gem
+              className="size-8 text-accent-text/55 dark:text-accent/55"
+              strokeWidth={1.25}
+              aria-hidden="true"
+            />
+          </div>
+        )}
+
+        {/* Single capped badge (top-left, 8px inset) */}
+        {badge && (
+          <Badge
+            variant={badge.variant}
+            className="pointer-events-none absolute top-2 left-2 z-20 max-w-[calc(100%-4rem)] truncate px-2 py-0.5 text-xs leading-tight shadow-sm"
+          >
+            {badge.label}
           </Badge>
         )}
 
+        {/* Quick-wishlist action (top-right, 8px inset, 36px circle / 44px hit target) */}
         <WishlistToggleButton
           variantId={product.defaultVariantId}
           productName={product.name}
-          className="absolute top-2.5 right-2.5 z-10"
+          className="absolute top-2 right-2 z-20"
         />
       </div>
 
-      <div className="flex flex-1 flex-col justify-between gap-2.5 p-4">
-        <div>
-          <p className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
-            {product.categoryName}
-          </p>
-          <h3 className="mt-1 font-display text-lg leading-snug font-medium text-foreground">
-            <Link
-              href={href}
-              className="underline-offset-4 transition-colors hover:text-accent-text hover:underline"
-            >
-              {product.name}
-            </Link>
-          </h3>
-          {metaParts.length > 0 && (
-            <p className="mt-1 text-xs text-muted-foreground">{metaParts.join(" · ")}</p>
-          )}
-        </div>
+      {/* Card Body: 12px mobile -> 16px >=768 */}
+      <div className="flex flex-1 flex-col p-2.5 sm:p-3 md:p-4">
+        <p className="mb-1 hidden truncate text-[11px] font-medium tracking-[0.08em] text-text-muted uppercase min-[361px]:block">
+          {product.categoryName}
+        </p>
 
-        <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-border/60 pt-2.5">
-          <Price
-            amount={product.basePrice}
-            compareAtAmount={product.compareAtPrice}
-            currency={currency}
-            isPriceOnRequest={product.priceMode === "PRICE_ON_REQUEST"}
-            size="sm"
-          />
-          {product.totalAvailableStock <= 0 && product.priceMode === "FIXED" && (
-            <span className="text-[11px] font-medium text-muted-foreground">
-              {product.leadTimeDays ? `Atelier (${product.leadTimeDays}d)` : "Waitlist"}
-            </span>
-          )}
+        <Heading className="mb-1 line-clamp-2 min-h-[2.7em] text-[15px] leading-[1.3] font-medium text-text sm:text-base">
+          <Link
+            href={href}
+            className="rounded-sm transition-colors after:absolute after:inset-0 after:z-10 after:content-[''] hover:text-accent-text focus-visible:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            {product.name}
+          </Link>
+        </Heading>
+
+        {(primaryMeta || product.certificationLab) && (
+          <div className="space-y-0.5" title={fullMetaTitle}>
+            {primaryMeta && (
+              <p className="truncate text-xs leading-[1.35] text-text-muted min-[420px]:text-[13px]">
+                {primaryMeta}
+              </p>
+            )}
+            {product.certificationLab && (
+              <p className="hidden truncate text-[11px] leading-tight text-text-muted sm:block">
+                {product.certificationLab}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="mt-auto space-y-2.5 pt-2 sm:pt-3">
+          <div className="flex min-h-6 items-baseline justify-between gap-2">
+            <Price
+              amount={product.basePrice}
+              compareAtAmount={product.compareAtPrice}
+              currency={currency}
+              isPriceOnRequest={isPriceOnRequest}
+              size="md"
+            />
+            {showLowStock && (
+              <span className="tabular-nums-price shrink-0 text-xs font-medium text-warning">
+                {product.totalAvailableStock} left
+              </span>
+            )}
+          </div>
+          <div className="relative z-20 hidden sm:block">
+            <ProductCardActions product={product} />
+          </div>
         </div>
       </div>
     </article>
   );
-}
+});

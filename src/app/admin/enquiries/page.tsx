@@ -19,6 +19,9 @@ const ENQUIRY_FILTER_OPTIONS: Array<EnquiryStatus | "ALL"> = [
   "RESOLVED",
 ];
 
+// Rendered per request (signed-in / URL-driven); a blocking navigation is intended.
+export const instant = false;
+
 export default async function AdminEnquiriesPage({
   searchParams,
 }: {

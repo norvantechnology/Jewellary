@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Button, Hr, Section, Text } from "@react-email/components";
 import { EMAIL_BUTTON_STYLE, EMAIL_PARAGRAPH_STYLE, EmailLayout } from "@/emails/EmailLayout";
+import { BRAND_PALETTE } from "@/lib/brand-palette";
 
 export interface OrderConfirmationLine {
   title: string;
@@ -51,8 +52,8 @@ export function OrderConfirmationEmail({
 
       <Section
         style={{
-          backgroundColor: "#FAF7F2",
-          border: "1px solid #E5DCCB",
+          backgroundColor: BRAND_PALETTE.light.surface2,
+          border: `1px solid ${BRAND_PALETTE.light.border}`,
           borderRadius: "4px",
           padding: "16px 20px",
           margin: "20px 0",
@@ -64,7 +65,7 @@ export function OrderConfirmationEmail({
             {line.lineTotalFormatted}
           </Text>
         ))}
-        <Hr style={{ borderColor: "#E5DCCB", margin: "12px 0" }} />
+        <Hr style={{ borderColor: BRAND_PALETTE.light.border, margin: "12px 0" }} />
         <Text style={{ ...EMAIL_PARAGRAPH_STYLE, margin: "0 0 4px 0", fontSize: "13px" }}>
           Subtotal: {subtotalFormatted} &bull; Shipping: {shippingFormatted} &bull; Tax:{" "}
           {taxFormatted}

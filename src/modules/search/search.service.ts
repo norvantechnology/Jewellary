@@ -1,4 +1,5 @@
 import "server-only";
+import { cacheLife, cacheTag } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { PAGINATION_PAGE_SIZE, SEARCH_SUGGEST_LIMIT } from "@/lib/constants";
 import {
@@ -10,6 +11,7 @@ import {
   type CollectionQueryInput,
   type PublicProductCardDTO,
 } from "@/modules/catalog/catalog.public";
+import { CACHE_TAGS } from "@/server/cache-tags";
 import { db } from "@/server/db";
 
 export interface SearchQueryInput extends CollectionQueryInput {
@@ -46,6 +48,12 @@ export interface SearchSuggestResponse {
     imageUrl: string | null;
     altText: string | null;
   }>;
+  guides: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    authorName: string;
+  }>;
 }
 
 function sanitizeSearchTerm(raw?: string): string {
@@ -59,9 +67,42 @@ interface RankedIdRow {
 }
 
 async function rankMatchingProductIds(term: string): Promise<RankedIdRow[]> {
-  const containsPattern = `%${term.toLowerCase()}%`;
+  const containsPattern = `%${term}%`;
+  const lowerContainsPattern = `%${term.toLowerCase()}%`;
 
-  const rows = await db.$queryRaw<Array<{ id: string; score: number }>>(Prisma.sql`
+  const indexedRows = await db.$queryRaw<Array<{ id: string; score: number }>>(Prisma.sql`
+    SELECT
+      id,
+      GREATEST(
+        COALESCE(ts_rank_cd("searchVector", websearch_to_tsquery('english', unaccent(${term}))), 0) * 2.0,
+        similarity(name, ${term}),
+        similarity(sku, ${term}) * 1.2,
+        word_similarity(${term}, name) * 0.9,
+        CASE
+          WHEN name ILIKE ${containsPattern} OR sku ILIKE ${containsPattern}
+            THEN 0.85
+          ELSE 0
+        END
+      )::float8 AS score
+    FROM "Product"
+    WHERE status = 'ACTIVE'
+      AND "deletedAt" IS NULL
+      AND (
+        "searchVector" @@ websearch_to_tsquery('english', unaccent(${term}))
+        OR name ILIKE ${containsPattern}
+        OR sku ILIKE ${containsPattern}
+        OR ${term} <% name
+      )
+    ORDER BY score DESC, "isFeatured" DESC, "createdAt" DESC
+    LIMIT 200
+  `);
+
+  if (indexedRows.length >= 10) {
+    return indexedRows;
+  }
+
+  // Typo & non-indexed attribute fallback when strict GIN candidates are sparse
+  const fallbackRows = await db.$queryRaw<Array<{ id: string; score: number }>>(Prisma.sql`
     SELECT
       id,
       GREATEST(
@@ -69,7 +110,7 @@ async function rankMatchingProductIds(term: string): Promise<RankedIdRow[]> {
         similarity(lower(name), lower(${term})),
         similarity(lower(sku), lower(${term})) * 1.2,
         CASE
-          WHEN lower(name) LIKE ${containsPattern} OR lower(sku) LIKE ${containsPattern}
+          WHEN lower(name) LIKE ${lowerContainsPattern} OR lower(sku) LIKE ${lowerContainsPattern}
             THEN 0.85
           ELSE 0
         END
@@ -81,21 +122,25 @@ async function rankMatchingProductIds(term: string): Promise<RankedIdRow[]> {
         "searchVector" @@ websearch_to_tsquery('english', unaccent(${term}))
         OR similarity(lower(name), lower(${term})) >= 0.16
         OR similarity(lower(sku), lower(${term})) >= 0.25
-        OR lower(name) LIKE ${containsPattern}
-        OR lower(sku) LIKE ${containsPattern}
-        OR lower(coalesce("subtitle", '')) LIKE ${containsPattern}
-        OR lower(coalesce("metalType", '')) LIKE ${containsPattern}
-        OR lower(coalesce("stoneShape", '')) LIKE ${containsPattern}
-        OR lower(coalesce("certificationLab", '')) LIKE ${containsPattern}
+        OR lower(name) LIKE ${lowerContainsPattern}
+        OR lower(sku) LIKE ${lowerContainsPattern}
+        OR lower(coalesce("subtitle", '')) LIKE ${lowerContainsPattern}
+        OR lower(coalesce("metalType", '')) LIKE ${lowerContainsPattern}
+        OR lower(coalesce("stoneShape", '')) LIKE ${lowerContainsPattern}
+        OR lower(coalesce("certificationLab", '')) LIKE ${lowerContainsPattern}
       )
     ORDER BY score DESC, "isFeatured" DESC, "createdAt" DESC
     LIMIT 200
   `);
 
-  return rows;
+  return fallbackRows;
 }
 
 export async function searchProducts(input: SearchQueryInput): Promise<SearchResult> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(CACHE_TAGS.products, CACHE_TAGS.categories, CACHE_TAGS.facets);
+
   const query = sanitizeSearchTerm(input.q);
   const pageSize = Math.min(48, Math.max(1, input.pageSize ?? PAGINATION_PAGE_SIZE));
   const page = Math.max(1, input.page ?? 1);
@@ -109,7 +154,18 @@ export async function searchProducts(input: SearchQueryInput): Promise<SearchRes
     };
   }
 
-  const ranked = await rankMatchingProductIds(query);
+  const [ranked, resolvedCategory, inStockIds] = await Promise.all([
+    rankMatchingProductIds(query),
+    input.categoryPath ? resolveCategoryByPath(input.categoryPath) : Promise.resolve(null),
+    input.inStock
+      ? db.$queryRaw<Array<{ productId: string }>>`
+          SELECT DISTINCT "productId"
+          FROM "ProductVariant"
+          WHERE "isActive" = true AND "stockQty" > "reservedQty"
+        `.then((rows) => rows.map((r) => r.productId))
+      : Promise.resolve(undefined),
+  ]);
+
   if (ranked.length === 0) {
     return {
       query,
@@ -136,15 +192,14 @@ export async function searchProducts(input: SearchQueryInput): Promise<SearchRes
   ranked.forEach((row, index) => {
     scoreOrder.set(row.id, index);
   });
-  const matchedIds = ranked.map((r) => r.id);
-
-  let categoryIds: string[] | undefined;
-  if (input.categoryPath) {
-    const resolved = await resolveCategoryByPath(input.categoryPath);
-    if (resolved?.kind === "category") {
-      categoryIds = resolved.category.descendantIds;
-    }
+  let matchedIds = ranked.map((r) => r.id);
+  if (inStockIds) {
+    const inStockSet = new Set(inStockIds);
+    matchedIds = matchedIds.filter((id) => inStockSet.has(id));
   }
+
+  const categoryIds =
+    resolvedCategory?.kind === "category" ? resolvedCategory.category.descendantIds : undefined;
 
   const scopeWhere: Prisma.ProductWhereInput = {
     id: { in: matchedIds },
@@ -190,7 +245,7 @@ export async function searchProducts(input: SearchQueryInput): Promise<SearchRes
             ? [{ caratTotal: { sort: "desc", nulls: "last" } }]
             : [];
 
-  const [facetRows, matchedRows] = await Promise.all([
+  const [facetRows, matchedIdRows] = await Promise.all([
     db.product.findMany({
       where: scopeWhere,
       select: {
@@ -207,19 +262,33 @@ export async function searchProducts(input: SearchQueryInput): Promise<SearchRes
     db.product.findMany({
       where,
       ...(orderBy.length > 0 ? { orderBy } : {}),
-      select: PUBLIC_PRODUCT_CARD_SELECT,
+      select: { id: true },
     }),
   ]);
 
-  let cards = matchedRows.map(mapProductRowToCardDTO);
-  if (input.inStock) {
-    cards = cards.filter((item) => item.totalAvailableStock > 0);
+  const orderedIds = matchedIdRows.map((r) => r.id);
+  if (!input.sort || input.sort === "featured") {
+    orderedIds.sort((a, b) => (scoreOrder.get(a) ?? 9999) - (scoreOrder.get(b) ?? 9999));
   }
 
-  // Keep relevance ranking when no explicit sort override was selected
-  if (!input.sort || input.sort === "featured") {
-    cards.sort((a, b) => (scoreOrder.get(a.id) ?? 9999) - (scoreOrder.get(b.id) ?? 9999));
-  }
+  const total = orderedIds.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * pageSize;
+  const pageIds = orderedIds.slice(start, start + pageSize);
+
+  const pageRows =
+    pageIds.length > 0
+      ? await db.product.findMany({
+          where: { id: { in: pageIds } },
+          select: PUBLIC_PRODUCT_CARD_SELECT,
+        })
+      : [];
+
+  const pagePos = new Map(pageIds.map((id, idx) => [id, idx]));
+  const cards = pageRows
+    .map(mapProductRowToCardDTO)
+    .sort((a, b) => (pagePos.get(a.id) ?? 9999) - (pagePos.get(b.id) ?? 9999));
 
   const countMap = (values: Array<string | null>) => {
     const counts = new Map<string, number>();
@@ -252,14 +321,9 @@ export async function searchProducts(input: SearchQueryInput): Promise<SearchRes
     }
   }
 
-  const total = cards.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const start = (safePage - 1) * pageSize;
-
   return {
     query,
-    items: cards.slice(start, start + pageSize),
+    items: cards,
     total,
     page: safePage,
     pageSize,
@@ -288,23 +352,35 @@ export async function getSearchSuggestions(
   rawQuery: string,
   limit = SEARCH_SUGGEST_LIMIT,
 ): Promise<SearchSuggestResponse> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(CACHE_TAGS.products, CACHE_TAGS.categories, CACHE_TAGS.articles);
+
   const query = sanitizeSearchTerm(rawQuery);
   const clampedLimit = Math.min(12, Math.max(1, limit));
 
   if (query.length < 2) {
-    const topCategories = await db.category.findMany({
-      where: { isActive: true, parentId: null },
-      orderBy: [{ sortOrder: "asc" }],
-      take: 5,
-      select: {
-        id: true,
-        name: true,
-        path: true,
-        _count: {
-          select: { products: { where: { status: "ACTIVE", deletedAt: null } } },
+    const [topCategories, topGuides] = await Promise.all([
+      db.category.findMany({
+        where: { isActive: true, parentId: null },
+        orderBy: [{ sortOrder: "asc" }],
+        take: 5,
+        select: {
+          id: true,
+          name: true,
+          path: true,
+          _count: {
+            select: { products: { where: { status: "ACTIVE", deletedAt: null } } },
+          },
         },
-      },
-    });
+      }),
+      db.article.findMany({
+        where: { isPublished: true },
+        orderBy: [{ publishedAt: "desc" }],
+        take: 3,
+        select: { id: true, title: true, slug: true, authorName: true },
+      }),
+    ]);
     return {
       query,
       categories: topCategories.map((c) => ({
@@ -314,10 +390,11 @@ export async function getSearchSuggestions(
         productCount: c._count.products,
       })),
       products: [],
+      guides: topGuides,
     };
   }
 
-  const [rankedIds, matchedCategories] = await Promise.all([
+  const [rankedIds, matchedCategories, matchedGuides] = await Promise.all([
     rankMatchingProductIds(query),
     db.category.findMany({
       where: {
@@ -337,6 +414,18 @@ export async function getSearchSuggestions(
           select: { products: { where: { status: "ACTIVE", deletedAt: null } } },
         },
       },
+    }),
+    db.article.findMany({
+      where: {
+        isPublished: true,
+        OR: [
+          { title: { contains: query, mode: "insensitive" } },
+          { excerpt: { contains: query, mode: "insensitive" } },
+        ],
+      },
+      orderBy: [{ publishedAt: "desc" }],
+      take: 3,
+      select: { id: true, title: true, slug: true, authorName: true },
     }),
   ]);
 
@@ -384,5 +473,6 @@ export async function getSearchSuggestions(
       imageUrl: p.images[0]?.thumbUrl ?? p.images[0]?.url ?? null,
       altText: p.images[0]?.altText ?? null,
     })),
+    guides: matchedGuides,
   };
 }

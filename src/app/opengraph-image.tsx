@@ -1,12 +1,21 @@
 import { ImageResponse } from "next/og";
+import { BRAND_PALETTE } from "@/lib/brand-palette";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
-export const alt = "Maison Aurelia — Fine Jewellery & Certified Diamonds";
-export const size = { width: 1200, height: 630 };
+export const size = {
+  width: 1200,
+  height: 630,
+};
+
 export const contentType = "image/png";
 
-export default async function Image() {
-  const settings = await getPublicStoreSettings();
+export default async function OpenGraphImage() {
+  const settings = await getPublicStoreSettings().catch(() => null);
+  const storeName = settings?.storeName ?? "Maison Aurelia";
+  const tagline =
+    settings?.tagline ??
+    "Certified GIA & IGI diamond engagement rings crafted in 18K gold and 950 platinum.";
+  const p = BRAND_PALETTE.light;
 
   return new ImageResponse(
     <div
@@ -16,74 +25,65 @@ export default async function Image() {
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        background: "#1E1915",
-        color: "#FAF7F0",
         padding: "64px 72px",
-        border: "12px solid #9A7532",
+        background: `linear-gradient(135deg, ${p.bg} 0%, ${p.surface} 52%, ${p.bgAlt} 100%)`,
+        color: p.text,
+        border: `1px solid ${p.border}`,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <span
           style={{
-            display: "flex",
-            fontSize: 18,
-            letterSpacing: 6,
+            fontSize: 22,
+            letterSpacing: "0.26em",
             textTransform: "uppercase",
-            color: "#D1AA62",
+            color: p.accentText,
+            fontWeight: 600,
           }}
         >
-          {settings.storeName}
-        </div>
-        <div
+          {storeName}
+        </span>
+        <span
           style={{
-            display: "flex",
             fontSize: 16,
-            color: "#C4B9A5",
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: p.textMuted,
+            border: `1px solid ${p.borderStrong}`,
+            padding: "8px 16px",
+            borderRadius: 999,
           }}
         >
-          GIA &amp; IGI Certified Atelier
-        </div>
+          Fine Jewellery Atelier
+        </span>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <div
-          style={{
-            display: "flex",
-            fontSize: 64,
-            lineHeight: 1.08,
-            fontWeight: 600,
-            color: "#FAF7F0",
-          }}
-        >
-          Architectural Fine Jewellery &amp; Heirloom Diamonds
+      <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 940 }}>
+        <div style={{ fontSize: 60, fontWeight: 600, lineHeight: 1.12, color: p.text }}>
+          Certified Diamonds & Heirloom Craftsmanship
         </div>
-        <div
-          style={{
-            display: "flex",
-            fontSize: 24,
-            lineHeight: 1.4,
-            color: "#DDD2BF",
-            maxWidth: 960,
-          }}
-        >
-          {settings.tagline ??
-            "Handcrafted in recycled 18K gold and 950 platinum with transparent grading dossiers and insured courier delivery."}
-        </div>
+        <div style={{ fontSize: 26, lineHeight: 1.4, color: p.text2 }}>{tagline}</div>
       </div>
 
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
-          borderTop: "1px solid #4A3D31",
+          justifyContent: "space-between",
+          borderTop: `1px solid ${p.border}`,
           paddingTop: 24,
           fontSize: 18,
-          color: "#D1AA62",
+          color: p.textMuted,
         }}
       >
-        <span style={{ display: "flex" }}>18K Gold · 950 Platinum · Natural &amp; Lab-Grown</span>
-        <span style={{ display: "flex" }}>{settings.returnWindowDays}-Day Insured Returns</span>
+        <span>GIA &amp; IGI Independently Certified</span>
+        <span>Insured Global Courier · {settings?.returnWindowDays ?? 30}-Day Returns</span>
       </div>
     </div>,
     { ...size },

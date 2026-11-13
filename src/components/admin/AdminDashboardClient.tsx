@@ -94,7 +94,7 @@ function DeltaBadge({ delta }: { delta: number | null }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-0.5 text-xs font-medium tabular-nums-price",
+        "tabular-nums-price inline-flex items-center gap-0.5 text-xs font-medium",
         positive ? "text-accent-text" : "text-destructive",
       )}
     >
@@ -125,10 +125,8 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-editorial-label text-accent-text">Maison Analytics</p>
-          <h1 className="mt-1 font-display text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
-            Admin Studio
-          </h1>
+          <p className="text-editorial-label text-accent-text">Studio Analytics</p>
+          <h1 className="type-h1 mt-1 font-display font-medium text-foreground">Admin Studio</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Net revenue, order velocity, vault stock health, and client concierge activity.
           </p>
@@ -147,7 +145,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
                   key={opt.value}
                   href={`/admin?period=${opt.value}`}
                   className={cn(
-                    "rounded-sm px-3 py-1.5 text-xs font-medium transition-colors",
+                    "inline-flex min-h-11 items-center rounded-sm px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-9",
                     active
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground",
@@ -168,7 +166,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
           <CardHeader className="pb-2">
             <CardDescription>Net Revenue</CardDescription>
             <div className="flex items-baseline justify-between gap-2">
-              <CardTitle className="font-display text-3xl tabular-nums-price">
+              <CardTitle className="tabular-nums-price font-display text-3xl">
                 {formatMoneyExact(data.kpis.revenue, data.currency)}
               </CardTitle>
               <DeltaBadge delta={data.kpis.revenueDeltaPct} />
@@ -183,7 +181,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
           <CardHeader className="pb-2">
             <CardDescription>Settled Orders</CardDescription>
             <div className="flex items-baseline justify-between gap-2">
-              <CardTitle className="font-display text-3xl tabular-nums-price">
+              <CardTitle className="tabular-nums-price font-display text-3xl">
                 {data.kpis.orders}
               </CardTitle>
               <DeltaBadge delta={data.kpis.ordersDeltaPct} />
@@ -198,7 +196,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
           <CardHeader className="pb-2">
             <CardDescription>Average Order Value</CardDescription>
             <div className="flex items-baseline justify-between gap-2">
-              <CardTitle className="font-display text-3xl tabular-nums-price">
+              <CardTitle className="tabular-nums-price font-display text-3xl">
                 {formatMoneyExact(data.kpis.aov, data.currency)}
               </CardTitle>
               <DeltaBadge delta={data.kpis.aovDeltaPct} />
@@ -213,7 +211,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
           <CardHeader className="pb-2">
             <CardDescription>New Client Registrations</CardDescription>
             <div className="flex items-baseline justify-between gap-2">
-              <CardTitle className="font-display text-3xl tabular-nums-price">
+              <CardTitle className="tabular-nums-price font-display text-3xl">
                 {data.kpis.newCustomers}
               </CardTitle>
               <DeltaBadge delta={data.kpis.newCustomersDeltaPct} />
@@ -233,7 +231,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
         >
           <div>
             <p className="text-xs tracking-wider text-muted-foreground uppercase">To Fulfill</p>
-            <p className="mt-1 font-display text-2xl font-medium text-foreground tabular-nums-price">
+            <p className="tabular-nums-price mt-1 font-display text-2xl font-medium text-foreground">
               {data.operations.ordersToFulfill}
             </p>
           </div>
@@ -246,7 +244,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
         >
           <div>
             <p className="text-xs tracking-wider text-muted-foreground uppercase">Open Enquiries</p>
-            <p className="mt-1 font-display text-2xl font-medium text-foreground tabular-nums-price">
+            <p className="tabular-nums-price mt-1 font-display text-2xl font-medium text-foreground">
               {data.operations.openEnquiries}
             </p>
           </div>
@@ -259,7 +257,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
         >
           <div>
             <p className="text-xs tracking-wider text-muted-foreground uppercase">Low Stock</p>
-            <p className="mt-1 font-display text-2xl font-medium text-foreground tabular-nums-price">
+            <p className="tabular-nums-price mt-1 font-display text-2xl font-medium text-foreground">
               {data.operations.lowStockCount}
             </p>
           </div>
@@ -272,7 +270,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
         >
           <div>
             <p className="text-xs tracking-wider text-muted-foreground uppercase">Active Pieces</p>
-            <p className="mt-1 font-display text-2xl font-medium text-foreground tabular-nums-price">
+            <p className="tabular-nums-price mt-1 font-display text-2xl font-medium text-foreground">
               {data.operations.activeProducts}
             </p>
           </div>
@@ -390,7 +388,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
               <CardTitle className="font-display text-2xl">Recent Orders</CardTitle>
               <CardDescription>Latest five client commissions</CardDescription>
             </div>
-            <Button asChild variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm" className="min-h-11 sm:min-h-9">
               <Link href="/admin/orders">
                 <ShoppingBag className="mr-1.5 size-3.5" aria-hidden="true" />
                 View All
@@ -419,7 +417,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         <Badge variant={meta.badgeVariant}>{meta.label}</Badge>
-                        <span className="text-sm font-medium tabular-nums-price">
+                        <span className="tabular-nums-price text-sm font-medium">
                           {formatMoneyExact(order.total, order.currency)}
                         </span>
                       </div>
@@ -437,7 +435,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
               <CardTitle className="font-display text-2xl">Top Pieces &amp; Low Stock</CardTitle>
               <CardDescription>Best-selling pieces and vault attention alerts</CardDescription>
             </div>
-            <Button asChild variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm" className="min-h-11 sm:min-h-9">
               <Link href="/admin/inventory">Manage Vault</Link>
             </Button>
           </CardHeader>
@@ -463,7 +461,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
                       >
                         {p.title}
                       </Link>
-                      <span className="shrink-0 text-xs text-muted-foreground tabular-nums-price">
+                      <span className="tabular-nums-price shrink-0 text-xs text-muted-foreground">
                         {p.unitsSold} sold · {formatMoneyExact(p.revenue, data.currency)}
                       </span>
                     </li>

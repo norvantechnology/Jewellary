@@ -5,22 +5,27 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Boxes,
+  Coins,
   ExternalLink,
   FileText,
   FolderTree,
   Gem,
   Image as ImageIcon,
   LayoutDashboard,
+  Mail,
   Menu,
   MessageSquare,
   ScrollText,
   Search,
+  MessagesSquare,
   Settings,
   ShoppingBag,
   SlidersHorizontal,
+  Sparkles,
   Users,
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
+import { useAdminInboxRealtime } from "@/components/providers/useChatRealtime";
 import { Logo } from "@/components/shared/Logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,6 +76,19 @@ const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       },
       { label: "Orders", href: "/admin/orders", icon: ShoppingBag, permission: "orders:read" },
       { label: "Customers", href: "/admin/customers", icon: Users, permission: "customers:read" },
+      { label: "Newsletter", href: "/admin/newsletter", icon: Mail, permission: "customers:read" },
+      {
+        label: "Customizations",
+        href: "/admin/customizations",
+        icon: Sparkles,
+        permission: "customization:manage",
+      },
+      {
+        label: "Messages",
+        href: "/admin/messages",
+        icon: MessagesSquare,
+        permission: "chat:manage",
+      },
       {
         label: "Enquiries",
         href: "/admin/enquiries",
@@ -119,6 +137,18 @@ const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     heading: "Administration",
     items: [
       {
+        label: "Currencies & FX",
+        href: "/admin/currencies",
+        icon: Coins,
+        permission: "settings:manage",
+      },
+      {
+        label: "SEO & Growth",
+        href: "/admin/seo",
+        icon: Search,
+        permission: "settings:manage",
+      },
+      {
         label: "Store & Shipping",
         href: "/admin/settings",
         icon: Settings,
@@ -138,10 +168,12 @@ function AdminNavLinks({
   role,
   pathname,
   onNavigate,
+  chatUnreadCount = 0,
 }: {
   role: UserRole;
   pathname: string;
   onNavigate?: () => void;
+  chatUnreadCount?: number;
 }) {
   return (
     <nav aria-label="Admin navigation" className="flex flex-col gap-6">
@@ -170,12 +202,23 @@ function AdminNavLinks({
                       className={cn(
                         "flex min-h-11 items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                         isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-foreground/85 hover:bg-muted hover:text-foreground",
+                          ? "bg-primary text-on-primary"
+                          : "text-text-2 hover:bg-surface-2 hover:text-text",
                       )}
                     >
-                      <Icon className="size-4 shrink-0" aria-hidden="true" />
+                      <Icon className="size-5 shrink-0 stroke-[1.5]" aria-hidden="true" />
                       <span className="truncate">{item.label}</span>
+                      {item.href === "/admin/messages" && chatUnreadCount > 0 ? (
+                        <span
+                          aria-label={`${chatUnreadCount} unread messages`}
+                          className={cn(
+                            "ml-auto inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
+                            isActive ? "bg-accent text-on-accent" : "bg-primary text-on-primary",
+                          )}
+                        >
+                          {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+                        </span>
+                      ) : null}
                     </Link>
                   </li>
                 );
@@ -202,6 +245,52 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [quickScope, setQuickScope] = React.useState<"orders" | "products" | "customers">("orders");
   const [quickQuery, setQuickQuery] = React.useState("");
+  const [chatUnreadCount, setChatUnreadCount] = React.useState(0);
+  const canManageChat = hasPermission(user.role, "chat:manage");
+
+  const refreshUnreadCount = React.useCallback(async () => {
+    if (!canManageChat) return;
+    try {
+      const res = await fetch("/api/chat/conversations?scope=admin&limit=1", {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const body = (await res.json()) as {
+        ok?: boolean;
+        data?: { totalUnreadCount?: number };
+      };
+      if (typeof body.data?.totalUnreadCount === "number") {
+        setChatUnreadCount(body.data.totalUnreadCount);
+      }
+    } catch {
+      // Non-blocking badge poll
+    }
+  }, [canManageChat]);
+
+  React.useEffect(() => {
+    if (!canManageChat) return;
+    let active = true;
+    fetch("/api/chat/conversations?scope=admin&limit=1", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { ok?: boolean; data?: { totalUnreadCount?: number } } | null) => {
+        if (active && typeof body?.data?.totalUnreadCount === "number") {
+          setChatUnreadCount(body.data.totalUnreadCount);
+        }
+      })
+      .catch(() => {
+        // Non-blocking badge poll
+      });
+    return () => {
+      active = false;
+    };
+  }, [canManageChat, pathname]);
+
+  useAdminInboxRealtime({
+    enabled: canManageChat,
+    onInboxEvent: () => {
+      void refreshUnreadCount();
+    },
+  });
 
   function handleQuickSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -216,17 +305,15 @@ export function AdminShell({
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background text-foreground lg:flex-row">
+    <div className="flex min-h-dvh w-full flex-col bg-background text-foreground lg:flex-row">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:w-64 lg:shrink-0 lg:flex-col lg:border-r lg:border-border lg:bg-card">
         <div className="flex h-16 items-center justify-between border-b border-border px-4">
-          <Link href="/admin" className="min-w-0">
-            <Logo siteName={siteName} />
-          </Link>
+          <Logo siteName={siteName} linkClassName="min-w-0" />
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-5">
-          <AdminNavLinks role={user.role} pathname={pathname} />
+          <AdminNavLinks role={user.role} pathname={pathname} chatUnreadCount={chatUnreadCount} />
         </div>
 
         <div className="space-y-3 border-t border-border p-4">
@@ -253,8 +340,8 @@ export function AdminShell({
       {/* Main Column */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar for mobile & tablet, compact header strip on desktop */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-card/95 px-4 backdrop-blur lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
+        <header className="safe-area-pt sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-border bg-header-bg px-4 backdrop-blur lg:h-16 lg:gap-3 lg:px-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <Button
@@ -262,17 +349,17 @@ export function AdminShell({
                   variant="outline"
                   size="icon"
                   aria-label="Open admin navigation"
-                  className="lg:hidden"
+                  className="size-11 shrink-0 lg:hidden"
                 >
-                  <Menu className="size-5" aria-hidden="true" />
+                  <Menu className="size-6 stroke-[1.5]" aria-hidden="true" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="flex flex-col p-0">
-                <SheetHeader className="border-b border-border px-4 py-4">
-                  <SheetTitle>
-                    <Logo siteName={siteName} />
+              <SheetContent side="left" className="flex w-[min(86vw,320px)] flex-col p-0">
+                <SheetHeader className="safe-area-pt border-b border-border px-4 py-3.5 text-left">
+                  <SheetTitle className="min-w-0">
+                    <Logo siteName={siteName} onClick={() => setMobileOpen(false)} />
                   </SheetTitle>
-                  <SheetDescription className="text-xs">
+                  <SheetDescription className="truncate text-xs">
                     Signed in as {user.email} ({user.role})
                   </SheetDescription>
                 </SheetHeader>
@@ -280,10 +367,11 @@ export function AdminShell({
                   <AdminNavLinks
                     role={user.role}
                     pathname={pathname}
+                    chatUnreadCount={chatUnreadCount}
                     onNavigate={() => setMobileOpen(false)}
                   />
                 </div>
-                <div className="space-y-3 border-t border-border p-4">
+                <div className="safe-area-pb space-y-3 border-t border-border p-4">
                   <Button
                     asChild
                     variant="outline"
@@ -302,7 +390,7 @@ export function AdminShell({
 
             <div className="min-w-0">
               <span className="text-xs font-medium tracking-[0.14em] text-accent-text uppercase">
-                Maison Studio
+                Atelier Studio
               </span>
               <span className="hidden text-xs text-muted-foreground sm:inline">
                 {" "}

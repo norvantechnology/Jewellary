@@ -1,28 +1,53 @@
 import "@/lib/zod-csp";
 import { z } from "zod";
+import { validatePhoneNumber, validatePostalCodeForCountry } from "@/lib/countries";
 
-export const checkoutAddressSchema = z
-  .object({
-    fullName: z.string().trim().min(2, "Full name is required.").max(120),
-    phone: z.string().trim().min(6, "Contact phone number is required.").max(32),
-    line1: z.string().trim().min(3, "Street address is required.").max(180),
-    line2: z
-      .string()
-      .trim()
-      .max(180)
-      .optional()
-      .nullable()
-      .transform((v) => (v && v.length > 0 ? v : null)),
-    city: z.string().trim().min(2, "City is required.").max(100),
-    state: z.string().trim().min(1, "State / Province is required.").max(100),
-    postalCode: z.string().trim().min(2, "Postal / ZIP code is required.").max(24),
-    country: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .regex(/^[A-Z]{2}$/, "Select a valid 2-letter destination country."),
-  })
-  .strict();
+export const checkoutAddressBaseSchema = z.object({
+  fullName: z.string().trim().min(2, "Full name is required.").max(120),
+  phone: z.string().trim().min(6, "Contact phone number is required.").max(32),
+  line1: z.string().trim().min(3, "Street address is required.").max(180),
+  line2: z
+    .string()
+    .trim()
+    .max(180)
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  city: z.string().trim().min(2, "City is required.").max(100),
+  state: z.string().trim().min(1, "State / Province is required.").max(100),
+  postalCode: z.string().trim().min(2, "Postal / ZIP code is required.").max(24),
+  country: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{2}$/, "Select a valid 2-letter destination country."),
+});
+
+export function validateCheckoutAddressFields(
+  val: { phone: string; postalCode: string; country: string },
+  ctx: z.RefinementCtx,
+) {
+  const phoneErr = validatePhoneNumber(val.phone);
+  if (phoneErr) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: phoneErr,
+      path: ["phone"],
+    });
+  }
+  const postalErr = validatePostalCodeForCountry(val.postalCode, val.country);
+  if (postalErr) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: postalErr,
+      path: ["postalCode"],
+    });
+  }
+}
+
+export const checkoutAddressSchema = checkoutAddressBaseSchema
+  .strict()
+  .superRefine(validateCheckoutAddressFields);
 
 export const quoteCheckoutSchema = z
   .object({
@@ -32,6 +57,13 @@ export const quoteCheckoutSchema = z
       .toUpperCase()
       .regex(/^[A-Z]{2}$/, "Valid 2-letter country code required."),
     shippingZoneId: z.string().trim().min(2).max(64).optional().nullable(),
+    currency: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z]{3}$/)
+      .optional()
+      .nullable(),
   })
   .strict();
 
@@ -42,6 +74,13 @@ export const createCheckoutOrderSchema = z
     billingSameAsShipping: z.boolean().default(true),
     billingAddress: checkoutAddressSchema.optional().nullable(),
     shippingZoneId: z.string().trim().min(2).max(64).optional().nullable(),
+    currency: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z]{3}$/)
+      .optional()
+      .nullable(),
     giftNote: z
       .string()
       .trim()

@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Edit2, Plus, Save, Trash2, Truck, X } from "lucide-react";
+import { Coins, Edit2, Plus, Save, Trash2, Truck, X } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -28,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes";
 import { formatMoney } from "@/lib/money";
 import {
   deleteShippingZoneAction,
@@ -103,6 +105,9 @@ export function SettingsManager({
   const [returnWindowDays, setReturnWindowDays] = React.useState(String(settings.returnWindowDays));
 
   const [allowAiCrawlers, setAllowAiCrawlers] = React.useState(settings.allowAiCrawlers);
+  const [requireAdminTwoFactor, setRequireAdminTwoFactor] = React.useState(
+    settings.requireAdminTwoFactor,
+  );
   const [seoDefaultTitlePattern, setSeoDefaultTitlePattern] = React.useState(
     settings.seoDefaultTitlePattern ?? "",
   );
@@ -127,9 +132,75 @@ export function SettingsManager({
   // Shipping zone modal state
   const [zoneDialogOpen, setZoneDialogOpen] = React.useState(false);
   const [zoneForm, setZoneForm] = React.useState<ZoneFormState>(emptyZone);
+  const [savedZoneSnapshot, setSavedZoneSnapshot] = React.useState(() =>
+    JSON.stringify(emptyZone()),
+  );
   const [savingZone, setSavingZone] = React.useState(false);
   const [deleteZoneTarget, setDeleteZoneTarget] = React.useState<ShippingZoneDTO | null>(null);
   const [deletingZone, setDeletingZone] = React.useState(false);
+
+  const settingsSnapshot = React.useMemo(
+    () =>
+      JSON.stringify({
+        storeName,
+        tagline,
+        contactEmail,
+        contactPhone,
+        supportHours,
+        logoUrl,
+        announcementBarEnabled,
+        announcementBarText,
+        announcementBarHref,
+        currency,
+        defaultCountry,
+        countriesCsv,
+        taxRatePercent,
+        taxLabel,
+        taxInclusive,
+        freeShippingThreshold,
+        signatureThreshold,
+        returnWindowDays,
+        requireAdminTwoFactor,
+        allowAiCrawlers,
+        seoDefaultTitlePattern,
+        seoDefaultDescription,
+        defaultOgImageUrl,
+        socialLinks,
+        physicalStore,
+      }),
+    [
+      storeName,
+      tagline,
+      contactEmail,
+      contactPhone,
+      supportHours,
+      logoUrl,
+      announcementBarEnabled,
+      announcementBarText,
+      announcementBarHref,
+      currency,
+      defaultCountry,
+      countriesCsv,
+      taxRatePercent,
+      taxLabel,
+      taxInclusive,
+      freeShippingThreshold,
+      signatureThreshold,
+      returnWindowDays,
+      requireAdminTwoFactor,
+      allowAiCrawlers,
+      seoDefaultTitlePattern,
+      seoDefaultDescription,
+      defaultOgImageUrl,
+      socialLinks,
+      physicalStore,
+    ],
+  );
+  const [savedSettingsSnapshot, setSavedSettingsSnapshot] = React.useState(settingsSnapshot);
+  const settingsDirty = settingsSnapshot !== savedSettingsSnapshot;
+  const zoneSnapshot = React.useMemo(() => JSON.stringify(zoneForm), [zoneForm]);
+  const zoneDirty = zoneDialogOpen && zoneSnapshot !== savedZoneSnapshot;
+  const unsavedGuard = useUnsavedChangesGuard({ isDirty: settingsDirty || zoneDirty });
 
   async function saveStoreSettings(e: React.FormEvent) {
     e.preventDefault();
@@ -159,6 +230,7 @@ export function SettingsManager({
       announcementBarText: announcementBarText || null,
       announcementBarHref: announcementBarHref || null,
       logoUrl: logoUrl || null,
+      requireAdminTwoFactor,
       allowAiCrawlers,
       seoDefaultTitlePattern: seoDefaultTitlePattern || null,
       seoDefaultDescription: seoDefaultDescription || null,
@@ -175,17 +247,21 @@ export function SettingsManager({
       return;
     }
 
+    unsavedGuard.markClean();
+    setSavedSettingsSnapshot(settingsSnapshot);
     toast.success("Store settings updated across storefront.");
     router.refresh();
   }
 
   function openNewZone() {
-    setZoneForm(emptyZone());
+    const initial = emptyZone();
+    setZoneForm(initial);
+    setSavedZoneSnapshot(JSON.stringify(initial));
     setZoneDialogOpen(true);
   }
 
   function openEditZone(z: ShippingZoneDTO) {
-    setZoneForm({
+    const initial: ZoneFormState = {
       id: z.id,
       name: z.name,
       countriesCsv: z.countries.join(", "),
@@ -196,8 +272,18 @@ export function SettingsManager({
       isInsured: z.isInsured,
       isActive: z.isActive,
       sortOrder: String(z.sortOrder),
-    });
+    };
+    setZoneForm(initial);
+    setSavedZoneSnapshot(JSON.stringify(initial));
     setZoneDialogOpen(true);
+  }
+
+  function closeZoneModal() {
+    if (!zoneDirty) {
+      setZoneDialogOpen(false);
+      return;
+    }
+    unsavedGuard.confirmLeave(() => setZoneDialogOpen(false));
   }
 
   async function saveZone(e: React.FormEvent) {
@@ -229,6 +315,8 @@ export function SettingsManager({
       return;
     }
 
+    unsavedGuard.markClean();
+    setSavedZoneSnapshot(zoneSnapshot);
     toast.success(zoneForm.id ? "Shipping zone updated." : "Shipping zone created.");
     setZoneDialogOpen(false);
     router.refresh();
@@ -253,6 +341,7 @@ export function SettingsManager({
   const zoneColumns: ResponsiveColumn<ShippingZoneDTO>[] = [
     {
       key: "name",
+      hideOnMobileCard: true,
       header: "Zone",
       cell: (z) => (
         <div>
@@ -265,7 +354,7 @@ export function SettingsManager({
       key: "rate",
       header: "Rate",
       cell: (z) => (
-        <div className="text-sm tabular-nums-price">
+        <div className="tabular-nums-price text-sm">
           <p>{formatMoney(z.flatRate, settings.currency)}</p>
           {z.freeThreshold && (
             <p className="text-xs text-muted-foreground">
@@ -341,7 +430,7 @@ export function SettingsManager({
           <form onSubmit={saveStoreSettings} className="space-y-6">
             <Card>
               <CardHeader>
-                <h2 className="font-display text-xl font-medium">Maison Identity &amp; Banner</h2>
+                <h2 className="font-display text-xl font-medium">Brand Identity &amp; Banner</h2>
                 <CardDescription>
                   Updates header wordmark, concierge contact channels, and announcement bar copy.
                 </CardDescription>
@@ -551,6 +640,22 @@ export function SettingsManager({
                     />
                   </div>
                 </div>
+                <div className="flex items-center justify-between rounded-sm border border-border px-4 py-3">
+                  <div>
+                    <Label htmlFor="set-require-2fa" className="cursor-pointer font-medium">
+                      Require two-factor for admin and staff
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      When enabled, staff and admin accounts without TOTP verification are
+                      redirected to complete 2FA setup before accessing the admin studio.
+                    </p>
+                  </div>
+                  <Switch
+                    id="set-require-2fa"
+                    checked={requireAdminTwoFactor}
+                    onCheckedChange={setRequireAdminTwoFactor}
+                  />
+                </div>
               </CardContent>
             </Card>
 
@@ -576,6 +681,23 @@ export function SettingsManager({
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface-2 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      Dynamic Multi-Currency &amp; Exchange Rates
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Manage active storefront currencies, rounding rules, decimal places, and rate
+                      audit logs.
+                    </p>
+                  </div>
+                  <Button asChild variant="outline" size="sm" className="gap-1.5">
+                    <Link href="/admin/currencies">
+                      <Coins className="size-3.5" aria-hidden="true" />
+                      <span>Manage Currencies</span>
+                    </Link>
+                  </Button>
+                </div>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <FormField id="com-curr" label="ISO Currency Code" required>
                     {(aria) => (
@@ -729,7 +851,7 @@ export function SettingsManager({
                       {...aria}
                       value={seoDefaultTitlePattern}
                       onChange={(e) => setSeoDefaultTitlePattern(e.target.value)}
-                      placeholder="%s | Maison Aurelia"
+                      placeholder={`%s | ${storeName || "Atelier Fine Jewellery"}`}
                     />
                   )}
                 </FormField>
@@ -798,7 +920,16 @@ export function SettingsManager({
         </TabsContent>
       </Tabs>
 
-      <Dialog open={zoneDialogOpen} onOpenChange={setZoneDialogOpen}>
+      <Dialog
+        open={zoneDialogOpen}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) {
+            setZoneDialogOpen(true);
+            return;
+          }
+          closeZoneModal();
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{zoneForm.id ? "Edit Shipping Zone" : "Add Shipping Zone"}</DialogTitle>
@@ -917,7 +1048,7 @@ export function SettingsManager({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setZoneDialogOpen(false)}
+                onClick={closeZoneModal}
                 disabled={savingZone}
               >
                 Cancel
@@ -942,6 +1073,8 @@ export function SettingsManager({
         loading={deletingZone}
         onConfirm={handleDeleteZone}
       />
+
+      {unsavedGuard.dialog}
     </div>
   );
 }

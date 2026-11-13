@@ -11,14 +11,16 @@ export const TooltipTrigger = RadixTooltip.Trigger;
 export function TooltipContent({
   className,
   sideOffset = 6,
+  collisionPadding = 8,
   ...props
 }: React.ComponentProps<typeof RadixTooltip.Content>) {
   return (
     <RadixTooltip.Portal>
       <RadixTooltip.Content
         sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
         className={cn(
-          "z-50 overflow-hidden rounded-sm border border-border bg-primary px-3 py-1.5 text-xs text-primary-foreground shadow-soft",
+          "ma-popover z-[var(--z-drawer)] rounded-md border border-border bg-popover px-2.5 py-1 text-xs font-medium text-popover-foreground shadow-md",
           className,
         )}
         {...props}

@@ -1,35 +1,39 @@
 import { NextResponse } from "next/server";
-import { generateSitemaps } from "@/app/sitemap";
-import { toAbsoluteUrl } from "@/lib/seo/metadata";
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
+import {
+  SITEMAP_CHUNK_SIZE,
+  createXmlResponseHeaders,
+  renderSitemapIndexXml,
+} from "@/lib/seo/sitemap";
+import { getActiveIndexableProductCount } from "@/modules/catalog/catalog.public";
+import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
 export async function GET() {
-  const segments = await generateSitemaps();
-  const entries = segments
-    .map(
-      (seg) =>
-        `  <sitemap>\n    <loc>${escapeXml(toAbsoluteUrl(`/sitemap/${seg.id}.xml`))}</loc>\n  </sitemap>`,
-    )
-    .join("\n");
+  const [productCount, settings] = await Promise.all([
+    getActiveIndexableProductCount(),
+    getPublicStoreSettings(),
+  ]);
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${entries}
-</sitemapindex>`;
+  const productChunks = Math.max(1, Math.ceil(productCount / SITEMAP_CHUNK_SIZE));
+  const lastMod = settings.updatedAt ?? new Date().toISOString();
 
+  const entries = [
+    { url: "/sitemaps/pages.xml", lastModified: lastMod },
+    { url: "/sitemaps/collections.xml", lastModified: lastMod },
+    { url: "/sitemaps/landing-facets.xml", lastModified: lastMod },
+    { url: "/sitemaps/guides.xml", lastModified: lastMod },
+    ...Array.from({ length: productChunks }, (_, idx) => ({
+      url: `/sitemaps/products-${idx + 1}.xml`,
+      lastModified: lastMod,
+    })),
+    ...Array.from({ length: productChunks }, (_, idx) => ({
+      url: `/sitemaps/images-${idx + 1}.xml`,
+      lastModified: lastMod,
+    })),
+  ];
+
+  const xml = renderSitemapIndexXml(entries);
   return new NextResponse(xml, {
     status: 200,
-    headers: {
-      "Content-Type": "application/xml; charset=utf-8",
-      "Cache-Control": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
-    },
+    headers: createXmlResponseHeaders(),
   });
 }

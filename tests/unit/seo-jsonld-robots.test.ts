@@ -1,14 +1,19 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { serializeJsonLd } from "@/components/seo/JsonLd";
+import { computeProductSeoScore, detectRedirectLoopOrChain } from "@/lib/seo/audit";
+import { buildAutoProductImageAlt, buildSeoImageStem } from "@/lib/seo/images";
 import {
   buildArticleJsonLd,
   buildBreadcrumbListJsonLd,
   buildCollectionJsonLd,
+  buildFaqPageJsonLd,
+  buildImageObjectsJsonLd,
   buildJewelryStoreJsonLd,
   buildOrganizationJsonLd,
   buildProductJsonLd,
   buildWebSiteJsonLd,
+  validateJsonLdNode,
 } from "@/lib/seo/jsonld";
 import {
   INDEXABLE_ROBOTS,
@@ -18,12 +23,19 @@ import {
   hasNonCanonicalCollectionQuery,
 } from "@/lib/seo/metadata";
 import { buildRobotsPolicy } from "@/lib/seo/robots-policy";
+import {
+  finalizeSeoDescription,
+  finalizeSeoTitle,
+  interpolateSeoTemplate,
+  validateSeoCopy,
+} from "@/lib/seo/templates";
 import type { ArticleDTO } from "@/modules/articles/article.service";
 import type { PublicProductDetailDTO } from "@/modules/catalog/catalog.public";
 import type { PublicStoreSettings, ShippingZoneDTO } from "@/modules/settings/settings.service";
 
 const mockSettings: PublicStoreSettings = {
   storeName: "Maison Aurelia",
+  legalName: "Maison Aurelia Fine Jewellery Ltd.",
   tagline: "Certified fine diamond jewellery.",
   contactEmail: "concierge@example.com",
   contactPhone: "+1-212-555-0148",
@@ -52,9 +64,12 @@ const mockSettings: PublicStoreSettings = {
     hours: "Mo-Sa 10:00-18:00",
   },
   allowAiCrawlers: true,
+  requireAdminTwoFactor: false,
   seoDefaultTitlePattern: "%s | Maison Aurelia",
   seoDefaultDescription: null,
   defaultOgImageUrl: null,
+  seoTemplates: null,
+  seoSettings: null,
   updatedAt: "2026-11-10T00:00:00.000Z",
 };
 
@@ -171,7 +186,7 @@ function makeProduct(overrides: Partial<PublicProductDetailDTO> = {}): PublicPro
   };
 }
 
-describe("Phase 7 Unit — JSON-LD Builders, Canonical Rules & Robots Policy", () => {
+describe("SEO Engine Unit Tests — JSON-LD, Templates, Images, Redirects & Robots", () => {
   it("escapes HTML-breaking characters in serializeJsonLd (SEO-13)", () => {
     const serialized = serializeJsonLd({
       "@context": "https://schema.org",
@@ -186,19 +201,23 @@ describe("Phase 7 Unit — JSON-LD Builders, Canonical Rules & Robots Policy", (
     expect(serialized).toContain("\\u0026");
   });
 
-  it("builds Organization with MerchantReturnPolicy, WebSite SearchAction, and conditional JewelryStore", () => {
-    const org = buildOrganizationJsonLd(mockSettings) as unknown as Record<string, unknown>;
+  it("builds Organization with legalName/hasShippingService, WebSite with alternateName (no SearchAction), and conditional JewelryStore", () => {
+    const org = buildOrganizationJsonLd(mockSettings, {
+      shippingZones: [mockZone],
+      includeShippingPolicy: true,
+    }) as unknown as Record<string, unknown>;
     expect(org["@type"]).toBe("Organization");
+    expect(org.legalName).toBe("Maison Aurelia Fine Jewellery Ltd.");
     expect(org.hasMerchantReturnPolicy).toMatchObject({
       "@type": "MerchantReturnPolicy",
       merchantReturnDays: 30,
     });
+    expect(org.hasShippingService).toBeDefined();
 
     const website = buildWebSiteJsonLd(mockSettings) as unknown as Record<string, unknown>;
     expect(website["@type"]).toBe("WebSite");
-    expect(website.potentialAction).toMatchObject({
-      "@type": "SearchAction",
-    });
+    expect(website.alternateName).toBeTruthy();
+    expect("potentialAction" in website).toBe(false);
 
     const store = buildJewelryStoreJsonLd(mockSettings) as unknown as Record<
       string,
@@ -211,9 +230,12 @@ describe("Phase 7 Unit — JSON-LD Builders, Canonical Rules & Robots Policy", (
     expect(omittedStore).toBeNull();
   });
 
-  it("builds Product vs ProductGroup JSON-LD accurately and omits Offer on PRICE_ON_REQUEST (SEO-12, SEO-14)", () => {
+  it("builds Product vs ProductGroup JSON-LD with PriceSpecification and omits Offer on PRICE_ON_REQUEST", () => {
     const singleProduct = buildProductJsonLd({
-      product: makeProduct(),
+      product: makeProduct({
+        compareAtPrice: "5200.00",
+        salePriceEndAt: "2026-12-31T23:59:59.000Z",
+      }),
       settings: mockSettings,
       defaultShippingZone: mockZone,
     });
@@ -221,16 +243,17 @@ describe("Phase 7 Unit — JSON-LD Builders, Canonical Rules & Robots Policy", (
     if (singleProduct["@type"] === "Product") {
       expect(singleProduct.offers).toMatchObject({
         "@type": "Offer",
-        price: "4850.00",
+        price: 4850,
         priceCurrency: "USD",
         availability: "https://schema.org/InStock",
       });
       expect(singleProduct.additionalProperty).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ name: "Certification Lab", value: "GIA" }),
+          expect.objectContaining({ name: "Certification Laboratory", value: "GIA" }),
           expect.objectContaining({ name: "Color Grade", value: "E" }),
         ]),
       );
+      expect(validateJsonLdNode(singleProduct).valid).toBe(true);
     }
 
     const multiVariantProduct = buildProductJsonLd({
@@ -271,12 +294,21 @@ describe("Phase 7 Unit — JSON-LD Builders, Canonical Rules & Robots Policy", (
     expect("offers" in bespokeProduct).toBe(false);
   });
 
-  it("builds CollectionPage ItemList, BreadcrumbList, and Article JSON-LD", () => {
+  it("builds CollectionPage ItemList, BreadcrumbList, FAQPage, ImageObject, and E-E-A-T Article JSON-LD", () => {
     const collection = buildCollectionJsonLd({
       name: "Engagement Rings",
       description: "Certified solitaires",
       path: "/collections/rings/engagement-rings",
-      items: [{ name: "Celeste", slug: "celeste-cathedral-solitaire-ring" }],
+      products: [
+        {
+          name: "Celeste",
+          slug: "celeste-cathedral-solitaire-ring",
+          basePrice: "4850.00",
+          priceMode: "FIXED",
+          primaryImageUrl: "/uploads/celeste.avif",
+        },
+      ],
+      currency: "USD",
     });
     expect(collection["@type"]).toBe("CollectionPage");
 
@@ -287,6 +319,21 @@ describe("Phase 7 Unit — JSON-LD Builders, Canonical Rules & Robots Policy", (
     expect(breadcrumbs["@type"]).toBe("BreadcrumbList");
     expect(breadcrumbs.itemListElement).toHaveLength(2);
 
+    const faqSchema = buildFaqPageJsonLd([
+      {
+        question: "Are diamonds certified?",
+        answer: "Yes, every solitaire ships with GIA or IGI grading.",
+      },
+    ]);
+    expect(faqSchema?.["@type"]).toBe("FAQPage");
+
+    const imageObjects = buildImageObjectsJsonLd({
+      images: [{ url: "/uploads/celeste.avif", altText: "Celeste ring front" }],
+      settings: mockSettings,
+    });
+    expect(imageObjects[0]?.["@type"]).toBe("ImageObject");
+    expect(imageObjects[0]?.copyrightNotice).toContain("Maison Aurelia");
+
     const mockArticle: ArticleDTO = {
       id: "art-1",
       title: "How to Choose an Engagement Diamond",
@@ -296,6 +343,18 @@ describe("Phase 7 Unit — JSON-LD Builders, Canonical Rules & Robots Policy", (
       coverImageUrl: null,
       coverAltText: null,
       authorName: "Claire Laurent",
+      authorJobTitle: "Chief Gemologist",
+      authorCredentials: "GIA Graduate Gemologist (GG)",
+      authorBio: "15 years grading fancy cuts.",
+      authorSameAs: [],
+      articleSection: "Diamond Education",
+      seoKeywords: "4Cs diamond grading",
+      seoFaqs: [],
+      ogTitle: null,
+      ogDescription: null,
+      ogImageUrl: null,
+      canonicalOverride: null,
+      noindex: false,
       isPublished: true,
       publishedAt: "2026-10-01T12:00:00.000Z",
       seoTitle: null,
@@ -305,10 +364,14 @@ describe("Phase 7 Unit — JSON-LD Builders, Canonical Rules & Robots Policy", (
     };
     const articleSchema = buildArticleJsonLd({ article: mockArticle, settings: mockSettings });
     expect(articleSchema["@type"]).toBe("Article");
-    expect(articleSchema.author).toMatchObject({ "@type": "Person", name: "Claire Laurent" });
+    expect(articleSchema.author).toMatchObject({
+      "@type": "Person",
+      name: "Claire Laurent",
+      jobTitle: "Chief Gemologist",
+    });
   });
 
-  it("enforces collection canonical rules and metadata robots directives (SEO-07, SEO-10)", () => {
+  it("enforces collection canonical rules, templates, image SEO helpers, and redirect loop detection", () => {
     expect(hasNonCanonicalCollectionQuery({})).toBe(false);
     expect(hasNonCanonicalCollectionQuery({ page: "2" })).toBe(false);
     expect(hasNonCanonicalCollectionQuery({ metal: "Platinum" })).toBe(true);
@@ -347,6 +410,82 @@ describe("Phase 7 Unit — JSON-LD Builders, Canonical Rules & Robots Policy", (
       follow: true,
       "max-image-preview": "large",
     });
+
+    // Template truncation & raw test string detection
+    const templated = interpolateSeoTemplate("{name} – {metal}, {carat}ct {cert} | {brand}", {
+      name: "Clairvoyant Emerald Solitaire Engagement Ring",
+      metal: "Platinum",
+      carat: "2.00",
+      cert: "GIA Certified",
+      brand: "Maison Aurelia",
+    });
+    const finalizedTitle = finalizeSeoTitle(templated, {
+      brandName: "Maison Aurelia",
+      maxLength: 60,
+    });
+    expect(finalizedTitle.length).toBeLessThanOrEqual(60);
+
+    const finalizedDesc = finalizeSeoDescription(
+      "Handcrafted solitaire ring featuring a 2.00ct emerald diamond.",
+      "Available in recycled platinum with GIA grading and insured courier delivery worldwide.",
+    );
+    expect(finalizedDesc.length).toBeGreaterThanOrEqual(100);
+    expect(finalizedDesc.length).toBeLessThanOrEqual(158);
+
+    const validationIssues = validateSeoCopy({
+      title: "Atelier Capsule mwc41pq0 test",
+      description: finalizedDesc,
+    });
+    expect(
+      validationIssues.some(
+        (issue) => issue.code === "PLACEHOLDER_OR_TEST_TOKEN" && issue.severity === "error",
+      ),
+    ).toBe(true);
+
+    expect(
+      buildSeoImageStem({
+        slug: "clairvoyant-diamond-studs",
+        metal: "18K White Gold",
+        carat: "1.50",
+        viewType: "front",
+      }),
+    ).toBe("clairvoyant-diamond-studs-18k-white-gold-1-5ct-front");
+
+    expect(
+      buildAutoProductImageAlt({
+        productName: "Clairvoyant Studs",
+        metal: "18K White Gold",
+        carat: "1.50",
+        shape: "Round",
+        cert: "GIA",
+        viewType: "front",
+      }).length,
+    ).toBeLessThanOrEqual(125);
+
+    const loopCheck = detectRedirectLoopOrChain(
+      "/a",
+      "/b",
+      new Map([
+        ["/b", "/c"],
+        ["/c", "/a"],
+      ]),
+    );
+    expect(loopCheck.hasLoop).toBe(true);
+
+    const score = computeProductSeoScore({
+      name: "Celeste Ring",
+      slug: "celeste-ring",
+      resolvedTitle: "Celeste Ring – Platinum, 1.50ct GIA | Maison Aurelia",
+      resolvedDescription:
+        "Discover the Celeste Ring crafted in 950 Platinum with a 1.50ct GIA certified solitaire diamond and insured courier delivery.",
+      primaryImageUrl: "/uploads/celeste.avif",
+      primaryImageWidth: 1600,
+      primaryImageHeight: 1600,
+      primaryAltText: "Celeste diamond engagement ring in 950 platinum, front view",
+      imageCount: 4,
+      hasSpecs: true,
+    });
+    expect(score.score).toBeGreaterThanOrEqual(80);
   });
 
   it("permits search/retrieval crawlers while toggling AI training crawlers via allowAiCrawlers (SEO-18, AI-03)", () => {

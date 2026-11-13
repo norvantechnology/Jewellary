@@ -6,8 +6,25 @@ import { CACHE_TAGS } from "@/server/cache-tags";
 import { db } from "@/server/db";
 import type { SiteHeaderConfig } from "@/types/navigation";
 
+export interface StoreSeoSettings {
+  canonicalHost?: string | null;
+  trailingSlashPolicy?: "remove" | "preserve";
+  maintenanceMode?: boolean;
+  maintenanceRetryAfterSeconds?: number;
+  googleSiteVerification?: string | null;
+  bingSiteVerification?: string | null;
+  pinterestVerification?: string | null;
+  indexNowKey?: string | null;
+  indexNowEnabled?: boolean;
+  defaultTwitterHandle?: string | null;
+  defaultGoogleProductCategory?: string | null;
+  customRobotsDisallow?: string[];
+  aiVisibilityChecklist?: Record<string, boolean>;
+}
+
 export interface PublicStoreSettings {
   storeName: string;
+  legalName: string | null;
   tagline: string | null;
   contactEmail: string;
   contactPhone: string | null;
@@ -36,9 +53,12 @@ export interface PublicStoreSettings {
     hours?: string;
   } | null;
   allowAiCrawlers: boolean;
+  requireAdminTwoFactor: boolean;
   seoDefaultTitlePattern: string | null;
   seoDefaultDescription: string | null;
   defaultOgImageUrl: string | null;
+  seoTemplates: Partial<Record<string, string>> | null;
+  seoSettings: StoreSeoSettings | null;
   updatedAt?: string;
 }
 
@@ -64,6 +84,7 @@ export async function getPublicStoreSettings(): Promise<PublicStoreSettings> {
   if (!row) {
     return {
       storeName: env.NEXT_PUBLIC_SITE_NAME,
+      legalName: null,
       tagline: null,
       contactEmail: env.EMAIL_FROM,
       contactPhone: null,
@@ -84,15 +105,19 @@ export async function getPublicStoreSettings(): Promise<PublicStoreSettings> {
       socialLinks: [],
       physicalStore: null,
       allowAiCrawlers: true,
+      requireAdminTwoFactor: false,
       seoDefaultTitlePattern: `%s | ${env.NEXT_PUBLIC_SITE_NAME}`,
       seoDefaultDescription: null,
       defaultOgImageUrl: null,
+      seoTemplates: null,
+      seoSettings: null,
       updatedAt: "2026-01-01T00:00:00.000Z",
     };
   }
 
   return {
     storeName: row.storeName,
+    legalName: row.legalName,
     tagline: row.tagline,
     contactEmail: row.contactEmail,
     contactPhone: row.contactPhone,
@@ -118,9 +143,18 @@ export async function getPublicStoreSettings(): Promise<PublicStoreSettings> {
         ? (row.physicalStore as PublicStoreSettings["physicalStore"])
         : null,
     allowAiCrawlers: row.allowAiCrawlers,
+    requireAdminTwoFactor: row.requireAdminTwoFactor,
     seoDefaultTitlePattern: row.seoDefaultTitlePattern,
     seoDefaultDescription: row.seoDefaultDescription,
     defaultOgImageUrl: row.defaultOgImageUrl,
+    seoTemplates:
+      row.seoTemplates && typeof row.seoTemplates === "object" && !Array.isArray(row.seoTemplates)
+        ? (row.seoTemplates as Record<string, string>)
+        : null,
+    seoSettings:
+      row.seoSettings && typeof row.seoSettings === "object" && !Array.isArray(row.seoSettings)
+        ? (row.seoSettings as StoreSeoSettings)
+        : null,
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -178,6 +212,8 @@ export async function getSiteHeaderConfig(): Promise<SiteHeaderConfig> {
     announcementEnabled: settings.announcementBarEnabled,
     announcementText: settings.announcementBarText,
     announcementHref: settings.announcementBarHref,
+    freeShippingThreshold: settings.freeShippingThreshold,
+    baseCurrency: settings.currency,
     contactEmail: settings.contactEmail,
     contactPhone: settings.contactPhone,
     socialLinks: settings.socialLinks,
@@ -187,4 +223,21 @@ export async function getSiteHeaderConfig(): Promise<SiteHeaderConfig> {
 
 export function normalizeTaxDecimal(taxRatePercent: number): Prisma.Decimal {
   return new Prisma.Decimal((taxRatePercent / 100).toFixed(4));
+}
+
+export async function getConfiguredSeoIndexNowKey(): Promise<string | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.settings);
+
+  const row = await db.storeSetting.findUnique({
+    where: { id: "default" },
+    select: { seoSettings: true },
+  });
+  const seo =
+    row?.seoSettings && typeof row.seoSettings === "object"
+      ? (row.seoSettings as { indexNowKey?: string | null })
+      : null;
+  const trimmed = seo?.indexNowKey?.trim();
+  return trimmed && trimmed.length >= 8 ? trimmed : null;
 }

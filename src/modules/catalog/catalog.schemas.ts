@@ -47,6 +47,13 @@ const optionalCleanText = (maxLen: number) =>
     .optional()
     .transform((v) => (v === null || v === undefined || v === "" ? null : v));
 
+const seoFaqPairSchema = z
+  .object({
+    question: z.string().trim().min(3).max(280),
+    answer: z.string().trim().min(3).max(1200),
+  })
+  .strict();
+
 export const categoryUpsertSchema = z
   .object({
     id: z.string().optional(),
@@ -57,6 +64,15 @@ export const categoryUpsertSchema = z
     imageUrl: optionalCleanText(500),
     seoTitle: optionalCleanText(120),
     seoDescription: optionalCleanText(320),
+    seoKeywords: optionalCleanText(300),
+    seoIntroCopy: optionalCleanText(4000),
+    seoIntroPosition: z.enum(["top", "bottom"]).optional().default("top"),
+    seoFaqs: z.array(seoFaqPairSchema).max(15).optional().default([]),
+    ogTitle: optionalCleanText(140),
+    ogDescription: optionalCleanText(320),
+    ogImageUrl: optionalCleanText(500),
+    canonicalOverride: optionalCleanText(500),
+    noindex: z.boolean().optional().default(false),
     sortOrder: z.coerce.number().int().min(0).max(10000).default(0),
     isActive: z.boolean().default(true),
     facetIds: z.array(z.string().min(1)).default([]),
@@ -131,11 +147,23 @@ export const productImageInputSchema = z
     url: z.string().trim().min(1, "Image URL is required."),
     thumbUrl: optionalCleanText(500),
     mediumUrl: optionalCleanText(500),
+    avifUrl: optionalCleanText(500),
+    jpegUrl: optionalCleanText(500),
+    responsiveVariants: z.record(z.string(), z.unknown()).optional().nullable(),
     altText: z
       .string()
       .trim()
       .min(3, "Accessible alt text (min 3 characters) is required for every image.")
       .max(240),
+    viewType: z
+      .enum(["front", "side", "detail", "on-hand", "lifestyle", "packaging", "certificate"])
+      .optional()
+      .default("front"),
+    title: optionalCleanText(160),
+    caption: optionalCleanText(300),
+    creditText: optionalCleanText(160),
+    copyrightNotice: optionalCleanText(200),
+    licenseUrl: optionalCleanText(500),
     width: z.coerce.number().int().min(1).max(20000).default(1200),
     height: z.coerce.number().int().min(1).max(20000).default(1200),
     focalX: z.number().min(0).max(1).optional().nullable(),
@@ -204,9 +232,16 @@ export const productUpsertSchema = z
 
     seoTitle: optionalCleanText(120),
     seoDescription: optionalCleanText(320),
+    seoKeywords: optionalCleanText(300),
+    seoFaqs: z.array(seoFaqPairSchema).max(15).optional().default([]),
+    ogTitle: optionalCleanText(140),
+    ogDescription: optionalCleanText(320),
     ogImageUrl: optionalCleanText(500),
     canonicalOverride: optionalCleanText(500),
     noindex: z.boolean().default(false),
+    warrantyText: optionalCleanText(300),
+    salePriceStartAt: optionalCleanText(40),
+    salePriceEndAt: optionalCleanText(40),
     gtin: optionalCleanText(32),
     mpn: optionalCleanText(64),
     googleProductCategory: optionalCleanText(180),
@@ -240,6 +275,9 @@ export const deleteProductSchema = z
   })
   .strict();
 
+export const archiveProductSchema = deleteProductSchema;
+export const duplicateProductSchema = deleteProductSchema;
+
 export const adjustStockSchema = z
   .object({
     variantId: z.string().min(1, "Variant is required."),
@@ -254,7 +292,7 @@ export const adjustStockSchema = z
   })
   .strict();
 
-export type CategoryUpsertInput = z.infer<typeof categoryUpsertSchema>;
+export type CategoryUpsertInput = z.input<typeof categoryUpsertSchema>;
 export type FacetUpsertInput = z.infer<typeof facetUpsertSchema>;
-export type ProductUpsertInput = z.infer<typeof productUpsertSchema>;
+export type ProductUpsertInput = z.input<typeof productUpsertSchema>;
 export type AdjustStockInput = z.infer<typeof adjustStockSchema>;

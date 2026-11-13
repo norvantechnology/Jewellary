@@ -37,6 +37,9 @@ const ALL_STATUSES: Array<OrderStatus | "ALL"> = [
   "REFUNDED",
 ];
 
+// Rendered per request (signed-in / URL-driven); a blocking navigation is intended.
+export const instant = false;
+
 export default async function AdminOrdersPage({
   searchParams,
 }: {
@@ -64,6 +67,7 @@ export default async function AdminOrdersPage({
     {
       key: "orderNumber",
       header: "Order",
+      hideOnMobileCard: true,
       cell: (row) => (
         <Link
           href={`/admin/orders/${row.id}`}
@@ -85,6 +89,7 @@ export default async function AdminOrdersPage({
     },
     {
       key: "status",
+      hideOnMobileCard: true,
       header: "Status",
       cell: (row) => {
         const meta = ORDER_STATUS_META[row.status];
@@ -101,9 +106,16 @@ export default async function AdminOrdersPage({
       header: "Total",
       className: "text-right",
       cell: (row) => (
-        <span className="font-medium tabular-nums-price">
-          {formatMoneyExact(row.total, row.currency)}
-        </span>
+        <div className="text-right">
+          <span className="tabular-nums-price font-medium">
+            {formatMoneyExact(row.total, row.currency, "en-US", row.currencyDecimals)}
+          </span>
+          {row.currency !== row.baseCurrency && (
+            <p className="tabular-nums-price text-[11px] text-muted-foreground">
+              Base: {formatMoneyExact(row.baseTotal, row.baseCurrency)}
+            </p>
+          )}
+        </div>
       ),
     },
     {
@@ -155,7 +167,7 @@ export default async function AdminOrdersPage({
         action="/admin/orders"
         className="grid gap-3 rounded-md border border-border bg-card p-4 sm:grid-cols-12"
       >
-        <div className="sm:col-span-4">
+        <div className="sm:col-span-3">
           <Input
             name="q"
             defaultValue={q}
@@ -188,8 +200,8 @@ export default async function AdminOrdersPage({
             aria-label="Filter orders to date"
           />
         </div>
-        <div className="flex gap-2 sm:col-span-1">
-          <Button type="submit" className="w-full">
+        <div className="flex gap-2 sm:col-span-2">
+          <Button type="submit" className="w-full px-3">
             Filter
           </Button>
         </div>

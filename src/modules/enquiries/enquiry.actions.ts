@@ -11,6 +11,7 @@ import {
   replyToAdminEnquiry,
   updateAdminEnquiry,
 } from "@/modules/enquiries/enquiry.service";
+import { assertHumanSubmission } from "@/server/abuse";
 import { createAction } from "@/server/create-action";
 
 export const submitEnquiryAction = createAction(
@@ -21,6 +22,12 @@ export const submitEnquiryAction = createAction(
     rateLimit: { tier: "enquiry" },
   },
   async (input, ctx) => {
+    await assertHumanSubmission({
+      website: input.website,
+      timingToken: input.timingToken,
+      turnstileToken: input.turnstileToken,
+      ip: ctx.ip,
+    });
     const created = await createCustomerEnquiry(input, ctx.auth?.user.id ?? null);
     revalidatePath("/admin/enquiries");
     revalidatePath("/admin");

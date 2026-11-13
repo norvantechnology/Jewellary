@@ -10,7 +10,9 @@ import { AuthCard, AuthHelpLink } from "@/modules/auth/AuthCard";
 import { forgotPasswordSchema, type ForgotPasswordInput } from "@/modules/auth/auth.schemas";
 import { authClient } from "@/server/auth-client";
 
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({ nextUrl = "/account" }: { nextUrl?: string }) {
+  const loginHref =
+    nextUrl === "/account" ? "/login" : `/login?next=${encodeURIComponent(nextUrl)}`;
   const [submitted, setSubmitted] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
 
@@ -44,12 +46,12 @@ export function ForgotPasswordForm() {
       eyebrow="Account Recovery"
       title="Reset Password"
       description="Enter your account email and we will send secure password reset instructions."
-      footer={<AuthHelpLink href="/login">Return to sign in</AuthHelpLink>}
+      footer={<AuthHelpLink href={loginHref}>Return to sign in</AuthHelpLink>}
     >
       {serverError && (
         <div
           role="alert"
-          className="rounded-sm border border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive"
+          className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
         >
           {serverError}
         </div>
@@ -58,9 +60,9 @@ export function ForgotPasswordForm() {
       {submitted ? (
         <div
           role="status"
-          className="space-y-3 rounded-sm border border-border bg-muted/40 p-4 text-sm text-foreground"
+          className="space-y-2 rounded-md border border-border bg-surface-2 p-4 text-sm text-foreground"
         >
-          <p className="font-medium">Reset Instructions Dispatched</p>
+          <p className="font-semibold">Reset Instructions Dispatched</p>
           <p className="text-muted-foreground">
             If an account exists for that email address, we have sent a link to choose a new
             password.
@@ -77,6 +79,7 @@ export function ForgotPasswordForm() {
             {(aria) => (
               <Input
                 type="email"
+                inputMode="email"
                 autoComplete="email"
                 placeholder="client@example.com"
                 {...form.register("email")}

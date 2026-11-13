@@ -46,6 +46,9 @@ async function EditProductContent({ params }: { params: Promise<{ id: string }> 
   );
 }
 
+// Rendered per request (signed-in / URL-driven); a blocking navigation is intended.
+export const instant = false;
+
 export default function AdminEditProductPage({ params }: { params: Promise<{ id: string }> }) {
   return (
     <Suspense fallback={<Skeleton className="h-96 w-full" />}>

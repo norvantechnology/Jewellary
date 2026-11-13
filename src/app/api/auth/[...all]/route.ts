@@ -6,69 +6,85 @@ import { enforceRateLimit, getClientIp, type RateLimitTier } from "@/server/rate
 
 const authHandler = toNextJsHandler(auth);
 
-function resolveRateLimitTier(pathname: string): RateLimitTier | null {
-  if (pathname.endsWith("/sign-in/email")) return "auth";
-  if (pathname.endsWith("/sign-up/email")) return "register";
-  if (pathname.endsWith("/request-password-reset")) return "forgotPassword";
+interface RoutePolicy {
+  /** Per-IP tier (keyed `ip` or `ip:email` when an email is present). */
+  ipTier: RateLimitTier;
+  /** Extra per-email tier applied across all IPs. */
+  emailTier?: RateLimitTier;
+  /** Whether the email-keyed bucket should combine with IP for the ipTier. */
+  ipWithEmail?: boolean;
+}
+
+/** Every auth endpoint that verifies a secret or sends an email is limited. */
+function resolvePolicy(pathname: string): RoutePolicy | null {
+  if (pathname.endsWith("/sign-in/email"))
+    return { ipTier: "auth", emailTier: "authAccount", ipWithEmail: true };
+  if (pathname.endsWith("/sign-up/email"))
+    return { ipTier: "register", emailTier: "emailRecipient" };
+  if (pathname.endsWith("/request-password-reset") || pathname.endsWith("/forget-password"))
+    return { ipTier: "forgotPassword", emailTier: "emailRecipient" };
+  if (pathname.endsWith("/send-verification-email"))
+    return { ipTier: "verificationEmail", emailTier: "emailRecipient" };
+  if (pathname.endsWith("/reset-password") || pathname.endsWith("/change-password"))
+    return { ipTier: "passwordUpdate" };
+  if (pathname.includes("/two-factor/")) return { ipTier: "twoFactor" };
   return null;
 }
 
+function tooMany(error: RateLimitError) {
+  return NextResponse.json(
+    { error: { code: error.code, message: error.message } },
+    {
+      status: 429,
+      headers: error.retryAfterSeconds
+        ? { "Retry-After": String(error.retryAfterSeconds) }
+        : undefined,
+    },
+  );
+}
+
 export async function GET(request: Request) {
+  const url = new URL(request.url);
+  if (url.pathname.endsWith("/verify-email")) {
+    try {
+      await enforceRateLimit("passwordUpdate", `verify:${await getClientIp()}`);
+    } catch (error) {
+      if (error instanceof RateLimitError) return tooMany(error);
+      throw error;
+    }
+  }
   return authHandler.GET(request);
 }
 
 export async function POST(request: Request) {
   const url = new URL(request.url);
-  const tier = resolveRateLimitTier(url.pathname);
-  let forwardedRequest = request;
+  const policy = resolvePolicy(url.pathname);
+  if (!policy) return authHandler.POST(request);
 
-  if (tier) {
-    try {
-      const ip = await getClientIp();
-      let rateKey = ip;
-
-      if (tier === "auth") {
-        const rawBody = await request.text();
-        try {
-          const body = JSON.parse(rawBody) as { email?: unknown };
-          const normalizedEmail =
-            typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-          if (normalizedEmail) {
-            rateKey = `${ip}:${normalizedEmail}`;
-          }
-        } catch {
-          // Ignore malformed JSON here; Better Auth returns standard 400
-        }
-        const headersCopy = new Headers(request.headers);
-        headersCopy.delete("content-length");
-        forwardedRequest = new Request(request.url, {
-          method: request.method,
-          headers: headersCopy,
-          body: rawBody,
-        });
-      }
-
-      await enforceRateLimit(tier, rateKey);
-    } catch (error) {
-      if (error instanceof RateLimitError) {
-        return NextResponse.json(
-          {
-            error: {
-              code: error.code,
-              message: error.message,
-            },
-          },
-          {
-            status: 429,
-            headers: error.retryAfterSeconds
-              ? { "Retry-After": String(error.retryAfterSeconds) }
-              : undefined,
-          },
-        );
-      }
-      throw error;
-    }
+  // Read the body once so we can key on the email, then forward an identical request.
+  const rawBody = await request.text();
+  let email = "";
+  try {
+    const body = JSON.parse(rawBody) as { email?: unknown };
+    email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  } catch {
+    // Malformed JSON: Better Auth returns its standard 400.
   }
 
-  return authHandler.POST(forwardedRequest);
+  try {
+    const ip = await getClientIp();
+    await enforceRateLimit(policy.ipTier, policy.ipWithEmail && email ? `${ip}:${email}` : ip);
+    if (policy.emailTier && email) {
+      await enforceRateLimit(policy.emailTier, email);
+    }
+  } catch (error) {
+    if (error instanceof RateLimitError) return tooMany(error);
+    throw error;
+  }
+
+  const headersCopy = new Headers(request.headers);
+  headersCopy.delete("content-length");
+  return authHandler.POST(
+    new Request(request.url, { method: request.method, headers: headersCopy, body: rawBody }),
+  );
 }

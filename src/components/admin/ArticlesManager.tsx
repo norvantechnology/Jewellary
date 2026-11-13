@@ -1,5 +1,6 @@
 "use client";
 
+import { LocalDate } from "@/components/shared/LocalDate";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Edit2, Eye, FileText, Plus, Trash2 } from "lucide-react";
@@ -28,6 +29,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { renderSafeMarkdown } from "@/lib/markdown";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes";
 import { deleteArticleAction, upsertArticleAction } from "@/modules/articles/article.actions";
 import type { ArticleDTO } from "@/modules/articles/article.service";
 
@@ -40,9 +42,15 @@ interface ArticleFormState {
   coverImageUrl: string;
   coverAltText: string;
   authorName: string;
+  authorJobTitle: string;
+  authorCredentials: string;
+  authorBio: string;
+  articleSection: string;
   isPublished: boolean;
   seoTitle: string;
   seoDescription: string;
+  seoKeywords: string;
+  noindex: boolean;
   relatedCategorySlug: string;
 }
 
@@ -53,10 +61,16 @@ const emptyArticle = (): ArticleFormState => ({
   bodyMarkdown: "## Craftsmanship & Care\n\nWrite your jewellery education guide in Markdown.",
   coverImageUrl: "",
   coverAltText: "",
-  authorName: "Maison Editorial Atelier",
+  authorName: "Atelier Editorial Team",
+  authorJobTitle: "Senior Gemologist",
+  authorCredentials: "GIA Graduate Gemologist (GG)",
+  authorBio: "",
+  articleSection: "Diamond Education",
   isPublished: false,
   seoTitle: "",
   seoDescription: "",
+  seoKeywords: "",
+  noindex: false,
   relatedCategorySlug: "",
 });
 
@@ -64,6 +78,11 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [form, setForm] = React.useState<ArticleFormState>(emptyArticle);
+  const [savedSnapshot, setSavedSnapshot] = React.useState(() => JSON.stringify(emptyArticle()));
+  const currentSnapshot = React.useMemo(() => JSON.stringify(form), [form]);
+  const unsavedGuard = useUnsavedChangesGuard({
+    isDirty: dialogOpen && currentSnapshot !== savedSnapshot,
+  });
   const [previewHtml, setPreviewHtml] = React.useState("");
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string[]>>({});
   const [saving, setSaving] = React.useState(false);
@@ -79,13 +98,14 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
   function openNew() {
     const initial = emptyArticle();
     setForm(initial);
+    setSavedSnapshot(JSON.stringify(initial));
     setFieldErrors({});
     void refreshPreview(initial.bodyMarkdown);
     setDialogOpen(true);
   }
 
   function openEdit(a: ArticleDTO) {
-    setForm({
+    const initial: ArticleFormState = {
       id: a.id,
       title: a.title,
       slug: a.slug,
@@ -94,11 +114,19 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
       coverImageUrl: a.coverImageUrl ?? "",
       coverAltText: a.coverAltText ?? "",
       authorName: a.authorName,
+      authorJobTitle: a.authorJobTitle ?? "",
+      authorCredentials: a.authorCredentials ?? "",
+      authorBio: a.authorBio ?? "",
+      articleSection: a.articleSection ?? "",
       isPublished: a.isPublished,
       seoTitle: a.seoTitle ?? "",
       seoDescription: a.seoDescription ?? "",
+      seoKeywords: a.seoKeywords ?? "",
+      noindex: Boolean(a.noindex),
       relatedCategorySlug: a.relatedCategorySlug ?? "",
-    });
+    };
+    setForm(initial);
+    setSavedSnapshot(JSON.stringify(initial));
     setFieldErrors({});
     void refreshPreview(a.bodyMarkdown);
     setDialogOpen(true);
@@ -118,9 +146,15 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
       coverImageUrl: form.coverImageUrl || null,
       coverAltText: form.coverAltText || null,
       authorName: form.authorName,
+      authorJobTitle: form.authorJobTitle || null,
+      authorCredentials: form.authorCredentials || null,
+      authorBio: form.authorBio || null,
+      articleSection: form.articleSection || null,
       isPublished: form.isPublished,
       seoTitle: form.seoTitle || null,
       seoDescription: form.seoDescription || null,
+      seoKeywords: form.seoKeywords || null,
+      noindex: form.noindex,
       relatedCategorySlug: form.relatedCategorySlug || null,
     });
 
@@ -132,6 +166,8 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
       return;
     }
 
+    unsavedGuard.markClean();
+    setSavedSnapshot(currentSnapshot);
     toast.success(form.id ? "Guide updated." : "Guide created.");
     setDialogOpen(false);
     router.refresh();
@@ -156,6 +192,7 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
   const columns: ResponsiveColumn<ArticleDTO>[] = [
     {
       key: "title",
+      hideOnMobileCard: true,
       header: "Editorial Guide",
       cell: (a) => (
         <div>
@@ -181,7 +218,7 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
     {
       key: "updated",
       header: "Updated",
-      cell: (a) => new Date(a.updatedAt).toLocaleDateString(),
+      cell: (a) => <LocalDate value={a.updatedAt} />,
     },
     {
       key: "actions",
@@ -242,7 +279,16 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
         }
       />
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) {
+            setDialogOpen(true);
+            return;
+          }
+          unsavedGuard.confirmLeave(() => setDialogOpen(false));
+        }}
+      >
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>{form.id ? "Edit Editorial Guide" : "New Editorial Guide"}</DialogTitle>
@@ -389,7 +435,7 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
             </Tabs>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField id="art-seo-t" label="SEO Title">
+              <FormField id="art-seo-t" label={`SEO Title (${form.seoTitle.length}/60)`}>
                 {(aria) => (
                   <Input
                     {...aria}
@@ -398,7 +444,10 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
                   />
                 )}
               </FormField>
-              <FormField id="art-seo-d" label="SEO Description">
+              <FormField
+                id="art-seo-d"
+                label={`SEO Description (${form.seoDescription.length}/158)`}
+              >
                 {(aria) => (
                   <Input
                     {...aria}
@@ -407,6 +456,69 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
                   />
                 )}
               </FormField>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField id="art-job" label="Author Job Title (E-E-A-T)">
+                {(aria) => (
+                  <Input
+                    {...aria}
+                    value={form.authorJobTitle}
+                    onChange={(e) => setForm((f) => ({ ...f, authorJobTitle: e.target.value }))}
+                  />
+                )}
+              </FormField>
+              <FormField id="art-cred" label="Author Credentials">
+                {(aria) => (
+                  <Input
+                    {...aria}
+                    value={form.authorCredentials}
+                    onChange={(e) => setForm((f) => ({ ...f, authorCredentials: e.target.value }))}
+                  />
+                )}
+              </FormField>
+              <FormField id="art-sec" label="Article Section">
+                {(aria) => (
+                  <Input
+                    {...aria}
+                    value={form.articleSection}
+                    onChange={(e) => setForm((f) => ({ ...f, articleSection: e.target.value }))}
+                  />
+                )}
+              </FormField>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="art-bio" label="Author Bio">
+                {(aria) => (
+                  <Input
+                    {...aria}
+                    value={form.authorBio}
+                    onChange={(e) => setForm((f) => ({ ...f, authorBio: e.target.value }))}
+                    placeholder="Gemologist background & grading experience"
+                  />
+                )}
+              </FormField>
+              <FormField id="art-kw" label="SEO Keywords">
+                {(aria) => (
+                  <Input
+                    {...aria}
+                    value={form.seoKeywords}
+                    onChange={(e) => setForm((f) => ({ ...f, seoKeywords: e.target.value }))}
+                  />
+                )}
+              </FormField>
+            </div>
+
+            <div className="flex items-center justify-between rounded-sm border border-border px-3.5 py-2.5">
+              <Label htmlFor="art-noindex" className="cursor-pointer">
+                Exclude Guide from Search Indexing (noindex)
+              </Label>
+              <Switch
+                id="art-noindex"
+                checked={form.noindex}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, noindex: v }))}
+              />
             </div>
 
             <div className="flex items-center justify-between rounded-sm border border-border px-3.5 py-2.5">
@@ -424,7 +536,7 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setDialogOpen(false)}
+                onClick={() => unsavedGuard.confirmLeave(() => setDialogOpen(false))}
                 disabled={saving}
               >
                 Cancel
@@ -436,6 +548,8 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {unsavedGuard.dialog}
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

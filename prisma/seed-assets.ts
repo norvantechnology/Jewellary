@@ -13,17 +13,7 @@ export interface GeneratedAsset {
   height: number;
 }
 
-function escapeXml(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
 function buildJewellerySvg(input: {
-  title: string;
-  subtitle: string;
   accentHex: string;
   bgStartHex: string;
   bgEndHex: string;
@@ -31,7 +21,7 @@ function buildJewellerySvg(input: {
   height: number;
   motif: "solitaire" | "band" | "pendant" | "earrings" | "bracelet" | "banner";
 }): string {
-  const { width, height, bgStartHex, bgEndHex, accentHex, title, subtitle, motif } = input;
+  const { width, height, bgStartHex, bgEndHex, accentHex, motif } = input;
   const cx = width / 2;
   const cy = motif === "banner" ? height / 2 : height * 0.44;
   const scale = motif === "banner" ? 1.25 : 1;
@@ -73,33 +63,32 @@ function buildJewellerySvg(input: {
     `;
   }
 
-  const labelY = motif === "banner" ? height - 48 : height - 96;
-
   return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <radialGradient id="glow" cx="50%" cy="45%" r="60%">
+      <radialGradient id="glow" cx="50%" cy="50%" r="58%">
         <stop offset="0%" stop-color="${bgStartHex}"/>
         <stop offset="100%" stop-color="${bgEndHex}"/>
       </radialGradient>
     </defs>
     <rect width="${width}" height="${height}" fill="url(#glow)"/>
-    <rect x="28" y="28" width="${width - 56}" height="${height - 56}" fill="none" stroke="${accentHex}" stroke-opacity="0.28" stroke-width="1.5"/>
-    ${illustration}
-    <text x="${cx}" y="${labelY}" text-anchor="middle" font-family="Georgia, serif" font-size="${motif === "banner" ? 30 : 28}" letter-spacing="3" fill="#2E261F">${escapeXml(title)}</text>
-    <text x="${cx}" y="${labelY + 34}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" letter-spacing="4" fill="#6E5D4B">${escapeXml(subtitle.toUpperCase())}</text>
+    <rect x="28" y="28" width="${width - 56}" height="${height - 56}" fill="none" stroke="${accentHex}" stroke-opacity="0.22" stroke-width="1.5"/>
+    <g transform="translate(0, ${motif === "banner" ? 18 : 34})">
+      ${illustration}
+    </g>
   </svg>`;
 }
 
 export async function ensureSeedImageAsset(input: {
   slug: string;
-  title: string;
-  subtitle: string;
+  title?: string;
+  subtitle?: string;
   accentHex?: string;
   bgStartHex?: string;
   bgEndHex?: string;
   width?: number;
   height?: number;
   motif: "solitaire" | "band" | "pendant" | "earrings" | "bracelet" | "banner";
+  force?: boolean;
 }): Promise<GeneratedAsset> {
   mkdirSync(SEED_IMAGE_DIR, { recursive: true });
 
@@ -117,11 +106,9 @@ export async function ensureSeedImageAsset(input: {
   const medPath = path.join(SEED_IMAGE_DIR, medFile);
   const thumbPath = path.join(SEED_IMAGE_DIR, thumbFile);
 
-  if (!existsSync(mainPath) || !existsSync(medPath) || !existsSync(thumbPath)) {
+  if (input.force || !existsSync(mainPath) || !existsSync(medPath) || !existsSync(thumbPath)) {
     const svgBuffer = Buffer.from(
       buildJewellerySvg({
-        title: input.title,
-        subtitle: input.subtitle,
         accentHex,
         bgStartHex,
         bgEndHex,

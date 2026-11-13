@@ -1,29 +1,58 @@
 import { NextResponse } from "next/server";
+import { Prisma, type NewsletterStatus } from "@/generated/prisma/client";
 import { buildCsvDocument } from "@/lib/csv";
+import { env } from "@/lib/env";
 import { writeAuditLog } from "@/server/audit";
 import { requirePermission } from "@/server/dal";
 import { db } from "@/server/db";
 import { AppError } from "@/server/errors";
 
-export async function GET(_request: Request, context: { params: Promise<{ resource: string }> }) {
+function exportFilePrefix() {
+  return (
+    env.NEXT_PUBLIC_SITE_NAME.toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "atelier"
+  );
+}
+
+export async function GET(request: Request, context: { params: Promise<{ resource: string }> }) {
   try {
     const { resource } = await context.params;
     const slug = resource.replace(/\.csv$/i, "").toLowerCase();
     const today = new Date().toISOString().slice(0, 10);
+    const prefix = exportFilePrefix();
 
     if (slug === "customers") {
       const actor = await requirePermission("customers:export");
       const users = await db.user.findMany({
         orderBy: { createdAt: "desc" },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          emailVerified: true,
+          createdAt: true,
           _count: { select: { orders: true } },
-          orders: {
-            where: { status: { notIn: ["PENDING_PAYMENT", "PAYMENT_FAILED", "CANCELLED"] } },
-            select: { total: true, refundedAmount: true },
-          },
         },
         take: 5000,
       });
+
+      const userIds = users.map((u) => u.id);
+      const spendRows =
+        userIds.length > 0
+          ? await db.$queryRaw<Array<{ userId: string; spend: number }>>(Prisma.sql`
+              SELECT
+                "userId",
+                COALESCE(SUM(GREATEST(0, "total" - "refundedAmount")), 0)::float8 AS spend
+              FROM "Order"
+              WHERE "userId" IN (${Prisma.join(userIds)})
+                AND "status" NOT IN ('PENDING_PAYMENT', 'PAYMENT_FAILED', 'CANCELLED')
+              GROUP BY "userId"
+            `)
+          : [];
+      const spendByUser = new Map(spendRows.map((r) => [r.userId, Number(r.spend ?? 0)]));
 
       const headers = [
         "ID",
@@ -37,10 +66,7 @@ export async function GET(_request: Request, context: { params: Promise<{ resour
         "Created At",
       ];
       const rows = users.map((u) => {
-        const spend = u.orders.reduce(
-          (sum, o) => sum + Math.max(0, Number(o.total) - Number(o.refundedAmount)),
-          0,
-        );
+        const spend = spendByUser.get(u.id) ?? 0;
         return [
           u.id,
           u.name,
@@ -67,7 +93,7 @@ export async function GET(_request: Request, context: { params: Promise<{ resour
         status: 200,
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="aurelia-customers-${today}.csv"`,
+          "Content-Disposition": `attachment; filename="${prefix}-customers-${today}.csv"`,
           "Cache-Control": "private, no-store",
         },
       });
@@ -77,12 +103,37 @@ export async function GET(_request: Request, context: { params: Promise<{ resour
       const actor = await requirePermission("exports:operational");
       const orders = await db.order.findMany({
         orderBy: { createdAt: "desc" },
-        include: {
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          guestEmail: true,
+          shippingAddress: true,
+          currency: true,
+          subtotal: true,
+          shippingCost: true,
+          taxAmount: true,
+          total: true,
+          refundedAmount: true,
+          carrier: true,
+          trackingNumber: true,
+          createdAt: true,
+          paidAt: true,
           user: { select: { name: true, email: true, anonymizedAt: true } },
-          items: { select: { quantity: true } },
         },
         take: 5000,
       });
+
+      const orderIds = orders.map((o) => o.id);
+      const qtyGroups =
+        orderIds.length > 0
+          ? await db.orderItem.groupBy({
+              by: ["orderId"],
+              where: { orderId: { in: orderIds } },
+              _sum: { quantity: true },
+            })
+          : [];
+      const qtyByOrder = new Map(qtyGroups.map((g) => [g.orderId, g._sum.quantity ?? 0]));
 
       const headers = [
         "Order Number",
@@ -108,7 +159,7 @@ export async function GET(_request: Request, context: { params: Promise<{ resour
           o.status,
           o.user && !o.user.anonymizedAt ? o.user.name : (shipping?.fullName ?? "Guest Client"),
           o.user && !o.user.anonymizedAt ? o.user.email : (o.guestEmail ?? ""),
-          o.items.reduce((sum, i) => sum + i.quantity, 0),
+          qtyByOrder.get(o.id) ?? 0,
           o.currency,
           o.subtotal.toFixed(2),
           o.shippingCost.toFixed(2),
@@ -135,7 +186,7 @@ export async function GET(_request: Request, context: { params: Promise<{ resour
         status: 200,
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="aurelia-orders-${today}.csv"`,
+          "Content-Disposition": `attachment; filename="${prefix}-orders-${today}.csv"`,
           "Cache-Control": "private, no-store",
         },
       });
@@ -146,9 +197,15 @@ export async function GET(_request: Request, context: { params: Promise<{ resour
       const products = await db.product.findMany({
         where: { deletedAt: null },
         orderBy: { createdAt: "desc" },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          priceMode: true,
+          basePrice: true,
           category: { select: { name: true } },
-          variants: { select: { sku: true, stockQty: true, reservedQty: true } },
+          variants: { select: { stockQty: true, reservedQty: true } },
         },
         take: 5000,
       });
@@ -195,7 +252,7 @@ export async function GET(_request: Request, context: { params: Promise<{ resour
         status: 200,
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="aurelia-products-${today}.csv"`,
+          "Content-Disposition": `attachment; filename="${prefix}-products-${today}.csv"`,
           "Cache-Control": "private, no-store",
         },
       });
@@ -244,7 +301,75 @@ export async function GET(_request: Request, context: { params: Promise<{ resour
         status: 200,
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="aurelia-inventory-${today}.csv"`,
+          "Content-Disposition": `attachment; filename="${prefix}-inventory-${today}.csv"`,
+          "Cache-Control": "private, no-store",
+        },
+      });
+    }
+
+    if (slug === "newsletter") {
+      const actor = await requirePermission("customers:export");
+      const url = new URL(request.url);
+      const q = url.searchParams.get("q")?.trim();
+      const rawStatus = url.searchParams.get("status");
+      const validStatuses: NewsletterStatus[] = ["PENDING", "CONFIRMED", "UNSUBSCRIBED"];
+      const status = validStatuses.includes(rawStatus as NewsletterStatus)
+        ? (rawStatus as NewsletterStatus)
+        : undefined;
+
+      const where: Prisma.NewsletterSubscriberWhereInput = {
+        ...(status ? { status } : {}),
+        ...(q
+          ? {
+              OR: [
+                { email: { contains: q, mode: "insensitive" } },
+                { source: { contains: q, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      };
+
+      const subscribers = await db.newsletterSubscriber.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: 10000,
+      });
+
+      const headers = [
+        "ID",
+        "Email",
+        "Status",
+        "Source",
+        "Consented At",
+        "Verified At",
+        "Unsubscribed At",
+        "Created At",
+      ];
+      const rows = subscribers.map((s) => [
+        s.id,
+        s.email,
+        s.status,
+        s.source ?? "",
+        s.consentedAt.toISOString(),
+        s.verifiedAt?.toISOString() ?? "",
+        s.unsubscribedAt?.toISOString() ?? "",
+        s.createdAt.toISOString(),
+      ]);
+
+      await writeAuditLog({
+        actorId: actor.user.id,
+        actorEmail: actor.user.email,
+        actorRole: actor.user.role,
+        action: "export.csv",
+        entityType: "newsletter",
+        after: { rowCount: rows.length, status: status ?? "ALL" },
+      });
+
+      return new NextResponse(buildCsvDocument(headers, rows), {
+        status: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${prefix}-newsletter-${today}.csv"`,
           "Cache-Control": "private, no-store",
         },
       });

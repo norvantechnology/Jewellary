@@ -7,6 +7,14 @@ const globalForPrisma = globalThis as unknown as {
   prismaClient?: PrismaClient;
 };
 
+const defaultPoolMax = Number.parseInt(process.env.PG_POOL_MAX ?? "", 10);
+const POOL_MAX =
+  Number.isFinite(defaultPoolMax) && defaultPoolMax > 0
+    ? defaultPoolMax
+    : process.env.NODE_ENV === "production"
+      ? 20
+      : 10;
+
 export function createPrismaClient(connectionString?: string): PrismaClient {
   const url = connectionString ?? process.env.DATABASE_URL;
   if (!url) {
@@ -17,11 +25,14 @@ export function createPrismaClient(connectionString?: string): PrismaClient {
     connectionString || !globalForPrisma.prismaPool
       ? new Pool({
           connectionString: url,
-          max: process.env.NODE_ENV === "production" ? 10 : 5,
+          max: POOL_MAX,
+          idleTimeoutMillis: 30_000,
+          connectionTimeoutMillis: 5_000,
+          maxUses: 7500,
         })
       : globalForPrisma.prismaPool;
 
-  if (!connectionString && process.env.NODE_ENV !== "production") {
+  if (!connectionString) {
     globalForPrisma.prismaPool = pool;
   }
 
@@ -33,10 +44,7 @@ export function createPrismaClient(connectionString?: string): PrismaClient {
 }
 
 export const db: PrismaClient = globalForPrisma.prismaClient ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prismaClient = db;
-}
+globalForPrisma.prismaClient = db;
 
 export { Prisma };
 export type { PrismaClient };

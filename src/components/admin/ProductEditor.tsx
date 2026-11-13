@@ -2,9 +2,22 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { BackLink } from "@/components/shared/BackLink";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, Plus, Save, Star, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  Copy,
+  Plus,
+  Save,
+  Sparkles,
+  Star,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
+import { AdminProductCustomizationTab } from "@/components/admin/AdminProductCustomizationTab";
+import { ProductDeleteDialog } from "@/components/admin/ProductDeleteDialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { FormField } from "@/components/shared/FormField";
 import { ImageUploadField, type UploadedImageResult } from "@/components/shared/ImageUploadField";
@@ -14,6 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   Select,
   SelectContent,
@@ -24,7 +38,20 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { deleteProductAction, upsertProductAction } from "@/modules/catalog/catalog.actions";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes";
+import { computeProductSeoScore } from "@/lib/seo/audit";
+import { IMAGE_VIEW_TYPES, buildAutoProductImageAlt } from "@/lib/seo/images";
+import {
+  DEFAULT_SEO_TEMPLATES,
+  finalizeSeoDescription,
+  finalizeSeoTitle,
+  interpolateSeoTemplate,
+} from "@/lib/seo/templates";
+import {
+  archiveProductAction,
+  duplicateProductAction,
+  upsertProductAction,
+} from "@/modules/catalog/catalog.actions";
 import type {
   AdminCategoryDTO,
   AdminFacetDTO,
@@ -55,10 +82,21 @@ interface ImageDraft {
   url: string;
   thumbUrl: string;
   mediumUrl: string;
+  avifUrl?: string | null;
+  jpegUrl?: string | null;
+  responsiveVariants?: Record<string, unknown> | null;
   altText: string;
+  viewType: "front" | "side" | "detail" | "on-hand" | "lifestyle" | "packaging" | "certificate";
+  title: string;
+  caption: string;
   width: number;
   height: number;
   isPrimary: boolean;
+}
+
+interface SeoFaqDraft {
+  question: string;
+  answer: string;
 }
 
 interface FacetDraft {
@@ -106,9 +144,16 @@ interface ProductFormState {
   certificateUrl: string;
   seoTitle: string;
   seoDescription: string;
+  seoKeywords: string;
+  ogTitle: string;
+  ogDescription: string;
   ogImageUrl: string;
   canonicalOverride: string;
   noindex: boolean;
+  warrantyText: string;
+  salePriceStartAt: string;
+  salePriceEndAt: string;
+  seoFaqs: SeoFaqDraft[];
   gtin: string;
   mpn: string;
   googleProductCategory: string;
@@ -158,9 +203,16 @@ function buildInitialState(
       certificateUrl: "",
       seoTitle: "",
       seoDescription: "",
+      seoKeywords: "",
+      ogTitle: "",
+      ogDescription: "",
       ogImageUrl: "",
       canonicalOverride: "",
       noindex: false,
+      warrantyText: "",
+      salePriceStartAt: "",
+      salePriceEndAt: "",
+      seoFaqs: [],
       gtin: "",
       mpn: "",
       googleProductCategory: "Apparel & Accessories > Jewelry",
@@ -222,9 +274,16 @@ function buildInitialState(
     certificateUrl: product.certificateUrl ?? "",
     seoTitle: product.seoTitle ?? "",
     seoDescription: product.seoDescription ?? "",
+    seoKeywords: product.seoKeywords ?? "",
+    ogTitle: product.ogTitle ?? "",
+    ogDescription: product.ogDescription ?? "",
     ogImageUrl: product.ogImageUrl ?? "",
     canonicalOverride: product.canonicalOverride ?? "",
     noindex: product.noindex,
+    warrantyText: product.warrantyText ?? "",
+    salePriceStartAt: product.salePriceStartAt ? product.salePriceStartAt.slice(0, 10) : "",
+    salePriceEndAt: product.salePriceEndAt ? product.salePriceEndAt.slice(0, 10) : "",
+    seoFaqs: product.seoFaqs ?? [],
     gtin: product.gtin ?? "",
     mpn: product.mpn ?? "",
     googleProductCategory: product.googleProductCategory ?? "",
@@ -251,7 +310,13 @@ function buildInitialState(
       url: i.url,
       thumbUrl: i.thumbUrl ?? i.url,
       mediumUrl: i.mediumUrl ?? i.url,
+      avifUrl: i.avifUrl ?? null,
+      jpegUrl: i.jpegUrl ?? null,
+      responsiveVariants: i.responsiveVariants ?? null,
       altText: i.altText,
+      viewType: (i.viewType || "front") as ImageDraft["viewType"],
+      title: i.title ?? "",
+      caption: i.caption ?? "",
       width: i.width,
       height: i.height,
       isPrimary: i.isPrimary,
@@ -285,11 +350,20 @@ export function ProductEditor({
   const [form, setForm] = React.useState<ProductFormState>(() =>
     buildInitialState(product, categories),
   );
+  const [savedSnapshot, setSavedSnapshot] = React.useState(() =>
+    JSON.stringify(buildInitialState(product, categories)),
+  );
+  const currentSnapshot = React.useMemo(() => JSON.stringify(form), [form]);
+  const isDirty = currentSnapshot !== savedSnapshot;
+  const unsavedGuard = useUnsavedChangesGuard({ isDirty });
+
   const [activeTab, setActiveTab] = React.useState("overview");
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string[]>>({});
   const [saving, setSaving] = React.useState(false);
-  const [deleteOpen, setDeleteOpen] = React.useState(false);
-  const [deleting, setDeleting] = React.useState(false);
+  const [duplicating, setDuplicating] = React.useState(false);
+  const [archiveOpen, setArchiveOpen] = React.useState(false);
+  const [archiving, setArchiving] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -353,7 +427,13 @@ export function ProductEditor({
         url: img.url,
         thumbUrl: img.thumbUrl || null,
         mediumUrl: img.mediumUrl || null,
+        avifUrl: img.avifUrl || null,
+        jpegUrl: img.jpegUrl || null,
+        responsiveVariants: img.responsiveVariants ?? undefined,
         altText: img.altText,
+        viewType: (img.viewType || "front") as ImageDraft["viewType"],
+        title: img.title || null,
+        caption: img.caption || null,
         width: img.width,
         height: img.height,
         isPrimary: img.isPrimary,
@@ -362,9 +442,18 @@ export function ProductEditor({
       facetValues: form.facetValues,
       seoTitle: form.seoTitle || null,
       seoDescription: form.seoDescription || null,
+      seoKeywords: form.seoKeywords || null,
+      ogTitle: form.ogTitle || null,
+      ogDescription: form.ogDescription || null,
       ogImageUrl: form.ogImageUrl || null,
       canonicalOverride: form.canonicalOverride || null,
       noindex: form.noindex,
+      warrantyText: form.warrantyText || null,
+      salePriceStartAt: form.salePriceStartAt
+        ? new Date(form.salePriceStartAt).toISOString()
+        : null,
+      salePriceEndAt: form.salePriceEndAt ? new Date(form.salePriceEndAt).toISOString() : null,
+      seoFaqs: form.seoFaqs.filter((q) => q.question.trim() && q.answer.trim()),
       gtin: form.gtin || null,
       mpn: form.mpn || null,
       googleProductCategory: form.googleProductCategory || null,
@@ -380,9 +469,11 @@ export function ProductEditor({
       return;
     }
 
+    unsavedGuard.markClean();
+    setSavedSnapshot(currentSnapshot);
     toast.success(form.id ? "Product saved." : "Product created.");
     if (!form.id) {
-      router.push(`/admin/products/${res.data.id}`);
+      router.replace(`/admin/products/${res.data.id}`);
     } else {
       router.refresh();
     }
@@ -390,18 +481,36 @@ export function ProductEditor({
 
   async function handleArchive() {
     if (!form.id) return;
-    setDeleting(true);
-    const res = await deleteProductAction({ id: form.id });
-    setDeleting(false);
+    setArchiving(true);
+    const res = await archiveProductAction({ id: form.id });
+    setArchiving(false);
 
     if (!res.ok) {
       toast.error(res.error.message);
       return;
     }
 
+    unsavedGuard.markClean();
+    setSavedSnapshot(currentSnapshot);
     toast.success("Product archived.");
     router.push("/admin/products");
     router.refresh();
+  }
+
+  async function handleDuplicate() {
+    if (!form.id) return;
+    setDuplicating(true);
+    const res = await duplicateProductAction({ id: form.id });
+    setDuplicating(false);
+
+    if (!res.ok) {
+      toast.error(res.error.message);
+      return;
+    }
+
+    unsavedGuard.markClean();
+    toast.success(`Duplicated "${form.name}" as a Draft copy.`);
+    router.replace(`/admin/products/${res.data.id}`);
   }
 
   function addVariant() {
@@ -442,24 +551,38 @@ export function ProductEditor({
   }
 
   function appendUploadedImage(asset: UploadedImageResult) {
-    setForm((prev) => ({
-      ...prev,
-      images: [
-        ...prev.images,
-        {
-          storageKey: asset.storageKey,
-          url: asset.url,
-          thumbUrl: asset.thumbUrl,
-          mediumUrl: asset.mediumUrl,
-          altText: prev.name
-            ? `${prev.name} view ${prev.images.length + 1}`
-            : "Fine jewellery piece",
-          width: asset.width,
-          height: asset.height,
-          isPrimary: prev.images.length === 0,
-        },
-      ],
-    }));
+    setForm((prev) => {
+      const viewType = prev.images.length === 0 ? "front" : "detail";
+      return {
+        ...prev,
+        images: [
+          ...prev.images,
+          {
+            storageKey: asset.storageKey,
+            url: asset.url,
+            thumbUrl: asset.thumbUrl,
+            mediumUrl: asset.mediumUrl,
+            avifUrl: asset.avifUrl ?? null,
+            jpegUrl: asset.jpegUrl ?? null,
+            responsiveVariants: asset.responsiveVariants ?? null,
+            altText: buildAutoProductImageAlt({
+              productName: prev.name || "Fine jewellery piece",
+              metal: prev.metalType || null,
+              carat: prev.caratTotal || null,
+              shape: prev.stoneShape || null,
+              cert: prev.certificationLab || null,
+              viewType,
+            }),
+            viewType: viewType as ImageDraft["viewType"],
+            title: "",
+            caption: "",
+            width: asset.width,
+            height: asset.height,
+            isPrimary: prev.images.length === 0,
+          },
+        ],
+      };
+    });
   }
 
   function moveImage(index: number, direction: -1 | 1) {
@@ -534,24 +657,56 @@ export function ProductEditor({
     });
   }
 
-  const serpTitle = form.seoTitle || `${form.name || "Untitled Fine Piece"} | ${siteName}`;
+  const selectedCategoryName =
+    categories.find((c) => c.id === form.categoryId)?.name ?? "Fine Jewellery";
+  const generatedSeoTitle = finalizeSeoTitle(
+    interpolateSeoTemplate(DEFAULT_SEO_TEMPLATES.productTitle, {
+      name: form.name || "Untitled Fine Piece",
+      category: selectedCategoryName,
+      collection: selectedCategoryName,
+      metal: form.metalType || form.stoneShape || null,
+      carat: form.caratTotal || null,
+      cert: form.certificationLab ? `${form.certificationLab} Certified` : null,
+      brand: siteName,
+    }),
+    { brandName: siteName, maxLength: 60 },
+  );
+  const generatedSeoDesc = finalizeSeoDescription(
+    form.subtitle || form.description || form.name,
+    `${form.certificationLab || "GIA / IGI"} certified fine jewellery crafted by ${siteName}.`,
+  );
+
+  const serpTitle = form.seoTitle || generatedSeoTitle;
   const serpUrl = `${siteUrl.replace(/\/+$/, "")}/products/${form.slug || "product-slug"}`;
-  const serpDescription =
-    form.seoDescription ||
-    form.subtitle ||
-    "Handcrafted fine jewellery finished to order with certified metals and ethical stones.";
+  const serpDescription = form.seoDescription || generatedSeoDesc;
+
+  const seoScoreResult = computeProductSeoScore({
+    name: form.name,
+    slug: form.slug || "product-slug",
+    seoTitle: form.seoTitle,
+    seoDescription: form.seoDescription,
+    resolvedTitle: serpTitle,
+    resolvedDescription: serpDescription,
+    seoKeywords: form.seoKeywords,
+    primaryImageUrl: form.images[0]?.url,
+    primaryImageWidth: form.images[0]?.width,
+    primaryImageHeight: form.images[0]?.height,
+    primaryAltText: form.images[0]?.altText,
+    imageCount: form.images.length,
+    hasSpecs: Boolean(form.metalType || form.caratTotal || form.certificationLab),
+  });
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
         <div className="space-y-1">
-          <Link
-            href="/admin/products"
+          <BackLink
+            fallbackHref="/admin/products"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="size-3.5" aria-hidden="true" />
             <span>Back to Products</span>
-          </Link>
+          </BackLink>
           <h1 className="font-display text-3xl font-medium text-foreground">
             {form.id ? form.name || "Edit Product" : "New Fine Jewellery Piece"}
           </h1>
@@ -562,15 +717,37 @@ export function ProductEditor({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {form.id && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                loading={duplicating}
+                onClick={() => void handleDuplicate()}
+                className="gap-1.5"
+              >
+                <Copy className="size-4" aria-hidden="true" />
+                <span>Duplicate</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setArchiveOpen(true)}
+                className="gap-1.5"
+              >
+                <span>Archive</span>
+              </Button>
+            </>
+          )}
           {form.id && canDelete && (
             <Button
               type="button"
               variant="outline"
-              onClick={() => setDeleteOpen(true)}
+              onClick={() => setDeleteDialogOpen(true)}
               className="gap-1.5 text-destructive"
             >
               <Trash2 className="size-4" aria-hidden="true" />
-              <span>Archive</span>
+              <span>Delete Permanently</span>
             </Button>
           )}
           <Button type="submit" loading={saving} className="gap-1.5">
@@ -605,6 +782,7 @@ export function ProductEditor({
           <TabsTrigger value="media">5. Media ({form.images.length})</TabsTrigger>
           <TabsTrigger value="facets">6. Facets</TabsTrigger>
           <TabsTrigger value="seo">7. SEO &amp; Feeds</TabsTrigger>
+          <TabsTrigger value="customization">8. Customization</TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Overview */}
@@ -1343,7 +1521,7 @@ export function ProductEditor({
                               variant="outline"
                               size="sm"
                               onClick={() => setPrimaryImage(idx)}
-                              className="h-7 gap-1 px-2 text-xs"
+                              className="min-h-11 gap-1.5 px-3 text-xs sm:min-h-8 sm:px-2"
                             >
                               <Star className="size-3" aria-hidden="true" />
                               <span>Set Primary</span>
@@ -1356,7 +1534,7 @@ export function ProductEditor({
 
                         <div>
                           <Label htmlFor={`img-alt-${idx}`} className="text-xs">
-                            Accessible Image Alt Text *
+                            Accessible Image Alt Text * ({img.altText.length}/125)
                           </Label>
                           <Input
                             id={`img-alt-${idx}`}
@@ -1368,9 +1546,71 @@ export function ProductEditor({
                                 return { ...f, images: next };
                               })
                             }
-                            placeholder="18k gold oval solitaire diamond ring angled on warm travertine"
+                            placeholder="18k gold oval solitaire diamond ring, front view"
                             required
                           />
+                        </div>
+
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          <div>
+                            <Label htmlFor={`img-view-${idx}`} className="text-xs">
+                              Image View Type
+                            </Label>
+                            <NativeSelect
+                              id={`img-view-${idx}`}
+                              value={img.viewType || "front"}
+                              onChange={(e) =>
+                                setForm((f) => {
+                                  const next = [...f.images];
+                                  next[idx] = {
+                                    ...next[idx]!,
+                                    viewType: e.target.value as ImageDraft["viewType"],
+                                  };
+                                  return { ...f, images: next };
+                                })
+                              }
+                            >
+                              {IMAGE_VIEW_TYPES.map((vt) => (
+                                <option key={vt} value={vt}>
+                                  {vt}
+                                </option>
+                              ))}
+                            </NativeSelect>
+                          </div>
+                          <div>
+                            <Label htmlFor={`img-title-${idx}`} className="text-xs">
+                              Image Title (Schema)
+                            </Label>
+                            <Input
+                              id={`img-title-${idx}`}
+                              value={img.title}
+                              placeholder="Optional image title"
+                              onChange={(e) =>
+                                setForm((f) => {
+                                  const next = [...f.images];
+                                  next[idx] = { ...next[idx]!, title: e.target.value };
+                                  return { ...f, images: next };
+                                })
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`img-cap-${idx}`} className="text-xs">
+                              Image Caption
+                            </Label>
+                            <Input
+                              id={`img-cap-${idx}`}
+                              value={img.caption}
+                              placeholder="Editorial / craft caption"
+                              onChange={(e) =>
+                                setForm((f) => {
+                                  const next = [...f.images];
+                                  next[idx] = { ...next[idx]!, caption: e.target.value };
+                                  return { ...f, images: next };
+                                })
+                              }
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -1499,19 +1739,37 @@ export function ProductEditor({
         <TabsContent value="seo">
           <div className="grid gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
-              <CardHeader>
-                <h2 className="font-display text-xl font-medium">
-                  Search Metadata &amp; Google Merchant Feed
-                </h2>
-                <CardDescription>
-                  Tailor organic snippets, canonical rules, and structured Merchant identifiers.
-                </CardDescription>
+              <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-xl font-medium">
+                    Search Metadata, FAQs &amp; Google Merchant Feed
+                  </h2>
+                  <CardDescription>
+                    Tailor organic snippets, social OpenGraph cards, sale validity, warranty text,
+                    and product FAQs.
+                  </CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setForm((f) => ({
+                      ...f,
+                      seoTitle: generatedSeoTitle,
+                      seoDescription: generatedSeoDesc,
+                    }))
+                  }
+                >
+                  <Sparkles className="mr-1.5 size-4" aria-hidden="true" />
+                  Generate from template
+                </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
                   id="seo-title"
                   label="Custom SEO Title"
-                  hint={`${form.seoTitle.length}/65 characters recommended`}
+                  hint={`${(form.seoTitle || serpTitle).length}/60 characters recommended`}
                 >
                   {(aria) => (
                     <Input
@@ -1526,7 +1784,7 @@ export function ProductEditor({
                 <FormField
                   id="seo-desc"
                   label="Meta Description"
-                  hint={`${form.seoDescription.length}/160 characters recommended`}
+                  hint={`${(form.seoDescription || serpDescription).length}/158 characters recommended`}
                 >
                   {(aria) => (
                     <Textarea
@@ -1538,6 +1796,80 @@ export function ProductEditor({
                     />
                   )}
                 </FormField>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField id="seo-keywords" label="Focus & Semantic Keywords">
+                    {(aria) => (
+                      <Input
+                        {...aria}
+                        value={form.seoKeywords}
+                        onChange={(e) => setForm((f) => ({ ...f, seoKeywords: e.target.value }))}
+                        placeholder="emerald cut solitaire ring, platinum 950, gia diamond"
+                      />
+                    )}
+                  </FormField>
+                  <FormField
+                    id="seo-warranty"
+                    label="Warranty & Lifetime Care Summary (Schema + Visible FAQ)"
+                  >
+                    {(aria) => (
+                      <Input
+                        {...aria}
+                        value={form.warrantyText}
+                        onChange={(e) => setForm((f) => ({ ...f, warrantyText: e.target.value }))}
+                        placeholder="Lifetime prong inspection, ultrasonic polishing & manufacturing warranty."
+                      />
+                    )}
+                  </FormField>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField id="seo-og-title" label="OpenGraph / Social Title Override">
+                    {(aria) => (
+                      <Input
+                        {...aria}
+                        value={form.ogTitle}
+                        onChange={(e) => setForm((f) => ({ ...f, ogTitle: e.target.value }))}
+                        placeholder={serpTitle}
+                      />
+                    )}
+                  </FormField>
+                  <FormField id="seo-og-desc" label="OpenGraph / Social Description Override">
+                    {(aria) => (
+                      <Input
+                        {...aria}
+                        value={form.ogDescription}
+                        onChange={(e) => setForm((f) => ({ ...f, ogDescription: e.target.value }))}
+                        placeholder={serpDescription}
+                      />
+                    )}
+                  </FormField>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField id="seo-sale-start" label="Sale Price Valid From (Merchant + Schema)">
+                    {(aria) => (
+                      <Input
+                        {...aria}
+                        type="date"
+                        value={form.salePriceStartAt}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, salePriceStartAt: e.target.value }))
+                        }
+                      />
+                    )}
+                  </FormField>
+                  <FormField id="seo-sale-end" label="Sale Price Valid Until">
+                    {(aria) => (
+                      <Input
+                        {...aria}
+                        type="date"
+                        value={form.salePriceEndAt}
+                        onChange={(e) => setForm((f) => ({ ...f, salePriceEndAt: e.target.value }))}
+                      />
+                    )}
+                  </FormField>
+                </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField id="seo-canon" label="Canonical Override URL">
@@ -1611,40 +1943,175 @@ export function ProductEditor({
                     onCheckedChange={(v) => setForm((f) => ({ ...f, noindex: v }))}
                   />
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <h2 className="font-display text-xl font-medium">SERP Snippet Preview</h2>
-                <CardDescription>Approximate organic search appearance.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1.5 rounded-sm border border-border bg-background p-4">
-                  <p className="truncate text-xs text-accent-text">{serpUrl}</p>
-                  <p className="line-clamp-2 font-display text-lg font-medium text-foreground">
-                    {serpTitle}
-                  </p>
-                  <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-                    {serpDescription}
-                  </p>
+                <div className="space-y-3 border-t border-border pt-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">
+                      Product-Specific FAQs (Visible + FAQPage JSON-LD)
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          seoFaqs: [...f.seoFaqs, { question: "", answer: "" }],
+                        }))
+                      }
+                    >
+                      <Plus className="mr-1 size-3.5" aria-hidden="true" />
+                      Add FAQ
+                    </Button>
+                  </div>
+                  {form.seoFaqs.map((faq, idx) => (
+                    <div key={idx} className="space-y-2 rounded-md border border-border p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <Input
+                          placeholder="Question (e.g., Does this setting sit flush with a wedding band?)"
+                          value={faq.question}
+                          onChange={(e) =>
+                            setForm((f) => {
+                              const next = [...f.seoFaqs];
+                              next[idx] = { ...next[idx]!, question: e.target.value };
+                              return { ...f, seoFaqs: next };
+                            })
+                          }
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setForm((f) => ({
+                              ...f,
+                              seoFaqs: f.seoFaqs.filter((_, i) => i !== idx),
+                            }))
+                          }
+                          aria-label="Remove FAQ"
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      </div>
+                      <Textarea
+                        rows={2}
+                        placeholder="Concise, verifiable answer shown in Initial HTML & FAQ schema"
+                        value={faq.answer}
+                        onChange={(e) =>
+                          setForm((f) => {
+                            const next = [...f.seoFaqs];
+                            next[idx] = { ...next[idx]!, answer: e.target.value };
+                            return { ...f, seoFaqs: next };
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="font-display text-xl font-medium">
+                      SEO Score &amp; SERP Preview
+                    </h2>
+                    <Badge variant={seoScoreResult.score >= 80 ? "success" : "warning"}>
+                      {seoScoreResult.score}/100
+                    </Badge>
+                  </div>
+                  <CardDescription>Live Google snippet &amp; quality diagnostics.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-1.5 rounded-sm border border-border bg-background p-4">
+                    <p className="truncate text-xs text-accent-text">{serpUrl}</p>
+                    <p className="line-clamp-2 font-display text-lg font-medium text-foreground">
+                      {serpTitle}
+                    </p>
+                    <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                      {serpDescription}
+                    </p>
+                  </div>
+
+                  {seoScoreResult.items.some((i) => !i.passed) && (
+                    <ul className="space-y-1 rounded-sm border border-border bg-surface p-3 text-xs text-muted-foreground">
+                      {seoScoreResult.items
+                        .filter((i) => !i.passed)
+                        .map((item) => (
+                          <li key={item.id}>
+                            • {item.label}: {item.detail}
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <h3 className="text-sm font-semibold">Social / OpenGraph Card Preview</h3>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-hidden rounded-md border border-border bg-background">
+                    {(form.ogImageUrl || form.images[0]?.url) && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={form.ogImageUrl || form.images[0]?.url}
+                        alt={form.name || "Social preview"}
+                        className="aspect-[1.91/1] w-full object-cover"
+                      />
+                    )}
+                    <div className="space-y-1 p-3">
+                      <p className="text-[11px] text-muted-foreground uppercase">{siteName}</p>
+                      <p className="line-clamp-1 text-sm font-medium text-foreground">
+                        {form.ogTitle || serpTitle}
+                      </p>
+                      <p className="line-clamp-2 text-xs text-muted-foreground">
+                        {form.ogDescription || serpDescription}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
+        </TabsContent>
+
+        {/* Tab 8: Customization */}
+        <TabsContent value="customization">
+          <AdminProductCustomizationTab productId={form.id} productSlug={form.slug} />
         </TabsContent>
       </Tabs>
 
       <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
         title="Archive Product"
         description={`Soft-delete and archive "${form.name}"? Orders referencing its historical variants stay intact.`}
         confirmLabel="Archive Product"
         destructive
-        loading={deleting}
+        loading={archiving}
         onConfirm={handleArchive}
       />
+
+      <ProductDeleteDialog
+        target={deleteDialogOpen && form.id ? { id: form.id, name: form.name } : null}
+        onOpenChange={setDeleteDialogOpen}
+        onDeleted={() => {
+          unsavedGuard.markClean();
+          router.replace("/admin/products");
+          router.refresh();
+        }}
+        onArchived={() => {
+          unsavedGuard.markClean();
+          router.replace("/admin/products");
+          router.refresh();
+        }}
+      />
+
+      {unsavedGuard.dialog}
     </form>
   );
 }

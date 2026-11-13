@@ -3,6 +3,7 @@ import { OrderStatus, Prisma } from "@/generated/prisma/client";
 import { env } from "@/lib/env";
 import { formatMoneyExact, subtractMoney, toDecimal } from "@/lib/money";
 import { hasPermission } from "@/lib/permissions";
+import { parseOrderCustomizationSnapshot } from "@/modules/customization/customization.validation";
 import type {
   AdminRefundOrderInput,
   AdminUpdateOrderInput,
@@ -32,7 +33,11 @@ export interface AdminOrderListItemDTO {
   userId: string | null;
   itemCount: number;
   currency: string;
+  currencyDecimals: number;
+  baseCurrency: string;
+  exchangeRate: string;
   total: string;
+  baseTotal: string;
   refundedAmount: string;
   carrier: string | null;
   trackingNumber: string | null;
@@ -48,11 +53,21 @@ export interface AdminOrderDetailDTO {
   customerName: string;
   customerEmail: string;
   currency: string;
+  currencyDecimals: number;
+  baseCurrency: string;
+  exchangeRate: string;
   subtotal: string;
   shippingCost: string;
   taxAmount: string;
   discountAmount: string;
   total: string;
+  baseSubtotal: string;
+  baseShippingCost: string;
+  baseTaxAmount: string;
+  baseDiscountAmount: string;
+  baseTotal: string;
+  chargedCurrency: string;
+  chargedAmount: string | null;
   refundedAmount: string;
   refundedAt: string | null;
   shippingMethodName: string;
@@ -82,6 +97,9 @@ export interface AdminOrderDetailDTO {
     quantity: number;
     unitPrice: string;
     lineTotal: string;
+    customizationRequestId?: string | null;
+    customizationRequestNumber?: string | null;
+    customizationSummaryLines?: Array<{ label: string; value: string }>;
   }>;
   events: Array<{
     id: string;
@@ -171,7 +189,24 @@ export async function listAdminOrders(params: {
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: {
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        userId: true,
+        guestEmail: true,
+        shippingAddress: true,
+        currency: true,
+        currencyDecimals: true,
+        baseCurrency: true,
+        exchangeRate: true,
+        total: true,
+        baseTotal: true,
+        refundedAmount: true,
+        carrier: true,
+        trackingNumber: true,
+        createdAt: true,
+        paidAt: true,
         user: { select: { name: true, email: true, anonymizedAt: true } },
         items: { select: { quantity: true } },
       },
@@ -196,8 +231,12 @@ export async function listAdminOrders(params: {
         userId: row.userId,
         itemCount: row.items.reduce((sum, i) => sum + i.quantity, 0),
         currency: row.currency,
-        total: row.total.toFixed(2),
-        refundedAmount: row.refundedAmount.toFixed(2),
+        currencyDecimals: row.currencyDecimals ?? 2,
+        baseCurrency: row.baseCurrency ?? row.currency,
+        exchangeRate: row.exchangeRate.toFixed(6),
+        total: row.total.toFixed(row.currencyDecimals ?? 2),
+        baseTotal: row.baseTotal.toFixed(2),
+        refundedAmount: row.refundedAmount.toFixed(row.currencyDecimals ?? 2),
         carrier: row.carrier,
         trackingNumber: row.trackingNumber,
         createdAt: row.createdAt.toISOString(),
@@ -240,6 +279,8 @@ export async function getAdminOrderDetail(orderId: string): Promise<AdminOrderDe
   const shipping = order.shippingAddress as unknown as CheckoutAddressInput;
   const billing = order.billingAddress as unknown as CheckoutAddressInput;
 
+  const dp = order.currencyDecimals ?? 2;
+  const chargedCurr = order.chargedCurrency || order.currency;
   return {
     id: order.id,
     orderNumber: order.orderNumber,
@@ -254,12 +295,24 @@ export async function getAdminOrderDetail(orderId: string): Promise<AdminOrderDe
         ? order.user.email
         : (order.guestEmail ?? "noreply@anonymized.local"),
     currency: order.currency,
-    subtotal: order.subtotal.toFixed(2),
-    shippingCost: order.shippingCost.toFixed(2),
-    taxAmount: order.taxAmount.toFixed(2),
-    discountAmount: order.discountAmount.toFixed(2),
-    total: order.total.toFixed(2),
-    refundedAmount: order.refundedAmount.toFixed(2),
+    currencyDecimals: dp,
+    baseCurrency: order.baseCurrency ?? order.currency,
+    exchangeRate: order.exchangeRate.toFixed(8),
+    subtotal: order.subtotal.toFixed(dp),
+    shippingCost: order.shippingCost.toFixed(dp),
+    taxAmount: order.taxAmount.toFixed(dp),
+    discountAmount: order.discountAmount.toFixed(dp),
+    total: order.total.toFixed(dp),
+    baseSubtotal: order.baseSubtotal.toFixed(2),
+    baseShippingCost: order.baseShippingCost.toFixed(2),
+    baseTaxAmount: order.baseTaxAmount.toFixed(2),
+    baseDiscountAmount: order.baseDiscountAmount.toFixed(2),
+    baseTotal: order.baseTotal.toFixed(2),
+    chargedCurrency: chargedCurr,
+    chargedAmount: order.chargedAmount
+      ? order.chargedAmount.toFixed(chargedCurr === order.currency ? dp : 2)
+      : null,
+    refundedAmount: order.refundedAmount.toFixed(dp),
     refundedAt: order.refundedAt?.toISOString() ?? null,
     shippingMethodName: order.shippingMethodName,
     shippingAddress: shipping,
@@ -277,18 +330,24 @@ export async function getAdminOrderDetail(orderId: string): Promise<AdminOrderDe
     deliveredAt: order.deliveredAt?.toISOString() ?? null,
     cancelledAt: order.cancelledAt?.toISOString() ?? null,
     createdAt: order.createdAt.toISOString(),
-    items: order.items.map((item) => ({
-      id: item.id,
-      productId: item.productId,
-      variantId: item.variantId,
-      skuSnapshot: item.skuSnapshot,
-      titleSnapshot: item.titleSnapshot,
-      variantTitleSnapshot: item.variantTitleSnapshot,
-      imageUrlSnapshot: item.imageUrlSnapshot,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice.toFixed(2),
-      lineTotal: item.lineTotal.toFixed(2),
-    })),
+    items: order.items.map((item) => {
+      const parsedCustom = parseOrderCustomizationSnapshot(item.customizationSnapshot);
+      return {
+        id: item.id,
+        productId: item.productId,
+        variantId: item.variantId,
+        skuSnapshot: item.skuSnapshot,
+        titleSnapshot: item.titleSnapshot,
+        variantTitleSnapshot: item.variantTitleSnapshot,
+        imageUrlSnapshot: item.imageUrlSnapshot,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice.toFixed(dp),
+        lineTotal: item.lineTotal.toFixed(dp),
+        customizationRequestId: item.customizationRequestId ?? null,
+        customizationRequestNumber: parsedCustom.requestNumber,
+        customizationSummaryLines: parsedCustom.lines,
+      };
+    }),
     events: order.events.map((evt) => ({
       id: evt.id,
       fromStatus: evt.fromStatus,
@@ -302,7 +361,7 @@ export async function getAdminOrderDetail(orderId: string): Promise<AdminOrderDe
       provider: p.provider,
       providerIntentId: p.providerIntentId,
       providerChargeId: p.providerChargeId,
-      amount: p.amount.toFixed(2),
+      amount: p.amount.toFixed(p.currency === order.currency ? dp : 2),
       currency: p.currency,
       status: p.status,
       createdAt: p.createdAt.toISOString(),
@@ -354,12 +413,15 @@ async function restoreOrderStockInTx(
   const orderItems = await tx.orderItem.findMany({
     where: { orderId },
     orderBy: { variantId: "asc" },
-    select: { productId: true, variantId: true, quantity: true },
+    select: { productId: true, variantId: true, quantity: true, customizationRequestId: true },
   });
 
   const productIds = new Set<string>();
   for (const item of orderItems) {
     productIds.add(item.productId);
+    if (item.customizationRequestId) {
+      continue;
+    }
     const updated = await tx.$queryRaw<Array<{ stockQty: number; reservedQty: number }>>`
       UPDATE "ProductVariant"
       SET "stockQty" = "stockQty" + ${item.quantity},
@@ -502,6 +564,24 @@ export async function updateAdminOrderStatus(
       },
     });
 
+    if (isStatusChange && input.toStatus === "PAID") {
+      const customItems = await tx.orderItem.findMany({
+        where: { orderId: existing.id, customizationRequestId: { not: null } },
+        select: { customizationRequestId: true },
+      });
+      for (const ci of customItems) {
+        if (!ci.customizationRequestId) continue;
+        await tx.customizationRequest.updateMany({
+          where: { id: ci.customizationRequestId, status: { not: "ORDERED" } },
+          data: { status: "ORDERED", orderedAt: now, orderId: existing.id },
+        });
+        await tx.quoteToken.updateMany({
+          where: { requestId: ci.customizationRequestId, usedAt: null },
+          data: { usedAt: now, usedByUserId: existing.userId },
+        });
+      }
+    }
+
     if (isStatusChange || input.customerNote) {
       await tx.orderEvent.create({
         data: {
@@ -618,29 +698,42 @@ export async function issueAdminOrderRefund(
     throw new ConflictError("No settled payment transaction found for this order.");
   }
 
-  const requestedDec = toDecimal(input.amount);
+  const dp = order.currencyDecimals ?? 2;
+  const requestedDec = toDecimal(input.amount, dp);
   if (requestedDec.lte(0)) {
     throw new ValidationError("Refund amount must be greater than zero.");
   }
 
-  const remainingRefundable = subtractMoney(order.total, order.refundedAmount);
+  const remainingRefundable = subtractMoney(order.total, order.refundedAmount, dp);
   if (requestedDec.gt(remainingRefundable)) {
     throw new ValidationError(
-      `Refund amount cannot exceed remaining balance of ${formatMoneyExact(remainingRefundable, order.currency)}.`,
+      `Refund amount cannot exceed remaining balance of ${formatMoneyExact(remainingRefundable, order.currency, "en-US", dp)}.`,
     );
   }
+
+  // Convert refund amount cleanly if gateway settled in fallback base currency
+  const gatewayCurrency = settledPayment.currency || order.chargedCurrency || order.currency;
+  const gatewayDp = gatewayCurrency === order.currency ? dp : 2;
+  const gatewayRefundAmount =
+    gatewayCurrency === order.currency || order.total.lte(0)
+      ? requestedDec.toFixed(dp)
+      : requestedDec
+          .div(order.total)
+          .times(settledPayment.amount)
+          .toDecimalPlaces(gatewayDp)
+          .toFixed(gatewayDp);
 
   const adapter = getPaymentProvider(settledPayment.provider);
   const refundResult = await adapter.createRefund({
     providerIntentId: settledPayment.providerIntentId,
     providerChargeId: settledPayment.providerChargeId,
-    amountDecimal: requestedDec.toFixed(2),
-    currency: order.currency,
+    amountDecimal: gatewayRefundAmount,
+    currency: gatewayCurrency,
     reason: input.reason,
   });
 
-  const newRefundedTotal = toDecimal(order.refundedAmount).plus(requestedDec);
-  const isFullRefund = newRefundedTotal.gte(toDecimal(order.total));
+  const newRefundedTotal = toDecimal(order.refundedAmount, dp).plus(requestedDec);
+  const isFullRefund = newRefundedTotal.gte(toDecimal(order.total, dp));
   const nextOrderStatus: OrderStatus = isFullRefund ? "REFUNDED" : order.status;
 
   let restoredProducts: string[] = [];
@@ -649,7 +742,7 @@ export async function issueAdminOrderRefund(
     await tx.order.update({
       where: { id: order.id },
       data: {
-        refundedAmount: new Prisma.Decimal(newRefundedTotal.toFixed(2)),
+        refundedAmount: new Prisma.Decimal(newRefundedTotal.toFixed(dp)),
         refundedAt: new Date(),
         ...(isFullRefund ? { status: "REFUNDED" } : {}),
       },

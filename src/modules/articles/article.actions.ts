@@ -1,6 +1,8 @@
 "use server";
 
-import { revalidateTag, updateTag } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
+import { Prisma } from "@/generated/prisma/client";
+import { submitIndexNowUrls } from "@/lib/seo/indexnow";
 import { slugify } from "@/lib/slug";
 import { articleUpsertSchema, deleteArticleSchema } from "@/modules/articles/article.schemas";
 import { CACHE_TAGS } from "@/server/cache-tags";
@@ -45,10 +47,28 @@ export const upsertArticleAction = createAction(
       coverImageUrl: input.coverImageUrl || null,
       coverAltText: input.coverAltText || null,
       authorName: input.authorName,
+      authorJobTitle: input.authorJobTitle || null,
+      authorCredentials: input.authorCredentials || null,
+      authorBio: input.authorBio || null,
+      authorSameAs:
+        input.authorSameAs && input.authorSameAs.length > 0
+          ? (input.authorSameAs as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+      articleSection: input.articleSection || null,
       isPublished: input.isPublished,
       publishedAt,
       seoTitle: input.seoTitle || null,
       seoDescription: input.seoDescription || null,
+      seoKeywords: input.seoKeywords || null,
+      seoFaqs:
+        input.seoFaqs && input.seoFaqs.length > 0
+          ? (input.seoFaqs as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+      ogTitle: input.ogTitle || null,
+      ogDescription: input.ogDescription || null,
+      ogImageUrl: input.ogImageUrl || null,
+      canonicalOverride: input.canonicalOverride || null,
+      noindex: input.noindex ?? false,
       relatedCategorySlug: input.relatedCategorySlug || null,
     };
 
@@ -60,6 +80,12 @@ export const upsertArticleAction = createAction(
     updateTag(CACHE_TAGS.article(slug));
     revalidateTag(CACHE_TAGS.articles, "max");
     revalidateTag(CACHE_TAGS.article(slug), "max");
+    revalidatePath(`/guides/${slug}`);
+    revalidatePath("/guides");
+    revalidatePath("/sitemap.xml");
+    if (article.isPublished && !article.noindex) {
+      void submitIndexNowUrls([`/guides/${article.slug}`, "/guides"]);
+    }
 
     return { id: article.id, slug: article.slug };
   },

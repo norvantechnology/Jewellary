@@ -1,14 +1,19 @@
 import "server-only";
 import { Prisma, type InventoryReason, type ProductStatus } from "@/generated/prisma/client";
 import { buildCategoryPath, slugify } from "@/lib/slug";
-import type {
-  AdjustStockInput,
-  CategoryUpsertInput,
-  FacetUpsertInput,
-  ProductUpsertInput,
+import {
+  categoryUpsertSchema,
+  productUpsertSchema,
+  type AdjustStockInput,
+  type CategoryUpsertInput,
+  type FacetUpsertInput,
+  type ProductUpsertInput,
 } from "@/modules/catalog/catalog.schemas";
 import { db } from "@/server/db";
 import { ConflictError, NotFoundError, ValidationError } from "@/server/errors";
+import { copyImageAsset, deleteImageAssets } from "@/server/storage";
+
+import { parseSeoFaqs, type SeoFaqItem } from "@/modules/seo/seo.service";
 
 export interface AdminCategoryDTO {
   id: string;
@@ -21,6 +26,15 @@ export interface AdminCategoryDTO {
   imageUrl: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  seoKeywords: string | null;
+  seoIntroCopy: string | null;
+  seoIntroPosition: "top" | "bottom";
+  seoFaqs: SeoFaqItem[];
+  ogTitle: string | null;
+  ogDescription: string | null;
+  ogImageUrl: string | null;
+  canonicalOverride: string | null;
+  noindex: boolean;
   sortOrder: number;
   isActive: boolean;
   productCount: number;
@@ -103,9 +117,16 @@ export interface AdminProductDetailDTO {
   certificateUrl: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  seoKeywords: string | null;
+  seoFaqs: SeoFaqItem[];
+  ogTitle: string | null;
+  ogDescription: string | null;
   ogImageUrl: string | null;
   canonicalOverride: string | null;
   noindex: boolean;
+  warrantyText: string | null;
+  salePriceStartAt: string | null;
+  salePriceEndAt: string | null;
   gtin: string | null;
   mpn: string | null;
   googleProductCategory: string | null;
@@ -132,7 +153,16 @@ export interface AdminProductDetailDTO {
     url: string;
     thumbUrl: string | null;
     mediumUrl: string | null;
+    avifUrl: string | null;
+    jpegUrl: string | null;
+    responsiveVariants: Record<string, unknown> | null;
     altText: string;
+    viewType: string;
+    title: string | null;
+    caption: string | null;
+    creditText: string | null;
+    copyrightNotice: string | null;
+    licenseUrl: string | null;
     width: number;
     height: number;
     focalX: number | null;
@@ -205,70 +235,101 @@ function toDecimalOrNull(value: string | null | undefined): Prisma.Decimal | nul
 
 export async function getAdminDashboardSummary(): Promise<AdminDashboardSummary> {
   const [
-    activeProducts,
-    draftProducts,
+    productCounts,
     categoriesCount,
     facetsCount,
     ordersCount,
     newEnquiriesCount,
     publishedArticlesCount,
     activeBannersCount,
-    activeVariants,
+    lowStockRows,
   ] = await Promise.all([
-    db.product.count({ where: { deletedAt: null, status: "ACTIVE" } }),
-    db.product.count({ where: { deletedAt: null, status: "DRAFT" } }),
+    db.product.groupBy({
+      by: ["status"],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    }),
     db.category.count(),
     db.facet.count(),
     db.order.count(),
     db.enquiry.count({ where: { status: "NEW" } }),
     db.article.count({ where: { isPublished: true } }),
     db.banner.count({ where: { isActive: true } }),
-    db.productVariant.findMany({
-      where: {
-        isActive: true,
-        product: { deletedAt: null },
-      },
-      include: {
-        product: { select: { id: true, name: true, slug: true, status: true } },
-      },
-      orderBy: [{ stockQty: "asc" }, { updatedAt: "desc" }],
-      take: 50,
-    }),
+    db.$queryRaw<
+      Array<{
+        id: string;
+        productId: string;
+        productName: string;
+        productSlug: string;
+        productStatus: ProductStatus;
+        sku: string;
+        title: string;
+        stockQty: number;
+        reservedQty: number;
+        availableQty: number;
+        lowStockThreshold: number;
+        isActive: boolean;
+        totalLowStock: number;
+      }>
+    >(Prisma.sql`
+      SELECT
+        v."id",
+        p."id" AS "productId",
+        p."name" AS "productName",
+        p."slug" AS "productSlug",
+        p."status" AS "productStatus",
+        v."sku",
+        v."title",
+        v."stockQty"::int,
+        v."reservedQty"::int,
+        (v."stockQty" - v."reservedQty")::int AS "availableQty",
+        v."lowStockThreshold"::int,
+        v."isActive",
+        COUNT(*) OVER()::int AS "totalLowStock"
+      FROM "ProductVariant" v
+      INNER JOIN "Product" p ON p."id" = v."productId"
+      WHERE v."isActive" = true
+        AND p."deletedAt" IS NULL
+        AND (v."stockQty" - v."reservedQty") <= v."lowStockThreshold"
+      ORDER BY v."stockQty" ASC, v."updatedAt" DESC
+      LIMIT 10
+    `),
   ]);
 
-  const lowStockAlerts: AdminInventoryRowDTO[] = [];
-  for (const v of activeVariants) {
-    const availableQty = v.stockQty - v.reservedQty;
-    if (availableQty <= v.lowStockThreshold) {
-      lowStockAlerts.push({
-        id: v.id,
-        productId: v.product.id,
-        productName: v.product.name,
-        productSlug: v.product.slug,
-        productStatus: v.product.status,
-        sku: v.sku,
-        title: v.title,
-        stockQty: v.stockQty,
-        reservedQty: v.reservedQty,
-        availableQty,
-        lowStockThreshold: v.lowStockThreshold,
-        isLowStock: true,
-        isActive: v.isActive,
-      });
-    }
+  let activeProducts = 0;
+  let draftProducts = 0;
+  for (const row of productCounts) {
+    if (row.status === "ACTIVE") activeProducts = row._count._all;
+    else if (row.status === "DRAFT") draftProducts = row._count._all;
   }
+
+  const lowStockAlerts: AdminInventoryRowDTO[] = lowStockRows.map((v) => ({
+    id: v.id,
+    productId: v.productId,
+    productName: v.productName,
+    productSlug: v.productSlug,
+    productStatus: v.productStatus,
+    sku: v.sku,
+    title: v.title,
+    stockQty: v.stockQty,
+    reservedQty: v.reservedQty,
+    availableQty: v.availableQty,
+    lowStockThreshold: v.lowStockThreshold,
+    isLowStock: true,
+    isActive: v.isActive,
+  }));
 
   return {
     activeProducts,
     draftProducts,
     categoriesCount,
     facetsCount,
-    lowStockVariantsCount: lowStockAlerts.length,
+    lowStockVariantsCount: Number(lowStockRows[0]?.totalLowStock ?? 0),
     ordersCount,
     newEnquiriesCount,
     publishedArticlesCount,
     activeBannersCount,
-    lowStockAlerts: lowStockAlerts.slice(0, 10),
+    lowStockAlerts,
   };
 }
 
@@ -293,6 +354,15 @@ export async function listAdminCategories(): Promise<AdminCategoryDTO[]> {
     imageUrl: row.imageUrl,
     seoTitle: row.seoTitle,
     seoDescription: row.seoDescription,
+    seoKeywords: row.seoKeywords,
+    seoIntroCopy: row.seoIntroCopy,
+    seoIntroPosition: row.seoIntroPosition === "bottom" ? "bottom" : "top",
+    seoFaqs: parseSeoFaqs(row.seoFaqs),
+    ogTitle: row.ogTitle,
+    ogDescription: row.ogDescription,
+    ogImageUrl: row.ogImageUrl,
+    canonicalOverride: row.canonicalOverride,
+    noindex: row.noindex,
     sortOrder: row.sortOrder,
     isActive: row.isActive,
     productCount: row._count.products,
@@ -301,7 +371,8 @@ export async function listAdminCategories(): Promise<AdminCategoryDTO[]> {
   }));
 }
 
-export async function upsertCategory(rawInput: CategoryUpsertInput) {
+export async function upsertCategory(unsafeInput: CategoryUpsertInput) {
+  const rawInput = categoryUpsertSchema.parse(unsafeInput);
   const slug = slugify(rawInput.slug || rawInput.name);
   if (!slug) {
     throw new ValidationError("Unable to derive a valid URL slug from the category name.", {
@@ -366,6 +437,18 @@ export async function upsertCategory(rawInput: CategoryUpsertInput) {
             imageUrl: rawInput.imageUrl ?? null,
             seoTitle: rawInput.seoTitle ?? null,
             seoDescription: rawInput.seoDescription ?? null,
+            seoKeywords: rawInput.seoKeywords ?? null,
+            seoIntroCopy: rawInput.seoIntroCopy ?? null,
+            seoIntroPosition: rawInput.seoIntroPosition ?? "top",
+            seoFaqs:
+              rawInput.seoFaqs && rawInput.seoFaqs.length > 0
+                ? (rawInput.seoFaqs as unknown as Prisma.InputJsonValue)
+                : Prisma.JsonNull,
+            ogTitle: rawInput.ogTitle ?? null,
+            ogDescription: rawInput.ogDescription ?? null,
+            ogImageUrl: rawInput.ogImageUrl ?? null,
+            canonicalOverride: rawInput.canonicalOverride ?? null,
+            noindex: rawInput.noindex ?? false,
             sortOrder: rawInput.sortOrder ?? 0,
             isActive: rawInput.isActive ?? true,
           },
@@ -419,6 +502,18 @@ export async function upsertCategory(rawInput: CategoryUpsertInput) {
           imageUrl: rawInput.imageUrl ?? null,
           seoTitle: rawInput.seoTitle ?? null,
           seoDescription: rawInput.seoDescription ?? null,
+          seoKeywords: rawInput.seoKeywords ?? null,
+          seoIntroCopy: rawInput.seoIntroCopy ?? null,
+          seoIntroPosition: rawInput.seoIntroPosition ?? "top",
+          seoFaqs:
+            rawInput.seoFaqs && rawInput.seoFaqs.length > 0
+              ? (rawInput.seoFaqs as unknown as Prisma.InputJsonValue)
+              : Prisma.JsonNull,
+          ogTitle: rawInput.ogTitle ?? null,
+          ogDescription: rawInput.ogDescription ?? null,
+          ogImageUrl: rawInput.ogImageUrl ?? null,
+          canonicalOverride: rawInput.canonicalOverride ?? null,
+          noindex: rawInput.noindex ?? false,
           sortOrder: rawInput.sortOrder ?? 0,
           isActive: rawInput.isActive ?? true,
         },
@@ -731,9 +826,16 @@ export async function getAdminProductById(id: string): Promise<AdminProductDetai
     certificateUrl: p.certificateUrl,
     seoTitle: p.seoTitle,
     seoDescription: p.seoDescription,
+    seoKeywords: p.seoKeywords,
+    seoFaqs: parseSeoFaqs(p.seoFaqs),
+    ogTitle: p.ogTitle,
+    ogDescription: p.ogDescription,
     ogImageUrl: p.ogImageUrl,
     canonicalOverride: p.canonicalOverride,
     noindex: p.noindex,
+    warrantyText: p.warrantyText,
+    salePriceStartAt: p.salePriceStartAt?.toISOString() ?? null,
+    salePriceEndAt: p.salePriceEndAt?.toISOString() ?? null,
     gtin: p.gtin,
     mpn: p.mpn,
     googleProductCategory: p.googleProductCategory,
@@ -760,7 +862,21 @@ export async function getAdminProductById(id: string): Promise<AdminProductDetai
       url: img.url,
       thumbUrl: img.thumbUrl,
       mediumUrl: img.mediumUrl,
+      avifUrl: img.avifUrl,
+      jpegUrl: img.jpegUrl,
+      responsiveVariants:
+        img.responsiveVariants &&
+        typeof img.responsiveVariants === "object" &&
+        !Array.isArray(img.responsiveVariants)
+          ? (img.responsiveVariants as Record<string, unknown>)
+          : null,
       altText: img.altText,
+      viewType: img.viewType,
+      title: img.title,
+      caption: img.caption,
+      creditText: img.creditText,
+      copyrightNotice: img.copyrightNotice,
+      licenseUrl: img.licenseUrl,
       width: img.width,
       height: img.height,
       focalX: img.focalX,
@@ -778,7 +894,8 @@ export async function getAdminProductById(id: string): Promise<AdminProductDetai
   };
 }
 
-export async function upsertProduct(rawInput: ProductUpsertInput, actorId: string | null) {
+export async function upsertProduct(unsafeInput: ProductUpsertInput, actorId: string | null) {
+  const rawInput = productUpsertSchema.parse(unsafeInput);
   const slug = slugify(rawInput.slug || rawInput.name);
   if (!slug) {
     throw new ValidationError("Unable to derive a valid product slug.", {
@@ -854,9 +971,19 @@ export async function upsertProduct(rawInput: ProductUpsertInput, actorId: strin
         leadTimeDays: typeof rawInput.leadTimeDays === "number" ? rawInput.leadTimeDays : null,
         seoTitle: rawInput.seoTitle ?? null,
         seoDescription: rawInput.seoDescription ?? null,
+        seoKeywords: rawInput.seoKeywords ?? null,
+        seoFaqs:
+          rawInput.seoFaqs && rawInput.seoFaqs.length > 0
+            ? (rawInput.seoFaqs as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+        ogTitle: rawInput.ogTitle ?? null,
+        ogDescription: rawInput.ogDescription ?? null,
         ogImageUrl: rawInput.ogImageUrl ?? null,
         canonicalOverride: rawInput.canonicalOverride ?? null,
         noindex: rawInput.noindex ?? false,
+        warrantyText: rawInput.warrantyText ?? null,
+        salePriceStartAt: rawInput.salePriceStartAt ? new Date(rawInput.salePriceStartAt) : null,
+        salePriceEndAt: rawInput.salePriceEndAt ? new Date(rawInput.salePriceEndAt) : null,
         gtin: rawInput.gtin ?? null,
         mpn: rawInput.mpn ?? null,
         googleProductCategory: rawInput.googleProductCategory ?? null,
@@ -917,7 +1044,18 @@ export async function upsertProduct(rawInput: ProductUpsertInput, actorId: strin
               url: img.url,
               thumbUrl: img.thumbUrl ?? null,
               mediumUrl: img.mediumUrl ?? null,
+              avifUrl: img.avifUrl ?? null,
+              jpegUrl: img.jpegUrl ?? null,
+              responsiveVariants: img.responsiveVariants
+                ? (img.responsiveVariants as unknown as Prisma.InputJsonValue)
+                : Prisma.JsonNull,
               altText: img.altText,
+              viewType: img.viewType ?? "front",
+              title: img.title ?? null,
+              caption: img.caption ?? null,
+              creditText: img.creditText ?? null,
+              copyrightNotice: img.copyrightNotice ?? null,
+              licenseUrl: img.licenseUrl ?? null,
               width: img.width ?? 1200,
               height: img.height ?? 1200,
               focalX: img.focalX ?? null,
@@ -1028,7 +1166,18 @@ export async function upsertProduct(rawInput: ProductUpsertInput, actorId: strin
               url: img.url,
               thumbUrl: img.thumbUrl ?? null,
               mediumUrl: img.mediumUrl ?? null,
+              avifUrl: img.avifUrl ?? null,
+              jpegUrl: img.jpegUrl ?? null,
+              responsiveVariants: img.responsiveVariants
+                ? (img.responsiveVariants as unknown as Prisma.InputJsonValue)
+                : Prisma.JsonNull,
               altText: img.altText,
+              viewType: img.viewType ?? "front",
+              title: img.title ?? null,
+              caption: img.caption ?? null,
+              creditText: img.creditText ?? null,
+              copyrightNotice: img.copyrightNotice ?? null,
+              licenseUrl: img.licenseUrl ?? null,
               width: img.width ?? 1200,
               height: img.height ?? 1200,
               focalX: img.focalX ?? null,
@@ -1108,6 +1257,259 @@ export async function softDeleteProduct(id: string) {
   return { id, slug: existing.slug };
 }
 
+export const archiveProduct = softDeleteProduct;
+
+/**
+ * Permanently deletes a product ONLY when no historical order line items exist.
+ * Also removes its own image assets from object/local storage.
+ */
+export async function deleteProduct(id: string) {
+  const existing = await db.product.findUnique({
+    where: { id },
+    include: {
+      images: {
+        select: { id: true, storageKey: true, url: true, mediumUrl: true, thumbUrl: true },
+      },
+      variants: { select: { id: true } },
+    },
+  });
+
+  if (!existing) {
+    throw new NotFoundError("Product not found.");
+  }
+
+  const variantIds = existing.variants.map((v) => v.id);
+  const orderItemCount = await db.orderItem.count({
+    where: {
+      OR: [
+        { productId: existing.id },
+        ...(variantIds.length > 0 ? [{ variantId: { in: variantIds } }] : []),
+      ],
+    },
+  });
+
+  if (orderItemCount > 0) {
+    throw new ConflictError(
+      "This piece has historical orders and cannot be permanently deleted. Use Archive instead to remove it from the storefront while preserving order and accounting records.",
+    );
+  }
+
+  await db.$transaction(async (tx) => {
+    await tx.slugRedirect.deleteMany({
+      where: {
+        entityType: "product",
+        OR: [{ oldSlug: existing.slug }, { newSlug: existing.slug }],
+      },
+    });
+    await tx.product.delete({ where: { id: existing.id } });
+  });
+
+  await deleteImageAssets(existing.images);
+
+  return { id: existing.id, slug: existing.slug };
+}
+
+async function resolveUniqueCopySlug(baseSlug: string): Promise<string> {
+  const stripped = baseSlug.replace(/-copy(?:-\d+)?$/, "");
+  for (let i = 1; i <= 50; i += 1) {
+    const candidate = i === 1 ? `${stripped}-copy` : `${stripped}-copy-${i}`;
+    const [existingProd, existingRedir] = await Promise.all([
+      db.product.findUnique({ where: { slug: candidate }, select: { id: true } }),
+      db.slugRedirect.findUnique({
+        where: { entityType_oldSlug: { entityType: "product", oldSlug: candidate } },
+        select: { id: true },
+      }),
+    ]);
+    if (!existingProd && !existingRedir) return candidate;
+  }
+  return `${stripped}-copy-${Date.now().toString(36)}`;
+}
+
+async function resolveUniqueCopySku(baseSku: string, usedSkus: Set<string>): Promise<string> {
+  const clean = baseSku.replace(/-COPY(?:-\d+)?$/i, "");
+  for (let i = 1; i <= 50; i += 1) {
+    const candidate = i === 1 ? `${clean}-COPY` : `${clean}-COPY-${i}`;
+    if (usedSkus.has(candidate.toUpperCase())) continue;
+    const [prodMatch, varMatch] = await Promise.all([
+      db.product.findUnique({ where: { sku: candidate }, select: { id: true } }),
+      db.productVariant.findUnique({ where: { sku: candidate }, select: { id: true } }),
+    ]);
+    if (!prodMatch && !varMatch) {
+      usedSkus.add(candidate.toUpperCase());
+      return candidate;
+    }
+  }
+  const fallback = `${clean}-COPY-${Date.now().toString(36).toUpperCase()}`;
+  usedSkus.add(fallback.toUpperCase());
+  return fallback;
+}
+
+/**
+ * Duplicates a product into a DRAFT copy with unique SKU/slug, facets, diamond specs,
+ * SEO metadata, variants, and independently copied image storage objects.
+ */
+export async function duplicateProduct(id: string, actorId: string | null) {
+  const source = await db.product.findFirst({
+    where: { id, deletedAt: null },
+    include: {
+      images: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
+      variants: { orderBy: { sortOrder: "asc" } },
+      facetValues: true,
+    },
+  });
+
+  if (!source) {
+    throw new NotFoundError("Product not found.");
+  }
+
+  const usedSkus = new Set<string>();
+  const newSlug = await resolveUniqueCopySlug(source.slug);
+  const newSku = await resolveUniqueCopySku(source.sku, usedSkus);
+  const newVariantSkus = await Promise.all(
+    source.variants.map((v) => resolveUniqueCopySku(v.sku, usedSkus)),
+  );
+
+  // Copy image objects on storage outside the DB transaction so failures don't lock rows
+  const copiedImages = await Promise.all(
+    source.images.map(async (img) => {
+      const cloned = await copyImageAsset({
+        storageKey: img.storageKey,
+        url: img.url,
+        mediumUrl: img.mediumUrl,
+        thumbUrl: img.thumbUrl,
+        folder: "products",
+        width: img.width,
+        height: img.height,
+      });
+      return {
+        ...cloned,
+        altText: img.altText,
+        focalX: img.focalX,
+        focalY: img.focalY,
+        isPrimary: img.isPrimary,
+        sortOrder: img.sortOrder,
+      };
+    }),
+  );
+
+  const primaryCopiedImage = copiedImages.find((img) => img.isPrimary) ?? copiedImages[0] ?? null;
+
+  const created = await db.$transaction(async (tx) => {
+    const copy = await tx.product.create({
+      data: {
+        sku: newSku,
+        name: `${source.name} (Copy)`,
+        slug: newSlug,
+        status: "DRAFT",
+        categoryId: source.categoryId,
+        subtitle: source.subtitle,
+        description: source.description,
+        priceMode: source.priceMode,
+        basePrice: source.basePrice,
+        compareAtPrice: source.compareAtPrice,
+        costPrice: source.costPrice,
+        metalType: source.metalType,
+        metalColor: source.metalColor,
+        metalPurity: source.metalPurity,
+        metalWeightGrams: source.metalWeightGrams,
+        stoneOrigin: source.stoneOrigin,
+        stoneShape: source.stoneShape,
+        caratTotal: source.caratTotal,
+        caratCenter: source.caratCenter,
+        colorGrade: source.colorGrade,
+        clarityGrade: source.clarityGrade,
+        cutGrade: source.cutGrade,
+        polishGrade: source.polishGrade,
+        symmetryGrade: source.symmetryGrade,
+        fluorescence: source.fluorescence,
+        certificationLab: source.certificationLab,
+        certificateNumber: source.certificateNumber,
+        certificateUrl: source.certificateUrl,
+        isFeatured: false,
+        isNewArrival: false,
+        isBestseller: false,
+        hasSizing: source.hasSizing,
+        leadTimeDays: source.leadTimeDays,
+        seoTitle: source.seoTitle,
+        seoDescription: source.seoDescription,
+        ogImageUrl: primaryCopiedImage ? primaryCopiedImage.url : source.ogImageUrl,
+        canonicalOverride: null,
+        noindex: source.noindex,
+        gtin: source.gtin,
+        mpn: source.mpn,
+        googleProductCategory: source.googleProductCategory,
+        images: {
+          create: copiedImages.map((img, idx) => ({
+            storageKey: img.storageKey,
+            url: img.url,
+            mediumUrl: img.mediumUrl,
+            thumbUrl: img.thumbUrl,
+            altText: img.altText,
+            width: img.width,
+            height: img.height,
+            focalX: img.focalX,
+            focalY: img.focalY,
+            isPrimary: img.isPrimary,
+            sortOrder: idx,
+          })),
+        },
+        facetValues: {
+          create: source.facetValues.map((fv) => ({
+            facetId: fv.facetId,
+            optionId: fv.optionId,
+            valueText: fv.valueText,
+            valueNumber: fv.valueNumber,
+            valueBoolean: fv.valueBoolean,
+          })),
+        },
+      },
+    });
+
+    for (let i = 0; i < source.variants.length; i += 1) {
+      const v = source.variants[i]!;
+      const variantSku = newVariantSkus[i]!;
+      const createdVariant = await tx.productVariant.create({
+        data: {
+          productId: copy.id,
+          sku: variantSku,
+          title: v.title,
+          size: v.size,
+          metal: v.metal,
+          stoneSpec: v.stoneSpec,
+          priceOverride: v.priceOverride,
+          compareAtOverride: v.compareAtOverride,
+          stockQty: v.stockQty,
+          reservedQty: 0,
+          lowStockThreshold: v.lowStockThreshold,
+          isDefault: v.isDefault,
+          isActive: v.isActive,
+          sortOrder: v.sortOrder,
+          weightGrams: v.weightGrams,
+        },
+      });
+
+      if (v.stockQty > 0) {
+        await tx.inventoryTransaction.create({
+          data: {
+            variantId: createdVariant.id,
+            reason: "INITIAL",
+            delta: v.stockQty,
+            balanceAfter: v.stockQty,
+            referenceType: "PRODUCT_DUPLICATE",
+            referenceId: copy.id,
+            note: `Initial stock copied from ${source.sku}`,
+            actorId,
+          },
+        });
+      }
+    }
+
+    return copy;
+  });
+
+  return { id: created.id, slug: created.slug, name: created.name, sku: created.sku };
+}
+
 export async function listAdminInventory(params: {
   search?: string;
   onlyLowStock?: boolean;
@@ -1117,6 +1519,75 @@ export async function listAdminInventory(params: {
   const page = Math.max(1, params.page ?? 1);
   const pageSize = Math.min(50, Math.max(10, params.pageSize ?? 25));
   const search = params.search?.trim();
+
+  if (params.onlyLowStock) {
+    const searchClause = search
+      ? Prisma.sql`AND (
+          v."sku" ILIKE ${`%${search}%`}
+          OR v."title" ILIKE ${`%${search}%`}
+          OR p."name" ILIKE ${`%${search}%`}
+        )`
+      : Prisma.empty;
+
+    const rows = await db.$queryRaw<
+      Array<{
+        id: string;
+        productId: string;
+        productName: string;
+        productSlug: string;
+        productStatus: ProductStatus;
+        sku: string;
+        title: string;
+        stockQty: number;
+        reservedQty: number;
+        lowStockThreshold: number;
+        isActive: boolean;
+        totalCount: number;
+      }>
+    >(Prisma.sql`
+      SELECT
+        v."id",
+        p."id" AS "productId",
+        p."name" AS "productName",
+        p."slug" AS "productSlug",
+        p."status" AS "productStatus",
+        v."sku",
+        v."title",
+        v."stockQty"::int,
+        v."reservedQty"::int,
+        v."lowStockThreshold"::int,
+        v."isActive",
+        COUNT(*) OVER()::int AS "totalCount"
+      FROM "ProductVariant" v
+      INNER JOIN "Product" p ON p."id" = v."productId"
+      WHERE p."deletedAt" IS NULL
+        AND (v."stockQty" - v."reservedQty") <= v."lowStockThreshold"
+        ${searchClause}
+      ORDER BY v."stockQty" ASC, p."name" ASC, v."sortOrder" ASC
+      LIMIT ${pageSize}
+      OFFSET ${(page - 1) * pageSize}
+    `);
+
+    const total = Number(rows[0]?.totalCount ?? 0);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const items: AdminInventoryRowDTO[] = rows.map((v) => ({
+      id: v.id,
+      productId: v.productId,
+      productName: v.productName,
+      productSlug: v.productSlug,
+      productStatus: v.productStatus,
+      sku: v.sku,
+      title: v.title,
+      stockQty: v.stockQty,
+      reservedQty: v.reservedQty,
+      availableQty: v.stockQty - v.reservedQty,
+      lowStockThreshold: v.lowStockThreshold,
+      isLowStock: true,
+      isActive: v.isActive,
+    }));
+
+    return { items, total, page, pageSize, totalPages };
+  }
 
   const where: Prisma.ProductVariantWhereInput = {
     product: { deletedAt: null },
@@ -1131,45 +1602,51 @@ export async function listAdminInventory(params: {
       : {}),
   };
 
-  const rows = await db.productVariant.findMany({
-    where,
-    include: {
-      product: { select: { id: true, name: true, slug: true, status: true } },
-    },
-    orderBy: [{ stockQty: "asc" }, { product: { name: "asc" } }, { sortOrder: "asc" }],
+  const [total, rows] = await Promise.all([
+    db.productVariant.count({ where }),
+    db.productVariant.findMany({
+      where,
+      select: {
+        id: true,
+        sku: true,
+        title: true,
+        stockQty: true,
+        reservedQty: true,
+        lowStockThreshold: true,
+        isActive: true,
+        product: { select: { id: true, name: true, slug: true, status: true } },
+      },
+      orderBy: [{ stockQty: "asc" }, { product: { name: "asc" } }, { sortOrder: "asc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+
+  const items: AdminInventoryRowDTO[] = rows.map((v) => {
+    const availableQty = v.stockQty - v.reservedQty;
+    return {
+      id: v.id,
+      productId: v.product.id,
+      productName: v.product.name,
+      productSlug: v.product.slug,
+      productStatus: v.product.status,
+      sku: v.sku,
+      title: v.title,
+      stockQty: v.stockQty,
+      reservedQty: v.reservedQty,
+      availableQty,
+      lowStockThreshold: v.lowStockThreshold,
+      isLowStock: availableQty <= v.lowStockThreshold,
+      isActive: v.isActive,
+    };
   });
 
-  const mapped: AdminInventoryRowDTO[] = rows
-    .map((v) => {
-      const availableQty = v.stockQty - v.reservedQty;
-      return {
-        id: v.id,
-        productId: v.product.id,
-        productName: v.product.name,
-        productSlug: v.product.slug,
-        productStatus: v.product.status,
-        sku: v.sku,
-        title: v.title,
-        stockQty: v.stockQty,
-        reservedQty: v.reservedQty,
-        availableQty,
-        lowStockThreshold: v.lowStockThreshold,
-        isLowStock: availableQty <= v.lowStockThreshold,
-        isActive: v.isActive,
-      };
-    })
-    .filter((row) => (params.onlyLowStock ? row.isLowStock : true));
-
-  const total = mapped.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const start = (page - 1) * pageSize;
-
   return {
-    items: mapped.slice(start, start + pageSize),
+    items,
     total,
     page,
     pageSize,
-    totalPages,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
   };
 }
 

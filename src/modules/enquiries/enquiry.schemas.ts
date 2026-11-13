@@ -31,7 +31,9 @@ export const createEnquirySchema = z
       .nullable()
       .optional()
       .transform((val) => (val && val.length > 0 ? val : null)),
-    website: z.string().max(0, "Spam filter triggered.").optional().default(""),
+    website: z.string().optional().default(""),
+    timingToken: z.string().trim().max(200).optional().default(""),
+    turnstileToken: z.string().trim().max(4096).optional().default(""),
   })
   .strict();
 
