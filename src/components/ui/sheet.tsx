@@ -15,7 +15,11 @@ import {
   sheetBottomVariants,
   useReducedMotionSafe,
 } from "@/lib/motion";
-import { keepOpenOnKeyboardEscape, useModalHistory } from "@/hooks/use-modal-history";
+import {
+  focusPanelOnTouch,
+  keepOpenOnKeyboardEscape,
+  useModalHistory,
+} from "@/hooks/use-modal-history";
 import { cn } from "@/lib/utils";
 
 interface SheetContextValue {
@@ -103,6 +107,7 @@ export function SheetContent({
   className,
   children,
   onEscapeKeyDown,
+  onOpenAutoFocus,
   ...props
 }: SheetContentProps) {
   const ui = useUiText();
@@ -187,6 +192,10 @@ export function SheetContent({
             <RadixDialog.Content
               forceMount
               asChild
+              onOpenAutoFocus={(event) => {
+                if (onOpenAutoFocus) onOpenAutoFocus(event);
+                else focusPanelOnTouch(event);
+              }}
               onEscapeKeyDown={(event) => {
                 keepOpenOnKeyboardEscape(event);
                 onEscapeKeyDown?.(event);

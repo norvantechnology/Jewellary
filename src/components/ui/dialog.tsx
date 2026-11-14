@@ -5,7 +5,11 @@ import { useUiText } from "@/components/providers/UiTextProvider";
 import * as React from "react";
 import { X } from "lucide-react";
 import { Dialog as RadixDialog } from "radix-ui";
-import { keepOpenOnKeyboardEscape, useModalHistory } from "@/hooks/use-modal-history";
+import {
+  focusPanelOnTouch,
+  keepOpenOnKeyboardEscape,
+  useModalHistory,
+} from "@/hooks/use-modal-history";
 import { cn } from "@/lib/utils";
 
 /** Radix Dialog root + native-like Back button handling (see useModalHistory). */
@@ -51,6 +55,7 @@ export function DialogContent({
   children,
   hideClose = false,
   onEscapeKeyDown,
+  onOpenAutoFocus,
   ...props
 }: React.ComponentProps<typeof RadixDialog.Content> & { hideClose?: boolean }) {
   const ui = useUiText();
@@ -62,6 +67,10 @@ export function DialogContent({
           "ma-dialog fixed right-0 bottom-0 left-0 z-[var(--z-modal)] grid max-h-[90dvh] w-full gap-4 overflow-y-auto rounded-t-[18px] border border-border bg-popover p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] text-popover-foreground shadow-md sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-[calc(100%-2rem)] sm:max-w-[540px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg sm:p-6",
           className,
         )}
+        onOpenAutoFocus={(event) => {
+          if (onOpenAutoFocus) onOpenAutoFocus(event);
+          else focusPanelOnTouch(event);
+        }}
         onEscapeKeyDown={(event) => {
           keepOpenOnKeyboardEscape(event);
           onEscapeKeyDown?.(event);

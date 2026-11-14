@@ -66,7 +66,8 @@ export function CurrencySwitcher({
   );
 
   React.useEffect(() => {
-    if (!open) return;
+    // Touch screens: keep the keyboard closed so the list stays tappable.
+    if (!open || window.matchMedia("(pointer: coarse)").matches) return;
     const timer = window.setTimeout(() => {
       searchInputRef.current?.focus();
     }, 20);
@@ -280,6 +281,10 @@ export function CurrencySwitcher({
         role="dialog"
         aria-label={ui.layout.currencyLabel}
         className="z-[var(--z-modal)] w-[min(18rem,calc(100vw-2rem))] overflow-hidden p-0"
+        onOpenAutoFocus={(event) => {
+          // Touch screens: keep the keyboard closed so the currency list stays tappable.
+          if (window.matchMedia("(pointer: coarse)").matches) event.preventDefault();
+        }}
       >
         {listboxPanel}
       </PopoverContent>

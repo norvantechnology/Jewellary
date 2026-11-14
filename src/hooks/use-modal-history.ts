@@ -136,3 +136,14 @@ export function keepOpenOnKeyboardEscape(event: KeyboardEvent) {
     (document.activeElement as HTMLElement).blur();
   }
 }
+
+/**
+ * Touch screens: don't auto-focus a text field when a dialog/sheet opens (the keyboard would
+ * cover the content). Focus the panel itself instead, so screen readers still land inside it.
+ */
+export function focusPanelOnTouch(event: Event) {
+  if (typeof window === "undefined" || !window.matchMedia("(pointer: coarse)").matches) return;
+  event.preventDefault();
+  const panel = event.currentTarget as HTMLElement | null;
+  panel?.focus({ preventScroll: true });
+}

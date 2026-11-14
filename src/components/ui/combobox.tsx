@@ -76,6 +76,11 @@ export function Combobox({
         portalled={!inModal}
         className="z-[var(--z-modal)] w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] min-w-[min(16rem,calc(100vw-2rem))] overflow-hidden p-0"
         align="start"
+        onOpenAutoFocus={(event) => {
+          // Touch screens: don't focus the search box (it would pop the keyboard over the list).
+          // People can still tap it to search; mouse/keyboard users keep type-to-search.
+          if (window.matchMedia("(pointer: coarse)").matches) event.preventDefault();
+        }}
       >
         <Command className="bg-popover text-popover-foreground">
           <div className="flex items-center border-b border-border bg-surface-2/60 px-3 transition-colors focus-within:border-accent">
