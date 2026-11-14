@@ -1548,6 +1548,7 @@
       "toasts": {
         "_comment": "Pop-up messages during checkout.",
         "orderReserved": "Order {orderNumber} created — your pieces are on hold.",
+        "fixFields": "Please complete the highlighted fields to continue.",
         "newSession": "Ready to try payment again.",
         "paymentSettled": "Payment received for {orderNumber}.",
         "declined": "Your card was declined. Please try another card.",

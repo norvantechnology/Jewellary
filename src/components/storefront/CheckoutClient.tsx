@@ -365,7 +365,17 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
           (prev?.orderNumber === res.data.orderNumber ? prev.guestToken : null),
       }));
       void notifySuccess(fill(t.toasts.orderReserved, { orderNumber: res.data.orderNumber }));
-    })(event);
+    }, onInvalidCheckout)(event);
+
+  // A missing or invalid field must never look like "nothing happened": say so and jump to it.
+  function onInvalidCheckout() {
+    void notifyError(t.toasts.fixFields);
+    window.requestAnimationFrame(() => {
+      const field = document.querySelector<HTMLElement>('#checkout-form [aria-invalid="true"]');
+      field?.scrollIntoView({ behavior: "smooth", block: "center" });
+      field?.focus({ preventScroll: true });
+    });
+  }
 
   async function handleRetryOrderPayment() {
     if (!createdOrder || sandboxBusy) return;
