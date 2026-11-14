@@ -101,7 +101,7 @@ export default async function HomePage() {
                 className="ma-hero-aura pointer-events-none absolute -inset-4 rounded-3xl"
                 aria-hidden="true"
               />
-              <div className="ma-hero-parallax ma-media-placeholder relative aspect-[16/10] w-full overflow-hidden rounded-xl border border-border shadow-sm sm:aspect-[4/3] lg:aspect-square lg:rounded-2xl">
+              <div className="ma-hero-parallax ma-media-placeholder relative mx-auto aspect-square w-full max-w-[560px] overflow-hidden rounded-xl border border-border shadow-sm lg:max-w-none lg:rounded-2xl">
                 <Float amplitude={8} duration={7} rotate={1.5} className="relative size-full">
                   {heroBanner?.imageUrl ? (
                     <Image
@@ -109,7 +109,7 @@ export default async function HomePage() {
                       alt={heroBanner.altText ?? heroBanner.title}
                       fill
                       preload
-                      sizes="(max-width: 1024px) 100vw, 42vw"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 560px, 42vw"
                       className="ma-hero-media scale-[1.04] object-cover object-center dark:brightness-90"
                     />
                   ) : (

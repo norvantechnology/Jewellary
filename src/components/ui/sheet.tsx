@@ -152,13 +152,27 @@ export function SheetContent({
             : fadeInVariants;
 
   const isHorizontal = side === "left" || side === "right";
-  const dragAxis = reducedMotion
-    ? false
-    : isHorizontal && enableHorizontalDrag
-      ? ("x" as const)
-      : side === "bottom"
-        ? ("y" as const)
-        : false;
+  // Bottom sheets drag from their handle only. Side sheets don't use drag at all: dragging the
+  // whole panel turned slightly-moving finger taps into drags, cancelling taps on links,
+  // options and buttons. They close on a clear horizontal swipe instead (see swipe handlers).
+  const dragAxis = reducedMotion ? false : side === "bottom" ? ("y" as const) : false;
+  const swipeToClose = isHorizontal && enableHorizontalDrag && !reducedMotion;
+  const swipeStart = React.useRef<{ x: number; y: number; t: number } | null>(null);
+  const onSwipeStart = (e: React.PointerEvent) => {
+    if (!swipeToClose || e.pointerType === "mouse") return;
+    swipeStart.current = { x: e.clientX, y: e.clientY, t: performance.now() };
+  };
+  const onSwipeEnd = (e: React.PointerEvent) => {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    const fast = Math.abs(dx) / Math.max(1, performance.now() - start.t) > 0.5;
+    const horizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
+    const outward = side === "left" ? dx < 0 : dx > 0;
+    if (horizontal && outward && (Math.abs(dx) > 70 || (fast && Math.abs(dx) > 30))) onClose();
+  };
 
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (side === "left" && (info.offset.x < -72 || info.velocity.x < -280)) {
@@ -209,8 +223,13 @@ export function SheetContent({
                 animate="visible"
                 exit="exit"
                 drag={dragAxis}
-                dragListener={isHorizontal}
+                dragListener={false}
                 dragControls={side === "bottom" ? dragControls : undefined}
+                onPointerDown={swipeToClose ? onSwipeStart : undefined}
+                onPointerUp={swipeToClose ? onSwipeEnd : undefined}
+                onPointerCancel={() => {
+                  swipeStart.current = null;
+                }}
                 dragDirectionLock
                 dragElastic={isHorizontal ? 0.08 : { top: 0, bottom: 0.2 }}
                 dragMomentum={false}

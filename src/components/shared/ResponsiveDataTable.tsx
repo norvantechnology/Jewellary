@@ -43,7 +43,7 @@ export function ResponsiveDataTable<T>({
   return (
     <div className={cn("w-full", className)}>
       {/* Desktop & tablet table */}
-      <div className="hidden overflow-x-auto rounded-lg border border-border bg-card shadow-sm md:block">
+      <div className="hidden overflow-x-auto rounded-lg border border-border bg-card shadow-sm xl:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -69,7 +69,7 @@ export function ResponsiveDataTable<T>({
       </div>
 
       {/* Mobile card list (UX-30 / AD-01) */}
-      <div className="grid gap-3 md:hidden">
+      <div className="grid gap-3 md:grid-cols-2 xl:hidden">
         {data.map((item) => (
           <div
             key={keyExtractor(item)}

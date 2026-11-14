@@ -711,7 +711,7 @@ export function ProductEditor({
             {form.id ? form.name || "Edit Product" : "New product"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Edit pricing, stone details, variants, photos, collection facets, and SERP metadata.
+            Edit pricing, stone details, sizes, photos, filters and SEO.
           </p>
         </div>
 
@@ -776,7 +776,7 @@ export function ProductEditor({
         <TabsList className="w-full justify-start">
           <TabsTrigger value="overview">1. Overview</TabsTrigger>
           <TabsTrigger value="pricing">2. Pricing</TabsTrigger>
-          <TabsTrigger value="specs">3. Metal &amp; 4Cs</TabsTrigger>
+          <TabsTrigger value="specs">3. Metal &amp; stone</TabsTrigger>
           <TabsTrigger value="variants">4. Variants ({form.variants.length})</TabsTrigger>
           <TabsTrigger value="media">5. Media ({form.images.length})</TabsTrigger>
           <TabsTrigger value="facets">6. Facets</TabsTrigger>
@@ -788,7 +788,7 @@ export function ProductEditor({
         <TabsContent value="overview">
           <Card>
             <CardHeader>
-              <h2 className="font-display text-xl font-medium">Piece Overview</h2>
+              <h2 className="font-display text-xl font-medium">Overview</h2>
               <CardDescription>
                 Core identity, category assignment, URL slug, and storefront merchandising badges.
               </CardDescription>
@@ -886,13 +886,13 @@ export function ProductEditor({
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="sm:col-span-2">
-                  <FormField id="prod-subtitle" label="Editorial Subtitle">
+                  <FormField id="prod-subtitle" label="Subtitle">
                     {(aria) => (
                       <Input
                         {...aria}
                         value={form.subtitle}
                         onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))}
-                        placeholder="1.5ct Oval GIA E/VVS2 · Hand-forged Gallery"
+                        placeholder="e.g. 2 ct oval moissanite, hidden halo"
                       />
                     )}
                   </FormField>
@@ -1059,8 +1059,7 @@ export function ProductEditor({
             <CardHeader>
               <h2 className="font-display text-xl font-medium">Metal &amp; stone details</h2>
               <CardDescription>
-                Details shown on the product page, in Google Shopping and adaptive 4Cs collection
-                filters.
+                Details shown on the product page, in Google Shopping and collection filters.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
