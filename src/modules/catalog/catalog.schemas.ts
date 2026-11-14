@@ -296,3 +296,23 @@ export type CategoryUpsertInput = z.input<typeof categoryUpsertSchema>;
 export type FacetUpsertInput = z.infer<typeof facetUpsertSchema>;
 export type ProductUpsertInput = z.input<typeof productUpsertSchema>;
 export type AdjustStockInput = z.infer<typeof adjustStockSchema>;
+
+export const bulkPriceSchema = z
+  .object({
+    productIds: z.array(z.string().min(1).max(64)).max(5000).optional(),
+    filter: z
+      .object({
+        search: z.string().trim().max(200).optional(),
+        status: z.enum(["ALL", "ACTIVE", "DRAFT", "ARCHIVED"]).optional(),
+        categoryId: z.string().trim().max(64).optional(),
+      })
+      .strict()
+      .optional(),
+    percent: z.number().gt(-90).max(500),
+    rounding: z.enum(["cents", "whole", "ninety-nine"]),
+    includeCompareAt: z.boolean(),
+  })
+  .strict()
+  .refine((v) => (v.productIds?.length ?? 0) > 0 || v.filter, {
+    message: "Select at least one product.",
+  });

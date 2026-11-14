@@ -9,7 +9,7 @@ import { listAdminEnquiries } from "@/modules/enquiries/enquiry.service";
 import { requirePermission } from "@/server/dal";
 
 export const metadata: Metadata = {
-  title: "Enquiries",
+  title: "Inquiries",
 };
 
 const ENQUIRY_FILTER_OPTIONS: Array<EnquiryStatus | "ALL"> = [
@@ -47,10 +47,10 @@ export default async function AdminEnquiriesPage({
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-editorial-label text-accent-text">Bespoke Concierge</p>
-        <h1 className="mt-1 font-display text-3xl font-medium text-foreground">Client Enquiries</h1>
+        <p className="text-editorial-label text-accent-text">Customer care</p>
+        <h1 className="mt-1 font-display text-3xl font-medium text-foreground">Inquiries</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {data.openCount} active enquiries requiring studio attention · {data.total} total shown.
+          {data.openCount} open inquiries need a reply · {data.total} total shown.
         </p>
       </div>
 
@@ -63,12 +63,12 @@ export default async function AdminEnquiriesPage({
           <Input
             name="q"
             defaultValue={q}
-            placeholder="Search client name, email, or enquiry text..."
-            aria-label="Search enquiries"
+            placeholder="Search name, email or message..."
+            aria-label="Search inquiries"
           />
         </div>
         <div className="sm:col-span-3">
-          <NativeSelect name="status" defaultValue={status} aria-label="Filter enquiries by status">
+          <NativeSelect name="status" defaultValue={status} aria-label="Filter inquiries by status">
             <option value="ALL">All Statuses</option>
             <option value="NEW">New</option>
             <option value="IN_PROGRESS">In Progress</option>

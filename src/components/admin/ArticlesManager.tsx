@@ -58,10 +58,10 @@ const emptyArticle = (): ArticleFormState => ({
   title: "",
   slug: "",
   excerpt: "",
-  bodyMarkdown: "## Craftsmanship & Care\n\nWrite your jewellery education guide in Markdown.",
+  bodyMarkdown: "## Craftsmanship & Care\n\nWrite your jewelry guide in Markdown.",
   coverImageUrl: "",
   coverAltText: "",
-  authorName: "Atelier Editorial Team",
+  authorName: "Maison Aurelia Team",
   authorJobTitle: "Senior Gemologist",
   authorCredentials: "GIA Graduate Gemologist (GG)",
   authorBio: "",
@@ -272,7 +272,7 @@ export function ArticlesManager({ articles }: { articles: ArticleDTO[] }) {
           <EmptyState
             icon={FileText}
             title="No Guides Written"
-            description="Create diamond education and jewellery care guides to build buyer trust."
+            description="Create buying and jewelry care guides to build buyer trust."
             actionLabel="Write Guide"
             onAction={openNew}
           />

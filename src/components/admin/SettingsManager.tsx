@@ -432,7 +432,7 @@ export function SettingsManager({
               <CardHeader>
                 <h2 className="font-display text-xl font-medium">Brand Identity &amp; Banner</h2>
                 <CardDescription>
-                  Updates header wordmark, concierge contact channels, and announcement bar copy.
+                  Store name, contact details and announcement bar text.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -459,7 +459,7 @@ export function SettingsManager({
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <FormField id="set-email" label="Concierge Email" required>
+                  <FormField id="set-email" label="Contact email" required>
                     {(aria) => (
                       <Input
                         {...aria}
@@ -470,7 +470,7 @@ export function SettingsManager({
                       />
                     )}
                   </FormField>
-                  <FormField id="set-phone" label="Concierge Phone">
+                  <FormField id="set-phone" label="Contact phone">
                     {(aria) => (
                       <Input
                         {...aria}
@@ -851,7 +851,7 @@ export function SettingsManager({
                       {...aria}
                       value={seoDefaultTitlePattern}
                       onChange={(e) => setSeoDefaultTitlePattern(e.target.value)}
-                      placeholder={`%s | ${storeName || "Atelier Fine Jewellery"}`}
+                      placeholder={`%s | ${storeName || "Your Store"}`}
                     />
                   )}
                 </FormField>

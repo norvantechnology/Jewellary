@@ -80,8 +80,7 @@ export function AdminCustomizationsClient({
             Customization Requests
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Review bespoke commissions, adjust specifications, issue locked quotations, and message
-            collectors.
+            Review custom requests, adjust details, send quotes, and message collectors.
           </p>
         </div>
         <Badge variant="outline" className="text-xs">

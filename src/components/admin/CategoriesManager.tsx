@@ -293,7 +293,7 @@ export function CategoriesManager({
           <EmptyState
             icon={FolderTree}
             title="No Categories Created"
-            description="Organize your fine jewellery catalogue into nested collections."
+            description="Organize your jewelry into categories and subcategories."
             actionLabel="Create Category"
             onAction={openNew}
           />

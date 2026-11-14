@@ -162,7 +162,7 @@ export function AdminCustomizationDetailClient({
       toast.error(res.error.message);
       return;
     }
-    toast.success("Internal atelier note saved.");
+    toast.success("Internal note saved.");
     await refreshFromServer();
   }
 
@@ -246,7 +246,7 @@ export function AdminCustomizationDetailClient({
       toast.error(res.error.message);
       return;
     }
-    toast.success("Bespoke selections updated.");
+    toast.success("Custom selections updated.");
     setEditOpen(false);
     await refreshFromServer();
   }
@@ -332,7 +332,7 @@ export function AdminCustomizationDetailClient({
           {/* Customer & Request Summary */}
           <Card>
             <CardHeader>
-              <h2 className="font-display text-lg font-medium">Collector &amp; Commission Brief</h2>
+              <h2 className="font-display text-lg font-medium">Customer &amp; request details</h2>
             </CardHeader>
             <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
               <div>
@@ -440,7 +440,7 @@ export function AdminCustomizationDetailClient({
           {/* Private Internal Notes */}
           <Card>
             <CardHeader>
-              <h2 className="font-display text-lg font-medium">Internal Atelier Notes (Private)</h2>
+              <h2 className="font-display text-lg font-medium">Internal notes (private)</h2>
               <CardDescription>
                 Never shared with customers; visible strictly to staff and admins.
               </CardDescription>
@@ -451,7 +451,7 @@ export function AdminCustomizationDetailClient({
                 value={internalNote}
                 onChange={(e) => setInternalNote(e.target.value)}
                 placeholder="Sourcing notes, stone vendor availability, goldsmith allocation…"
-                aria-label="Private atelier internal note"
+                aria-label="Private internal note"
               />
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -527,7 +527,7 @@ export function AdminCustomizationDetailClient({
                   conversationId={detail.conversationId}
                   viewerRole="ADMIN"
                   cannedReplies={cannedReplies}
-                  composerPlaceholder="Message collector about this commission…"
+                  composerPlaceholder="Message the customer about this request…"
                 />
               ) : (
                 <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
@@ -543,7 +543,7 @@ export function AdminCustomizationDetailClient({
       <Dialog open={acceptOpen} onOpenChange={setAcceptOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Issue Locked Atelier Quotation</DialogTitle>
+            <DialogTitle>Send quote</DialogTitle>
             <DialogDescription>
               Sets a server-locked price, sends a single-use approval link to {detail.customerEmail}
               , and enables direct bag checkout.
@@ -698,7 +698,7 @@ export function AdminCustomizationDetailClient({
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Adjust Commission Specifications</DialogTitle>
+            <DialogTitle>Edit request details</DialogTitle>
             <DialogDescription>
               Refine specifications agreed with the collector before quoting.
             </DialogDescription>

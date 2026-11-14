@@ -3,8 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Archive, Copy, Edit2, Gem, Plus, Search, Trash2 } from "lucide-react";
+import { Archive, Copy, Edit2, Gem, Percent, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { BulkPriceDialog, type BulkPriceTarget } from "@/components/admin/BulkPriceDialog";
 import { CsvExportLink } from "@/components/admin/CsvExportLink";
 import { ProductDeleteDialog } from "@/components/admin/ProductDeleteDialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
@@ -16,6 +17,7 @@ import {
 } from "@/components/shared/ResponsiveDataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -59,6 +61,49 @@ export function ProductsManager({
   const [archiving, setArchiving] = React.useState(false);
   const [duplicatingId, setDuplicatingId] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<AdminProductListItem | null>(null);
+  // Bulk selection: individual ids, or "every product matching the current filters".
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [allMatching, setAllMatching] = React.useState(false);
+  const [bulkOpen, setBulkOpen] = React.useState(false);
+  const pageIds = items.map((p) => p.id);
+  const pageAllSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const pageSomeSelected = pageIds.some((id) => selected.has(id));
+  const selectedCount = allMatching ? total : selected.size;
+
+  function toggleOne(id: string, on: boolean) {
+    setAllMatching(false);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+  function togglePage(on: boolean) {
+    setAllMatching(false);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of pageIds) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  }
+  function clearSelection() {
+    setSelected(new Set());
+    setAllMatching(false);
+  }
+  const bulkTarget: BulkPriceTarget = allMatching
+    ? {
+        kind: "filter",
+        filter: {
+          search: initialSearch || undefined,
+          status: (initialStatus || "ALL") as "ALL" | "ACTIVE" | "DRAFT" | "ARCHIVED",
+          categoryId: initialCategoryId || undefined,
+        },
+      }
+    : { kind: "ids", productIds: [...selected] };
 
   function buildHref(
     nextPage: number,
@@ -112,6 +157,18 @@ export function ProductsManager({
 
   const columns: ResponsiveColumn<AdminProductListItem>[] = [
     {
+      key: "select",
+      header: "",
+      className: "w-10",
+      cell: (p) => (
+        <Checkbox
+          checked={allMatching || selected.has(p.id)}
+          onCheckedChange={(v) => toggleOne(p.id, v === true)}
+          aria-label={`Select ${p.name}`}
+        />
+      ),
+    },
+    {
       key: "piece",
       header: "Piece",
       cell: (p) => (
@@ -158,13 +215,17 @@ export function ProductsManager({
     },
     {
       key: "stock",
-      header: "Available",
-      cell: (p) => (
-        <div className="flex items-center gap-2">
-          <span className="tabular-nums-price">{p.availableStock}</span>
-          {p.lowStock && <Badge variant="warning">Low</Badge>}
-        </div>
-      ),
+      header: "Stock",
+      cell: (p) =>
+        // Made-to-order products carry effectively unlimited stock (1,000,000 per variant).
+        p.availableStock >= 1_000_000 ? (
+          <Badge variant="info">Made to order</Badge>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="tabular-nums-price">{p.availableStock}</span>
+            {p.lowStock && <Badge variant="warning">Low</Badge>}
+          </div>
+        ),
     },
     {
       key: "status",
@@ -233,12 +294,13 @@ export function ProductsManager({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
         <div>
-          <p className="text-editorial-label text-accent-text">Fine Jewellery Catalogue</p>
+          <p className="text-editorial-label text-accent-text">Catalog</p>
           <h1 className="mt-1 font-display text-3xl font-medium text-foreground">
             Products ({total})
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage pieces, diamond 4Cs dossiers, multi-metal variants, imagery, and SEO metadata.
+            Manage products, prices, sizes, photos and SEO. Select products to change prices in
+            bulk.
           </p>
         </div>
 
@@ -308,6 +370,73 @@ export function ProductsManager({
           </Button>
         </div>
       </form>
+
+      {items.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-card px-4 py-2.5 text-sm">
+          <label className="flex cursor-pointer items-center gap-2.5">
+            <Checkbox
+              checked={
+                allMatching || pageAllSelected ? true : pageSomeSelected ? "indeterminate" : false
+              }
+              onCheckedChange={(v) => togglePage(v === true)}
+              aria-label="Select all products on this page"
+            />
+            <span>Select page ({items.length})</span>
+          </label>
+          {(pageAllSelected || allMatching) && total > items.length && (
+            <button
+              type="button"
+              onClick={() => setAllMatching((v) => !v)}
+              className="cursor-pointer font-medium text-accent-text underline-offset-4 hover:underline"
+            >
+              {allMatching ? "Select only this page" : `Select all ${total} matching products`}
+            </button>
+          )}
+          {selectedCount > 0 && (
+            <span className="text-text-muted">
+              {allMatching
+                ? `All ${total} matching products selected`
+                : `${selectedCount} selected`}
+            </span>
+          )}
+        </div>
+      )}
+
+      {selectedCount > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-[var(--z-sticky,40)] border-t border-border bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg backdrop-blur-md">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
+            <p className="text-sm font-medium">
+              {selectedCount} product{selectedCount === 1 ? "" : "s"} selected
+            </p>
+            <div className="ml-auto flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearSelection}
+                className="gap-1.5"
+              >
+                <X className="size-4" aria-hidden="true" /> Clear
+              </Button>
+              <Button type="button" size="sm" onClick={() => setBulkOpen(true)} className="gap-1.5">
+                <Percent className="size-4" aria-hidden="true" /> Change prices
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <BulkPriceDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        target={bulkTarget}
+        count={selectedCount}
+        currency={currency}
+        onDone={() => {
+          clearSelection();
+          router.refresh();
+        }}
+      />
 
       <ResponsiveDataTable
         data={items}

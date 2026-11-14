@@ -173,7 +173,7 @@ export function AdminOrderDetailClient({
         <div className="space-y-6 lg:col-span-7">
           {/* Items Snapshot */}
           <section className="rounded-md border border-border bg-card p-6">
-            <h2 className="font-display text-2xl font-medium text-foreground">Commission Items</h2>
+            <h2 className="font-display text-2xl font-medium text-foreground">Items</h2>
             <ul className="mt-4 divide-y divide-border">
               {order.items.map((item) => (
                 <li key={item.id} className="flex items-center gap-4 py-3.5">

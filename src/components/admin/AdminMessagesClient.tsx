@@ -261,12 +261,12 @@ export function AdminMessagesClient({
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="font-display text-2xl font-medium tracking-tight text-foreground sm:text-3xl">
-              Concierge Messages
+              Messages
             </h1>
             {totalUnread > 0 ? <Badge>{totalUnread} unread</Badge> : null}
           </div>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Real-time collector conversations, product shares, bespoke reviews, and private notes.
+            Live customer chats, shared products, custom requests and private notes.
           </p>
         </div>
 
@@ -421,7 +421,7 @@ export function AdminMessagesClient({
                       <div className="mt-1.5 flex flex-wrap items-center gap-1">
                         <Badge variant="outline" className="text-[10px]">
                           {conv.contextType === "CUSTOMIZATION_REQUEST"
-                            ? "Bespoke"
+                            ? "Custom"
                             : conv.contextType}
                         </Badge>
                         {conv.unreadCount > 0 ? (
@@ -543,7 +543,7 @@ export function AdminMessagesClient({
                           href={`/admin/customizations/${selectedSummary.customizationRequestId}`}
                           className="mt-1 inline-flex items-center gap-1 text-accent-text hover:underline"
                         >
-                          Open Bespoke Review
+                          Open custom request
                           <ExternalLink className="size-3" />
                         </Link>
                       </div>
@@ -699,9 +699,9 @@ export function AdminMessagesClient({
       <Dialog open={cannedModalOpen} onOpenChange={setCannedModalOpen}>
         <DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Atelier Quick-Reply Templates</DialogTitle>
+            <DialogTitle>Quick-reply templates</DialogTitle>
             <DialogDescription>
-              Saved concierge responses insertable from the sparkles icon in any thread.
+              Saved replies you can insert from the sparkles icon in any chat.
             </DialogDescription>
           </DialogHeader>
 
@@ -719,7 +719,7 @@ export function AdminMessagesClient({
               rows={3}
               value={cannedBody}
               onChange={(e) => setCannedBody(e.target.value)}
-              placeholder="Write reusable concise atelier message…"
+              placeholder="Write a reusable reply…"
               required
             />
             <Button type="submit" size="sm" disabled={savingCanned}>

@@ -1168,7 +1168,7 @@ export function SeoHubManager({
                     <Label>Legal Entity Name</Label>
                     <Input
                       value={globalConfigForm.legalName}
-                      placeholder="Maison Aurelia Fine Jewellery Ltd."
+                      placeholder="Your registered company name"
                       onChange={(e) =>
                         setGlobalConfigForm((c) => ({ ...c, legalName: e.target.value }))
                       }

@@ -197,7 +197,7 @@ export function AdminCustomerDetailClient({
                       {...fp}
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
-                      placeholder="Onboarding atelier advisor..."
+                      placeholder="e.g. Prefers email, ring size 6"
                     />
                   )}
                 </FormField>

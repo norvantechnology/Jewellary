@@ -566,7 +566,7 @@ export function ProductEditor({
             jpegUrl: asset.jpegUrl ?? null,
             responsiveVariants: asset.responsiveVariants ?? null,
             altText: buildAutoProductImageAlt({
-              productName: prev.name || "Fine jewellery piece",
+              productName: prev.name || "Jewelry piece",
               metal: prev.metalType || null,
               carat: prev.caratTotal || null,
               shape: prev.stoneShape || null,
@@ -658,7 +658,7 @@ export function ProductEditor({
   }
 
   const selectedCategoryName =
-    categories.find((c) => c.id === form.categoryId)?.name ?? "Fine Jewellery";
+    categories.find((c) => c.id === form.categoryId)?.name ?? "Fine Jewelry";
   const generatedSeoTitle = finalizeSeoTitle(
     interpolateSeoTemplate(DEFAULT_SEO_TEMPLATES.productTitle, {
       name: form.name || "Untitled Fine Piece",
@@ -673,7 +673,7 @@ export function ProductEditor({
   );
   const generatedSeoDesc = finalizeSeoDescription(
     form.subtitle || form.description || form.name,
-    `${form.certificationLab || "GIA / IGI"} certified fine jewellery crafted by ${siteName}.`,
+    `Handmade jewelry by ${siteName}.`,
   );
 
   const serpTitle = form.seoTitle || generatedSeoTitle;
@@ -708,11 +708,10 @@ export function ProductEditor({
             <span>Back to Products</span>
           </BackLink>
           <h1 className="font-display text-3xl font-medium text-foreground">
-            {form.id ? form.name || "Edit Product" : "New Fine Jewellery Piece"}
+            {form.id ? form.name || "Edit Product" : "New product"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            7-tab studio editor covering pricing, GIA 4Cs dossier, variants, accessible media,
-            collection facets, and SERP metadata.
+            Edit pricing, stone details, variants, photos, collection facets, and SERP metadata.
           </p>
         </div>
 
@@ -979,7 +978,7 @@ export function ProductEditor({
               <h2 className="font-display text-xl font-medium">Pricing &amp; Valuation</h2>
               <CardDescription>
                 Server-authoritative base pricing. Select &ldquo;Price on Request&rdquo; for High
-                Jewellery bespoke inquiry pieces.
+                Jewelry sold by quote only.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -1058,12 +1057,10 @@ export function ProductEditor({
         <TabsContent value="specs">
           <Card>
             <CardHeader>
-              <h2 className="font-display text-xl font-medium">
-                Metal &amp; Gemological Dossier (4Cs)
-              </h2>
+              <h2 className="font-display text-xl font-medium">Metal &amp; stone details</h2>
               <CardDescription>
-                Structured specifications powering PDP dossiers, Google Merchant attributes, and
-                adaptive 4Cs collection filters.
+                Details shown on the product page, in Google Shopping and adaptive 4Cs collection
+                filters.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1507,7 +1504,7 @@ export function ProductEditor({
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={img.thumbUrl || img.url}
-                        alt={img.altText || "Uploaded jewellery preview"}
+                        alt={img.altText || "Uploaded jewelry photo"}
                         className="size-20 shrink-0 rounded-sm border border-border object-cover"
                       />
 
@@ -1659,7 +1656,7 @@ export function ProductEditor({
             <CardHeader>
               <h2 className="font-display text-xl font-medium">Collection Filter Facets</h2>
               <CardDescription>
-                Attach filterable jewellery traits so shoppers can narrow collections precisely.
+                Add filterable attributes so shoppers can narrow down collections.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">

@@ -128,7 +128,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
           <p className="text-editorial-label text-accent-text">Studio Analytics</p>
           <h1 className="type-h1 mt-1 font-display font-medium text-foreground">Admin Studio</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Net revenue, order velocity, vault stock health, and client concierge activity.
+            Revenue, orders, stock and customer activity.
           </p>
         </div>
 
@@ -243,7 +243,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
           className="flex items-center justify-between rounded-md border border-border bg-card p-4 transition-colors hover:border-accent"
         >
           <div>
-            <p className="text-xs tracking-wider text-muted-foreground uppercase">Open Enquiries</p>
+            <p className="text-xs tracking-wider text-muted-foreground uppercase">Open inquiries</p>
             <p className="tabular-nums-price mt-1 font-display text-2xl font-medium text-foreground">
               {data.operations.openEnquiries}
             </p>
@@ -283,7 +283,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
         <Card className="min-w-0 lg:col-span-7">
           <CardHeader>
             <CardTitle className="font-display text-2xl">Revenue Trajectory</CardTitle>
-            <CardDescription>Daily net settled commission revenue</CardDescription>
+            <CardDescription>Daily net revenue</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64 w-full min-w-0">
@@ -386,7 +386,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
             <div>
               <CardTitle className="font-display text-2xl">Recent Orders</CardTitle>
-              <CardDescription>Latest five client commissions</CardDescription>
+              <CardDescription>Latest five orders</CardDescription>
             </div>
             <Button asChild variant="outline" size="sm" className="min-h-11 sm:min-h-9">
               <Link href="/admin/orders">

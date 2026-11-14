@@ -6,7 +6,7 @@ import { hasPermission } from "@/lib/permissions";
 import { requireStaffPageSession } from "@/server/dal";
 
 export const metadata: Metadata = {
-  title: "Concierge Messages",
+  title: "Messages",
 };
 
 // Rendered per request (signed-in / URL-driven); a blocking navigation is intended.

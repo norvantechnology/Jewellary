@@ -48,9 +48,7 @@ export function AdminEnquiriesClient({ enquiries }: { enquiries: AdminEnquiryDTO
   function openReplyModal(enq: AdminEnquiryDTO) {
     setReplyTarget(enq);
     setSubject(
-      enq.productName
-        ? `Regarding ${enq.productName} — Concierge Response`
-        : `Your ${enq.type.toLowerCase()} concierge enquiry`,
+      enq.productName ? `About ${enq.productName}` : `Your ${enq.type.toLowerCase()} inquiry`,
     );
     setReplyMessage("");
     setNextStatus("RESOLVED");
@@ -70,7 +68,7 @@ export function AdminEnquiriesClient({ enquiries }: { enquiries: AdminEnquiryDTO
         toast.error(res.error.message);
         return;
       }
-      toast.success("Enquiry record updated");
+      toast.success("Inquiry updated");
       router.refresh();
     } finally {
       setPendingId(null);
@@ -94,7 +92,7 @@ export function AdminEnquiriesClient({ enquiries }: { enquiries: AdminEnquiryDTO
       }
       toast.success(
         res.data.emailDelivered
-          ? `Concierge reply sent to ${replyTarget.email}`
+          ? `Reply sent to ${replyTarget.email}`
           : "Reply recorded (SMTP offline in local preview)",
       );
       setReplyTarget(null);
@@ -108,8 +106,8 @@ export function AdminEnquiriesClient({ enquiries }: { enquiries: AdminEnquiryDTO
     return (
       <EmptyState
         icon={MessageSquare}
-        title="No client enquiries matching this filter"
-        description="Bespoke commissions and product concierge enquiries submitted on the storefront appear here."
+        title="No inquiries match this filter"
+        description="Custom design requests and product questions sent from the store appear here."
       />
     );
   }
@@ -177,7 +175,7 @@ export function AdminEnquiriesClient({ enquiries }: { enquiries: AdminEnquiryDTO
                 </FormField>
               </div>
               <div className="sm:col-span-6">
-                <FormField id={`enq-note-${enq.id}`} label="Internal Concierge Notes">
+                <FormField id={`enq-note-${enq.id}`} label="Internal notes">
                   {(fp) => (
                     <Textarea
                       {...fp}
@@ -186,7 +184,7 @@ export function AdminEnquiriesClient({ enquiries }: { enquiries: AdminEnquiryDTO
                       onChange={(e) =>
                         setNoteDrafts((prev) => ({ ...prev, [enq.id]: e.target.value }))
                       }
-                      placeholder="Record call outcomes, bespoke specs, or gem sourcing notes..."
+                      placeholder="Call notes, custom details or follow-ups..."
                     />
                   )}
                 </FormField>
@@ -217,8 +215,7 @@ export function AdminEnquiriesClient({ enquiries }: { enquiries: AdminEnquiryDTO
           <DialogHeader>
             <DialogTitle>Reply to {replyTarget?.name}</DialogTitle>
             <DialogDescription>
-              Sends an editorial concierge email to {replyTarget?.email} and logs the note on this
-              enquiry.
+              Sends an email to {replyTarget?.email} and logs the note on this inquiry.
             </DialogDescription>
           </DialogHeader>
 
@@ -241,7 +238,7 @@ export function AdminEnquiriesClient({ enquiries }: { enquiries: AdminEnquiryDTO
                   rows={5}
                   value={replyMessage}
                   onChange={(e) => setReplyMessage(e.target.value)}
-                  placeholder="Write a personal response from the gemology & concierge atelier..."
+                  placeholder="Write your reply..."
                   required
                 />
               )}
@@ -270,7 +267,7 @@ export function AdminEnquiriesClient({ enquiries }: { enquiries: AdminEnquiryDTO
                 Cancel
               </Button>
               <Button type="submit" loading={sendingReply}>
-                Send Concierge Reply
+                Send reply
               </Button>
             </DialogFooter>
           </form>

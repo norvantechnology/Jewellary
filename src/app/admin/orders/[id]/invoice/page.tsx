@@ -253,14 +253,12 @@ export default async function AdminOrderInvoicePage({
         </div>
       </article>
 
-      {/* Atelier Packing Slip */}
+      {/* Packing slip */}
       <article className="rounded-md border border-border bg-card p-6 sm:p-10 print:break-before-page">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
           <div>
             <p className="text-editorial-label text-accent-text">{order.store.storeName}</p>
-            <h2 className="mt-1 font-display text-2xl font-medium text-foreground">
-              Atelier Packing Slip
-            </h2>
+            <h2 className="mt-1 font-display text-2xl font-medium text-foreground">Packing slip</h2>
           </div>
           <div className="text-right text-sm">
             <p className="font-medium text-foreground">Order {order.orderNumber}</p>

@@ -695,21 +695,29 @@ export async function deleteFacet(id: string) {
   return { id, code: existing.code };
 }
 
-export async function listAdminProducts(params: {
+export interface AdminProductFilter {
   search?: string;
   status?: ProductStatus | "ALL";
   categoryId?: string;
-  page?: number;
-  pageSize?: number;
-}) {
-  const page = Math.max(1, params.page ?? 1);
-  const pageSize = Math.min(50, Math.max(5, params.pageSize ?? 20));
-  const search = params.search?.trim();
+}
 
-  const where: Prisma.ProductWhereInput = {
+/** Admin product list filter. A parent category also matches its subcategories. */
+export async function buildAdminProductWhere(
+  params: AdminProductFilter,
+): Promise<Prisma.ProductWhereInput> {
+  const search = params.search?.trim();
+  let categoryIds: string[] | undefined;
+  if (params.categoryId) {
+    const children = await db.category.findMany({
+      where: { parentId: params.categoryId },
+      select: { id: true },
+    });
+    categoryIds = [params.categoryId, ...children.map((c) => c.id)];
+  }
+  return {
     deletedAt: null,
     ...(params.status && params.status !== "ALL" ? { status: params.status } : {}),
-    ...(params.categoryId ? { categoryId: params.categoryId } : {}),
+    ...(categoryIds ? { categoryId: { in: categoryIds } } : {}),
     ...(search
       ? {
           OR: [
@@ -720,6 +728,131 @@ export async function listAdminProducts(params: {
         }
       : {}),
   };
+}
+
+export type PriceRounding = "cents" | "whole" | "ninety-nine";
+
+/** New price after a percentage change, rounded as requested. Never below 0.01. */
+export function adjustPrice(
+  value: Prisma.Decimal,
+  percent: number,
+  rounding: PriceRounding,
+): Prisma.Decimal {
+  const raw = value.mul(new Prisma.Decimal(1).plus(new Prisma.Decimal(percent).div(100)));
+  let next: Prisma.Decimal;
+  if (rounding === "whole") next = raw.toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+  else if (rounding === "ninety-nine") next = raw.floor().plus(new Prisma.Decimal("0.99"));
+  else next = raw.toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+  return Prisma.Decimal.max(next, new Prisma.Decimal("0.01"));
+}
+
+export interface BulkPriceInput {
+  productIds?: string[];
+  filter?: AdminProductFilter;
+  percent: number;
+  rounding: PriceRounding;
+  includeCompareAt: boolean;
+  dryRun?: boolean;
+}
+
+/**
+ * Changes the price of many products by a percentage (base price + any variant price
+ * overrides, optionally compare-at prices). With dryRun it only returns the preview.
+ */
+export async function bulkAdjustProductPrices(input: BulkPriceInput) {
+  if (
+    !Number.isFinite(input.percent) ||
+    input.percent === 0 ||
+    input.percent <= -90 ||
+    input.percent > 500
+  ) {
+    throw new ValidationError("Enter a percentage between -90% and +500% (not 0).");
+  }
+  const where: Prisma.ProductWhereInput = input.productIds?.length
+    ? { id: { in: input.productIds }, deletedAt: null }
+    : await buildAdminProductWhere(input.filter ?? {});
+  const products = await db.product.findMany({
+    where,
+    take: 5000,
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      priceMode: true,
+      basePrice: true,
+      compareAtPrice: true,
+      variants: { select: { id: true, priceOverride: true, compareAtOverride: true } },
+    },
+  });
+  const priced = products.filter((p) => p.priceMode === "FIXED");
+  const changes = priced.map((p) => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    oldPrice: p.basePrice.toString(),
+    newPrice: adjustPrice(p.basePrice, input.percent, input.rounding).toString(),
+  }));
+  const summary = {
+    matched: products.length,
+    updated: priced.length,
+    skippedPriceOnRequest: products.length - priced.length,
+    oldTotal: priced.reduce((a, p) => a.plus(p.basePrice), new Prisma.Decimal(0)).toString(),
+    newTotal: changes.reduce((a, c) => a.plus(c.newPrice), new Prisma.Decimal(0)).toString(),
+    preview: changes.slice(0, 8),
+  };
+  if (input.dryRun || priced.length === 0)
+    return { ...summary, slugs: [] as string[], ids: [] as string[] };
+
+  await db.$transaction(
+    async (tx) => {
+      for (const p of priced) {
+        await tx.product.update({
+          where: { id: p.id },
+          data: {
+            basePrice: adjustPrice(p.basePrice, input.percent, input.rounding),
+            ...(input.includeCompareAt && p.compareAtPrice
+              ? { compareAtPrice: adjustPrice(p.compareAtPrice, input.percent, input.rounding) }
+              : {}),
+          },
+        });
+        for (const v of p.variants) {
+          if (!v.priceOverride && !(input.includeCompareAt && v.compareAtOverride)) continue;
+          await tx.productVariant.update({
+            where: { id: v.id },
+            data: {
+              ...(v.priceOverride
+                ? { priceOverride: adjustPrice(v.priceOverride, input.percent, input.rounding) }
+                : {}),
+              ...(input.includeCompareAt && v.compareAtOverride
+                ? {
+                    compareAtOverride: adjustPrice(
+                      v.compareAtOverride,
+                      input.percent,
+                      input.rounding,
+                    ),
+                  }
+                : {}),
+            },
+          });
+        }
+      }
+    },
+    { timeout: 120_000 },
+  );
+  return { ...summary, slugs: priced.map((p) => p.slug), ids: priced.map((p) => p.id) };
+}
+
+export async function listAdminProducts(params: {
+  search?: string;
+  status?: ProductStatus | "ALL";
+  categoryId?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = Math.min(50, Math.max(5, params.pageSize ?? 20));
+  const where = await buildAdminProductWhere(params);
 
   const [total, rows] = await Promise.all([
     db.product.count({ where }),

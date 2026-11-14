@@ -270,8 +270,8 @@ export function FacetsManager({
             Attributes &amp; Facets
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Configure jewellery specifications (Occasion, Setting Style, Chain Length) and
-            selectable filter values.
+            Configure jewelry attributes (Occasion, Setting Style, Chain Length) and selectable
+            filter values.
           </p>
         </div>
 
@@ -290,7 +290,7 @@ export function FacetsManager({
           <EmptyState
             icon={SlidersHorizontal}
             title="No Facet Attributes"
-            description="Create structured jewellery attributes to power category filter sidebars."
+            description="Create jewelry attributes that power the category filters."
             actionLabel="Create Attribute"
             onAction={openNew}
           />

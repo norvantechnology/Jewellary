@@ -187,7 +187,7 @@ function createEmptyGroup(index: number): EditableOptionGroup {
     values: [
       {
         value: "standard",
-        label: "Standard Atelier Option",
+        label: "Standard option",
         swatchHex: "",
         swatchImageUrl: "",
         priceAdjustmentType: "NONE",
@@ -301,9 +301,9 @@ export function AdminProductCustomizationTab({
     return (
       <Card>
         <CardHeader>
-          <h2 className="font-display text-xl font-medium">Bespoke Customization</h2>
+          <h2 className="font-display text-xl font-medium">Customization</h2>
           <CardDescription>
-            Save the product draft first to configure custom atelier options and category presets.
+            Save the product draft first to set up customization options and category presets.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -459,7 +459,7 @@ export function AdminProductCustomizationTab({
       toast.error(res.error.message);
       return;
     }
-    toast.success(`Applied "${presetKey}" atelier preset.`);
+    toast.success(`Applied "${presetKey}" preset.`);
     await loadConfig(productId);
   }
 
@@ -468,7 +468,7 @@ export function AdminProductCustomizationTab({
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="font-display text-xl font-medium">Bespoke Commission Controls</h2>
+            <h2 className="font-display text-xl font-medium">Customization settings</h2>
             <CardDescription>
               Enable made-to-order customization options and indicative estimates on this piece.
             </CardDescription>
@@ -559,7 +559,7 @@ export function AdminProductCustomizationTab({
                 id="cust-disclaimer"
                 value={disclaimerText}
                 onChange={(e) => setDisclaimerText(e.target.value)}
-                placeholder="Indicative estimate shown; final quotation confirmed by our atelier."
+                placeholder="Estimate shown; we confirm the final price in your quote."
               />
             </div>
           </div>

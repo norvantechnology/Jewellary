@@ -91,7 +91,7 @@ const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         permission: "chat:manage",
       },
       {
-        label: "Enquiries",
+        label: "Inquiries",
         href: "/admin/enquiries",
         icon: MessageSquare,
         permission: "enquiries:manage",
@@ -397,11 +397,11 @@ export function AdminShell({
 
             <div className="min-w-0">
               <span className="text-xs font-medium tracking-[0.14em] text-accent-text uppercase">
-                Atelier Studio
+                Store admin
               </span>
               <span className="hidden text-xs text-muted-foreground sm:inline">
                 {" "}
-                — Fine Jewellery Operations
+                — Maison Aurelia
               </span>
             </div>
           </div>

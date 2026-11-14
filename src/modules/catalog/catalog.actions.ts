@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { submitIndexNowUrls } from "@/lib/seo/indexnow";
 import {
   adjustStockSchema,
+  bulkPriceSchema,
   archiveProductSchema,
   categoryUpsertSchema,
   deleteCategorySchema,
@@ -15,6 +16,7 @@ import {
 } from "@/modules/catalog/catalog.schemas";
 import {
   adjustVariantStock,
+  bulkAdjustProductPrices,
   archiveProduct,
   deleteCategory,
   deleteFacet,
@@ -244,5 +246,43 @@ export const adjustStockAction = createAction(
     const result = await adjustVariantStock(input, ctx.auth?.user.id ?? null);
     invalidateCatalogTags([CACHE_TAGS.products, CACHE_TAGS.product(result.productId)]);
     return result;
+  },
+);
+
+/** Preview only: shows how many products change and sample old → new prices. */
+export const previewBulkPriceAction = createAction(
+  {
+    name: "catalog.product.bulkPricePreview",
+    schema: bulkPriceSchema,
+    auth: { permission: "catalog:write" },
+    rateLimit: { tier: "adminWrite" },
+  },
+  async (input) => bulkAdjustProductPrices({ ...input, dryRun: true }),
+);
+
+/** Applies a percentage price change to many products in one transaction (audit logged). */
+export const applyBulkPriceAction = createAction(
+  {
+    name: "catalog.product.bulkPrice",
+    schema: bulkPriceSchema,
+    auth: { permission: "catalog:write" },
+    rateLimit: { tier: "adminWrite" },
+    audit: {
+      action: "PRODUCT_BULK_PRICE",
+      entityType: "Product",
+      entityId: () => "bulk",
+    },
+  },
+  async (input) => {
+    const result = await bulkAdjustProductPrices(input);
+    invalidateCatalogTags(
+      [
+        CACHE_TAGS.products,
+        ...result.ids.map((id) => CACHE_TAGS.product(id)),
+        ...result.slugs.map((slug) => CACHE_TAGS.productSlug(slug)),
+      ],
+      ["/", "/collections", "/sitemap.xml", "/feeds/google-merchant.xml"],
+    );
+    return { updated: result.updated, skippedPriceOnRequest: result.skippedPriceOnRequest };
   },
 );
