@@ -91,6 +91,7 @@ export function useModalHistory(open: boolean, requestClose: () => void) {
       window.history.pushState({ ...currentState(), __modal: id }, "");
     }
     openStack.push(id);
+    const openedAt = window.location.pathname + window.location.search;
 
     let closedByBack = false;
     const onPopState = () => {
@@ -117,13 +118,32 @@ export function useModalHistory(open: boolean, requestClose: () => void) {
         id,
         window.setTimeout(() => {
           pendingBack.delete(id);
-          if (currentState().__modal === id && Date.now() >= navigatingAwayUntil) {
+          // The page URL changed while open (e.g. filters/sort applied): going Back would undo it.
+          const urlChanged = window.location.pathname + window.location.search !== openedAt;
+          if (currentState().__modal === id && !urlChanged && Date.now() >= navigatingAwayUntil) {
             window.history.back();
           }
         }, 0),
       );
     };
   }, [open, id]);
+}
+
+/**
+ * Runs `fn` once a modal has finished closing (after its history entry is removed), so a
+ * navigation started from inside the modal is not undone by that Back step.
+ */
+export function runAfterModalClose(fn: () => void) {
+  let done = false;
+  const go = () => {
+    if (done) return;
+    done = true;
+    window.removeEventListener("popstate", onPop);
+    fn();
+  };
+  const onPop = () => window.setTimeout(go, 0);
+  window.addEventListener("popstate", onPop);
+  window.setTimeout(go, 350);
 }
 
 /**

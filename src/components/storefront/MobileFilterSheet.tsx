@@ -6,6 +6,7 @@ import { ArrowUpDown, SlidersHorizontal } from "lucide-react";
 import { AnimatedCounter } from "@/components/motion/AnimatedCounter";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { runAfterModalClose } from "@/hooks/use-modal-history";
 import {
   Sheet,
   SheetContent,
@@ -160,8 +161,8 @@ export function MobileSortSheet({
           <RadioGroup
             value={currentSort}
             onValueChange={(value) => {
-              onSelectSort(value as CollectionSortOption);
               setOpen(false);
+              runAfterModalClose(() => onSelectSort(value as CollectionSortOption));
             }}
             className="gap-1"
           >

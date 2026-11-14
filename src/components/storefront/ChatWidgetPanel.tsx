@@ -303,6 +303,12 @@ export function ChatWidgetPanel({
     return () => cancelAnimationFrame(raf);
   }, [open, pendingOpenDetail, onConsumePendingDetail, conversations, ui]);
 
+  // Keep the launcher badge in step with the list (e.g. after opening a conversation marks it read).
+  React.useEffect(() => {
+    if (!session) return;
+    onTotalUnreadChange(conversations.reduce((acc, c) => acc + c.unreadCount, 0));
+  }, [conversations, session, onTotalUnreadChange]);
+
   // Lightweight socket listener for unread / conversation list previews (no refetch!)
   React.useEffect(() => {
     if (!open || !session?.authenticated) return;

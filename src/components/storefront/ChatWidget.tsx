@@ -144,6 +144,34 @@ export function ChatWidget() {
     };
   }, []);
 
+  // Unread badge while the panel is closed: refresh on load, on tab focus and every 20s
+  // (works without the realtime socket, e.g. on Vercel). Skipped for visitors with no chats.
+  React.useEffect(() => {
+    if (open) return;
+    let cancelled = false;
+    const refresh = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const res = await fetch("/api/chat/conversations", { cache: "no-store" });
+        if (!res.ok) return;
+        const body = (await res.json()) as { data?: { totalUnread?: number } };
+        if (!cancelled && typeof body.data?.totalUnread === "number") {
+          setTotalUnread(body.data.totalUnread);
+        }
+      } catch {
+        // Badge is best-effort.
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(refresh, 20000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [open]);
+
   // Phone Back closes the chat (and only hides the keyboard first if it is open).
   useModalHistory(open, () => setOpen(false));
 
