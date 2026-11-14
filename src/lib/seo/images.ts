@@ -1,3 +1,4 @@
+import { SITE_CONTENT_DEFAULTS } from "@/modules/site-content/site-content.shared";
 import { slugify } from "@/lib/slug";
 
 export const IMAGE_VIEW_TYPES = [
@@ -12,14 +13,16 @@ export const IMAGE_VIEW_TYPES = [
 
 export type ImageViewType = (typeof IMAGE_VIEW_TYPES)[number];
 
+// Wording: data/frontend/site-content.json → site.seoTemplates.imageLabels
+const imageLabels = SITE_CONTENT_DEFAULTS.site.seoTemplates.imageLabels;
 export const IMAGE_VIEW_LABELS: Record<ImageViewType, string> = {
-  front: "front view",
-  side: "side profile",
-  detail: "close-up detail",
-  "on-hand": "worn on hand",
-  lifestyle: "editorial styling",
-  packaging: "atelier presentation box",
-  certificate: "gemological certificate",
+  front: imageLabels.front,
+  side: imageLabels.side,
+  detail: imageLabels.detail,
+  "on-hand": imageLabels.onHand,
+  lifestyle: imageLabels.lifestyle,
+  packaging: imageLabels.packaging,
+  certificate: imageLabels.certificate,
 };
 
 export const IMAGE_RESPONSIVE_WIDTHS = [320, 480, 640, 800, 1080, 1280, 1600, 2000] as const;

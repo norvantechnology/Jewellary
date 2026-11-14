@@ -1,10 +1,11 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Container, Section } from "@/components/shared/primitives";
 import { CheckoutClient } from "@/components/storefront/CheckoutClient";
 import { Skeleton } from "@/components/ui/skeleton";
-import { NOINDEX_NOFOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
+import { NOINDEX_NOFOLLOW_ROBOTS } from "@/lib/seo/metadata";
 import {
   getCheckoutBootstrapData,
   getOrderConfirmation,
@@ -12,20 +13,24 @@ import {
 } from "@/modules/orders/order.service";
 import { isCancellableBeforeSettlement } from "@/modules/orders/state-machine";
 
-export const metadata: Metadata = buildMetadata({
-  title: "Checkout",
-  description: "Secure checkout with insured delivery.",
-  pathname: "/checkout",
-  canonical: "/checkout",
-  robots: NOINDEX_NOFOLLOW_ROBOTS,
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return buildPageMetadata((c) => c.pages.checkout.seo, {
+    pathname: "/checkout",
+    canonical: "/checkout",
+    robots: NOINDEX_NOFOLLOW_ROBOTS,
+  });
+}
 
 async function CheckoutBody({
   searchParams,
 }: {
   searchParams: Promise<{ order?: string; token?: string }>;
 }) {
-  const [params, bootstrap] = await Promise.all([searchParams, getCheckoutBootstrapData()]);
+  const [params, bootstrap, content] = await Promise.all([
+    searchParams,
+    getCheckoutBootstrapData(),
+    getSiteContent(),
+  ]);
 
   let initialRetryOrder: {
     order: OrderConfirmationDTO;
@@ -56,14 +61,16 @@ async function CheckoutBody({
         <Breadcrumbs
           items={[
             { label: "Home", href: "/" },
-            { label: "Bag", href: "/cart" },
-            { label: "Checkout" },
+            { label: content.pages.checkout.breadcrumbCart, href: "/cart" },
+            { label: content.pages.checkout.breadcrumb },
           ]}
         />
 
         <header className="mt-2 mb-4 md:mt-2 md:mb-6 md:border-b md:border-border md:pb-4">
           <h1 className="type-h1 font-semibold text-foreground">
-            {initialRetryOrder ? "Complete Payment Authorization" : "Secure Checkout"}
+            {initialRetryOrder
+              ? content.pages.checkout.retryHeading
+              : content.pages.checkout.heading}
           </h1>
         </header>
 

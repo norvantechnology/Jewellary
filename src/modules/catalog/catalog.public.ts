@@ -1313,7 +1313,7 @@ export async function getMerchantFeedItems(): Promise<MerchantFeedItemDTO[]> {
     const description =
       product.description ??
       product.subtitle ??
-      `${product.name} — independently certified fine jewellery crafted to heirloom tolerances.`;
+      `${product.name}: independently certified fine jewelry, made to last.`;
     const defaultMaterial =
       [product.metalPurity, product.metalType].filter(Boolean).join(" ") || null;
     const googleCategory = product.googleProductCategory ?? "Apparel & Accessories > Jewelry";
@@ -1517,4 +1517,18 @@ export async function getMerchantFeedProductsForXml(): Promise<
       backorderable: false,
     })),
   }));
+}
+
+/**
+ * Top-level categories as quick links (search suggestions, empty states). Comes from the
+ * database so it always matches the real catalog; empty until categories are added in admin.
+ */
+export async function getCategoryShortcuts(
+  limit = 6,
+): Promise<Array<{ label: string; href: string }>> {
+  const tree = await getAllActiveCategoriesTree();
+  const populated = tree.filter((c) => c.productCount > 0);
+  return (populated.length > 0 ? populated : tree)
+    .slice(0, limit)
+    .map((c) => ({ label: c.name, href: `/collections/${c.path}` }));
 }

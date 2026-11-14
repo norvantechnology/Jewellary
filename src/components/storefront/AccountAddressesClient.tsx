@@ -5,6 +5,7 @@ import { AnimatePresence, m } from "motion/react";
 import { useRouter } from "next/navigation";
 import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 import { RevealStagger } from "@/components/motion/Reveal";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -114,6 +115,7 @@ export function AccountAddressesClient({
 }) {
   const router = useRouter();
   const reducedMotion = useReducedMotionSafe();
+  const t = useUiText().account.addresses;
   const [addresses, setAddresses] = React.useState(initialAddresses);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [form, setForm] = React.useState<AddressFormState>(emptyAddressForm);
@@ -126,7 +128,7 @@ export function AccountAddressesClient({
 
   function openNew() {
     if (atLimit) {
-      toast.error(`You can save up to ${MAX_SAVED_ADDRESSES} addresses.`);
+      toast.error(fill(t.limitError, { max: MAX_SAVED_ADDRESSES }));
       return;
     }
     setForm(emptyAddressForm());
@@ -143,20 +145,20 @@ export function AccountAddressesClient({
   function validateClientFields(): Record<string, string[]> {
     const errors: Record<string, string[]> = {};
     if (form.fullName.trim().length < 2) {
-      errors.fullName = ["Full name is required."];
+      errors.fullName = [t.fullNameRequired];
     }
     const phoneErr = validatePhoneNumber(form.phone);
     if (phoneErr) {
       errors.phone = [phoneErr];
     }
     if (form.line1.trim().length < 3) {
-      errors.line1 = ["Street address is required."];
+      errors.line1 = [t.streetRequired];
     }
     if (form.city.trim().length < 2) {
-      errors.city = ["City is required."];
+      errors.city = [t.cityRequired];
     }
     if (form.state.trim().length < 1) {
-      errors.state = [`${countryMeta?.stateLabel ?? "State / Province"} is required.`];
+      errors.state = [fill(t.stateRequired, { field: countryMeta?.stateLabel ?? t.stateLabel })];
     }
     const postalErr = validatePostalCodeForCountry(form.postalCode, form.country);
     if (postalErr) {
@@ -170,7 +172,7 @@ export function AccountAddressesClient({
     const clientErrors = validateClientFields();
     if (Object.keys(clientErrors).length > 0) {
       setFieldErrors(clientErrors);
-      toast.error("Please fix the highlighted address fields.");
+      toast.error(t.fixFieldsError);
       return;
     }
     setFieldErrors({});
@@ -200,7 +202,7 @@ export function AccountAddressesClient({
         return;
       }
 
-      toast.success(form.id ? "Address updated" : "Address added");
+      toast.success(form.id ? t.updatedToast : t.addedToast);
       setDialogOpen(false);
       router.refresh();
 
@@ -228,11 +230,7 @@ export function AccountAddressesClient({
         toast.error(res.error.message);
         return;
       }
-      toast.success(
-        kind === "shipping"
-          ? "Default shipping address updated"
-          : "Default billing address updated",
-      );
+      toast.success(kind === "shipping" ? t.defaultShippingToast : t.defaultBillingToast);
       setAddresses((prev) =>
         prev.map((a) => ({
           ...a,
@@ -252,7 +250,7 @@ export function AccountAddressesClient({
       toast.error(res.error.message);
       return;
     }
-    toast.success("Address removed");
+    toast.success(t.removedToast);
     setAddresses((prev) => {
       const remaining = prev.filter((a) => a.id !== deleted.id);
       const first = remaining[0];
@@ -277,7 +275,7 @@ export function AccountAddressesClient({
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:flex-wrap sm:items-center">
         <div>
-          <h2 className="type-h3 font-semibold text-foreground">Saved Addresses</h2>
+          <h2 className="type-h3 font-semibold text-foreground">{t.heading}</h2>
           <p className="tabular-nums-price mt-1 text-sm text-muted-foreground">
             Manage delivery destinations for faster checkout ({addresses.length} /{" "}
             {MAX_SAVED_ADDRESSES} saved).
@@ -290,16 +288,16 @@ export function AccountAddressesClient({
           className="min-h-11 w-full sm:min-h-10 sm:w-auto"
         >
           <Plus className="size-5 stroke-[1.5]" aria-hidden="true" />
-          <span>{atLimit ? "Limit Reached (10)" : "Add Address"}</span>
+          <span>{atLimit ? fill(t.limitReached, { max: MAX_SAVED_ADDRESSES }) : t.addButton}</span>
         </Button>
       </div>
 
       {addresses.length === 0 ? (
         <EmptyState
           icon={MapPin}
-          title="No saved addresses yet"
-          description="Save an insured delivery destination so your next order is pre-filled at checkout."
-          actionLabel="Add First Address"
+          title={t.emptyTitle}
+          description={t.emptyText}
+          actionLabel={t.emptyAction}
           onAction={openNew}
         />
       ) : (
@@ -319,7 +317,7 @@ export function AccountAddressesClient({
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-lg font-semibold text-foreground">
-                      {addr.label ?? "Saved Destination"}
+                      {addr.label ?? t.untitledLabel}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       <AnimatePresence mode="popLayout" initial={false}>
@@ -332,7 +330,7 @@ export function AccountAddressesClient({
                             exit="exit"
                             className="inline-flex"
                           >
-                            <Badge variant="primary">Default</Badge>
+                            <Badge variant="primary">{t.defaultBadge}</Badge>
                           </m.span>
                         ) : null}
                       </AnimatePresence>
@@ -346,7 +344,7 @@ export function AccountAddressesClient({
                             exit="exit"
                             className="inline-flex"
                           >
-                            <Badge variant="outline">Default Billing</Badge>
+                            <Badge variant="outline">{t.defaultBillingBadge}</Badge>
                           </m.span>
                         ) : null}
                       </AnimatePresence>
@@ -373,7 +371,7 @@ export function AccountAddressesClient({
                     className="min-h-11 sm:min-h-9"
                   >
                     <Pencil className="size-4 stroke-[1.5]" aria-hidden="true" />
-                    <span>Edit</span>
+                    <span>{t.edit}</span>
                   </Button>
                   {!addr.isDefaultShipping && (
                     <Button
@@ -384,7 +382,8 @@ export function AccountAddressesClient({
                       onClick={() => handleSetDefault(addr.id, "shipping")}
                       className="min-h-11 sm:min-h-9"
                     >
-                      Set as default
+                      {" "}
+                      {t.setDefault}{" "}
                     </Button>
                   )}
                   {!addr.isDefaultBilling && (
@@ -396,7 +395,8 @@ export function AccountAddressesClient({
                       onClick={() => handleSetDefault(addr.id, "billing")}
                       className="min-h-11 sm:min-h-9"
                     >
-                      Set Default Billing
+                      {" "}
+                      {t.setDefaultBilling}{" "}
                     </Button>
                   )}
                   <Button
@@ -405,7 +405,7 @@ export function AccountAddressesClient({
                     variant="ghost"
                     onClick={() => setDeleteTarget(addr)}
                     className="ml-auto min-h-11 min-w-11 text-muted-foreground hover:text-destructive sm:min-h-9 sm:min-w-9"
-                    aria-label={`Delete address ${addr.label ?? addr.fullName}`}
+                    aria-label={fill(t.deleteAria, { name: addr.label ?? addr.fullName })}
                   >
                     <Trash2 className="size-5 stroke-[1.5]" aria-hidden="true" />
                   </Button>
@@ -419,20 +419,14 @@ export function AccountAddressesClient({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{form.id ? "Edit Address" : "Add Delivery Address"}</DialogTitle>
-            <DialogDescription>
-              Courier insurance requires an accurate recipient name and telephone number.
-            </DialogDescription>
+            <DialogTitle>{form.id ? t.editTitle : t.addTitle}</DialogTitle>
+            <DialogDescription>{t.dialogText}</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSave} className="space-y-4" noValidate>
             <div className="space-y-2">
-              <span className="text-sm font-medium text-foreground">Address Label</span>
-              <div
-                className="grid grid-cols-3 gap-2"
-                role="group"
-                aria-label="Address label preset"
-              >
+              <span className="text-sm font-medium text-foreground">{t.labelHeading}</span>
+              <div className="grid grid-cols-3 gap-2" role="group" aria-label={t.presetAria}>
                 {LABEL_PRESETS.map((preset) => {
                   const active = form.labelPreset === preset;
                   return (
@@ -453,17 +447,13 @@ export function AccountAddressesClient({
                 })}
               </div>
               {form.labelPreset === "Other" && (
-                <FormField
-                  id="addr-label"
-                  label="Custom Label (Optional)"
-                  error={fieldErrors.label?.[0]}
-                >
+                <FormField id="addr-label" label={t.customLabel} error={fieldErrors.label?.[0]}>
                   {(fp) => (
                     <Input
                       {...fp}
                       value={form.customLabel}
                       onChange={(e) => setForm((f) => ({ ...f, customLabel: e.target.value }))}
-                      placeholder="e.g. Residence, Safe Deposit, Studio"
+                      placeholder={t.customLabelPlaceholder}
                     />
                   )}
                 </FormField>
@@ -473,7 +463,7 @@ export function AccountAddressesClient({
             <div className="grid gap-4 min-[480px]:grid-cols-2">
               <FormField
                 id="addr-fullname"
-                label="Full Name"
+                label={t.fullNameLabel}
                 required
                 error={fieldErrors.fullName?.[0]}
               >
@@ -490,7 +480,7 @@ export function AccountAddressesClient({
 
               <FormField
                 id="addr-country"
-                label="Country"
+                label={t.countryLabel}
                 required
                 error={fieldErrors.country?.[0]}
               >
@@ -513,7 +503,7 @@ export function AccountAddressesClient({
               </FormField>
             </div>
 
-            <FormField id="addr-phone" label="Phone Number" required error={fieldErrors.phone?.[0]}>
+            <FormField id="addr-phone" label={t.phoneLabel} required error={fieldErrors.phone?.[0]}>
               {(fp) => (
                 <PhoneWithDialCodeInput
                   id={fp.id}
@@ -539,7 +529,7 @@ export function AccountAddressesClient({
 
             <FormField
               id="addr-line1"
-              label="Street Address"
+              label={t.streetLabel}
               required
               error={fieldErrors.line1?.[0]}
             >
@@ -554,11 +544,7 @@ export function AccountAddressesClient({
               )}
             </FormField>
 
-            <FormField
-              id="addr-line2"
-              label="Apartment / Suite (Optional)"
-              error={fieldErrors.line2?.[0]}
-            >
+            <FormField id="addr-line2" label={t.line2Label} error={fieldErrors.line2?.[0]}>
               {(fp) => (
                 <Input
                   {...fp}
@@ -570,7 +556,7 @@ export function AccountAddressesClient({
             </FormField>
 
             <div className="grid gap-4 min-[480px]:grid-cols-2 sm:grid-cols-3">
-              <FormField id="addr-city" label="City" required error={fieldErrors.city?.[0]}>
+              <FormField id="addr-city" label={t.cityLabel} required error={fieldErrors.city?.[0]}>
                 {(fp) => (
                   <Input
                     {...fp}
@@ -583,7 +569,7 @@ export function AccountAddressesClient({
               </FormField>
               <FormField
                 id="addr-state"
-                label={countryMeta?.stateLabel ?? "State / Province"}
+                label={countryMeta?.stateLabel ?? t.stateLabel}
                 required
                 error={fieldErrors.state?.[0]}
               >
@@ -603,9 +589,13 @@ export function AccountAddressesClient({
               </FormField>
               <FormField
                 id="addr-postal"
-                label="Postal / ZIP"
+                label={t.postalLabel}
                 required
-                hint={countryMeta ? `e.g. ${countryMeta.postalExample}` : undefined}
+                hint={
+                  countryMeta
+                    ? fill(t.postalHint, { example: countryMeta.postalExample })
+                    : undefined
+                }
                 error={fieldErrors.postalCode?.[0]}
               >
                 {(fp) => (
@@ -643,7 +633,8 @@ export function AccountAddressesClient({
                   htmlFor="addr-default-shipping"
                   className="cursor-pointer text-sm text-foreground"
                 >
-                  Use as default shipping address
+                  {" "}
+                  {t.useDefaultShipping}{" "}
                 </label>
               </div>
               <div className="flex min-h-11 items-center gap-3">
@@ -658,7 +649,8 @@ export function AccountAddressesClient({
                   htmlFor="addr-default-billing"
                   className="cursor-pointer text-sm text-foreground"
                 >
-                  Use as default billing address
+                  {" "}
+                  {t.useDefaultBilling}{" "}
                 </label>
               </div>
             </div>
@@ -671,10 +663,12 @@ export function AccountAddressesClient({
                 disabled={pending}
                 className="min-h-11 sm:min-h-10"
               >
-                Cancel
+                {" "}
+                {t.cancel}{" "}
               </Button>
               <Button type="submit" loading={pending} className="min-h-11 sm:min-h-10">
-                Save Address
+                {" "}
+                {t.save}{" "}
               </Button>
             </DialogFooter>
           </form>
@@ -686,13 +680,11 @@ export function AccountAddressesClient({
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Delete Saved Address"
+        title={t.deleteTitle}
         description={
-          deleteTarget
-            ? `Remove "${deleteTarget.label ?? deleteTarget.line1}" from your address book? Past order receipts retain their original snapshot.`
-            : ""
+          deleteTarget ? fill(t.deleteText, { name: deleteTarget.label ?? deleteTarget.line1 }) : ""
         }
-        confirmLabel="Remove Address"
+        confirmLabel={t.deleteConfirm}
         destructive
         onConfirm={handleConfirmDelete}
       />

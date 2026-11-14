@@ -1,11 +1,32 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import { X } from "lucide-react";
 import { Dialog as RadixDialog } from "radix-ui";
+import { keepOpenOnKeyboardEscape, useModalHistory } from "@/hooks/use-modal-history";
 import { cn } from "@/lib/utils";
 
-export const Dialog = RadixDialog.Root;
+/** Radix Dialog root + native-like Back button handling (see useModalHistory). */
+export function Dialog({
+  open: controlledOpen,
+  defaultOpen = false,
+  onOpenChange,
+  ...props
+}: React.ComponentProps<typeof RadixDialog.Root>) {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      if (controlledOpen === undefined) setUncontrolledOpen(next);
+      onOpenChange?.(next);
+    },
+    [controlledOpen, onOpenChange],
+  );
+  useModalHistory(open, () => handleOpenChange(false));
+  return <RadixDialog.Root open={open} onOpenChange={handleOpenChange} {...props} />;
+}
 export const DialogTrigger = RadixDialog.Trigger;
 export const DialogPortal = RadixDialog.Portal;
 export const DialogClose = RadixDialog.Close;
@@ -29,8 +50,10 @@ export function DialogContent({
   className,
   children,
   hideClose = false,
+  onEscapeKeyDown,
   ...props
 }: React.ComponentProps<typeof RadixDialog.Content> & { hideClose?: boolean }) {
+  const ui = useUiText();
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -39,12 +62,16 @@ export function DialogContent({
           "ma-dialog fixed right-0 bottom-0 left-0 z-[var(--z-modal)] grid max-h-[90dvh] w-full gap-4 overflow-y-auto rounded-t-[18px] border border-border bg-popover p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] text-popover-foreground shadow-md sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-[calc(100%-2rem)] sm:max-w-[540px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg sm:p-6",
           className,
         )}
+        onEscapeKeyDown={(event) => {
+          keepOpenOnKeyboardEscape(event);
+          onEscapeKeyDown?.(event);
+        }}
         {...props}
       >
         {children}
         {!hideClose && (
           <RadixDialog.Close
-            aria-label="Close dialog"
+            aria-label={ui.common.closeDialog}
             className="transition-ui absolute top-3 right-3 z-20 inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-text-muted hover:bg-surface-3 hover:text-text focus-visible:outline-2 focus-visible:outline-accent"
           >
             <X className="size-5" strokeWidth={1.5} aria-hidden="true" />

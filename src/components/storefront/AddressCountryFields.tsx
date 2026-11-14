@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
@@ -31,6 +33,7 @@ export function CountrySelectField({
   inModal = false,
   ariaDescribedBy,
 }: CountrySelectFieldProps) {
+  const a = useUiText().checkout.addressPickers;
   const options = React.useMemo<ComboboxOption[]>(() => {
     if (allowedCountryCodes && allowedCountryCodes.length > 0) {
       return allowedCountryCodes.map((code) => ({
@@ -48,8 +51,8 @@ export function CountrySelectField({
       value={value}
       inModal={inModal}
       aria-describedby={ariaDescribedBy}
-      placeholder="Select country"
-      searchPlaceholder="Search country..."
+      placeholder={a.selectCountry}
+      searchPlaceholder={a.searchCountry}
       onValueChange={(next) => {
         if (next && next !== value) {
           onChange(next);
@@ -86,6 +89,7 @@ export function StateRegionField({
   name,
   onBlur,
 }: StateRegionFieldProps) {
+  const a = useUiText().checkout.addressPickers;
   const states = React.useMemo(() => getCountryStates(country), [country]);
 
   if (states.length === 0) {
@@ -100,7 +104,7 @@ export function StateRegionField({
         required={required}
         aria-describedby={ariaDescribedBy}
         aria-invalid={ariaInvalid}
-        placeholder="State, province, or region"
+        placeholder={a.stateFreeText}
       />
     );
   }
@@ -123,8 +127,8 @@ export function StateRegionField({
       value={matched?.code ?? ""}
       inModal={inModal}
       aria-describedby={ariaDescribedBy}
-      placeholder="Select state / region"
-      searchPlaceholder="Search state or region..."
+      placeholder={a.selectState}
+      searchPlaceholder={a.searchState}
       onValueChange={(next) => {
         if (next) {
           onChange(next);
@@ -159,6 +163,7 @@ export function PhoneWithDialCodeInput({
   name,
   onBlur,
 }: PhoneWithDialCodeInputProps) {
+  const a = useUiText().checkout.addressPickers;
   const split = React.useMemo(() => splitPhoneByCountryDialCode(value, country), [value, country]);
   const [dialOverride, setDialOverride] = React.useState<{
     country: string;
@@ -191,7 +196,7 @@ export function PhoneWithDialCodeInput({
   return (
     <div className="flex items-stretch gap-2">
       <NativeSelect
-        aria-label="Country dial code"
+        aria-label={a.dialCodeAria}
         value={dialCode}
         onChange={(e) => handleDialChange(e.target.value)}
         className="h-12 min-h-12 w-24 shrink-0 min-[380px]:w-28 md:h-11 md:min-h-11"
@@ -214,7 +219,7 @@ export function PhoneWithDialCodeInput({
         value={split.localNumber}
         onChange={(e) => handleNumberChange(e.target.value)}
         onBlur={onBlur}
-        placeholder="212 555 0140"
+        placeholder={a.phonePlaceholder}
         className="min-w-0 flex-1"
       />
     </div>

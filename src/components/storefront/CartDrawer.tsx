@@ -1,5 +1,7 @@
 "use client";
 
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,6 +41,8 @@ interface CartDrawerSummaryResponse {
 export function CartDrawer() {
   const { formatPrice, currency } = useCurrency();
   const visitor = useVisitorState();
+  const t = useUiText().cart;
+  const d = t.drawer;
   const cart = visitor.latestCart;
   const [drawerConfig, setDrawerConfig] = React.useState<{
     freeShippingThreshold: string | null;
@@ -74,8 +78,12 @@ export function CartDrawer() {
         visitorStore.setLatestCart(data.cart);
         setLiveAnnouncement(
           data.cart.itemCount === 0
-            ? "Your shopping bag is currently empty."
-            : `Shopping bag contains ${data.cart.itemCount} item${data.cart.itemCount === 1 ? "" : "s"}, subtotal ${formatPriceRef.current(data.cart.subtotal, { exact: true })}.`,
+            ? d.liveEmpty
+            : fill(d.liveSummary, {
+                count: data.cart.itemCount,
+                items: data.cart.itemCount === 1 ? t.item : t.items,
+                subtotal: formatPriceRef.current(data.cart.subtotal, { exact: true }),
+              }),
         );
       })
       .catch(() => {
@@ -87,7 +95,7 @@ export function CartDrawer() {
     return () => {
       active = false;
     };
-  }, [visitor.cartDrawerOpen]);
+  }, [visitor.cartDrawerOpen, d, t]);
 
   async function handleQuantityChange(variantId: string, nextQty: number, cartItemId?: string) {
     setBusyVariantId(cartItemId ?? variantId);
@@ -102,7 +110,11 @@ export function CartDrawer() {
 
     visitorStore.setLatestCart(res.data);
     setLiveAnnouncement(
-      `Updated shopping bag to ${res.data.itemCount} item${res.data.itemCount === 1 ? "" : "s"}, subtotal ${formatPrice(res.data.subtotal, { exact: true })}.`,
+      fill(d.liveUpdated, {
+        count: res.data.itemCount,
+        items: res.data.itemCount === 1 ? t.item : t.items,
+        subtotal: formatPrice(res.data.subtotal, { exact: true }),
+      }),
     );
   }
 
@@ -129,11 +141,16 @@ export function CartDrawer() {
       signatureRequired: updatedItems.length > 0 ? (cart?.signatureRequired ?? false) : false,
     };
     visitorStore.setLatestCart(nextCart);
-    void notifySuccess(`${name} removed from bag.`);
+    void notifySuccess(fill(d.removedToast, { name }));
     setLiveAnnouncement(
       res.data.itemCount === 0
-        ? `${name} removed. Your shopping bag is now empty.`
-        : `${name} removed. ${res.data.itemCount} item${res.data.itemCount === 1 ? "" : "s"} remaining, subtotal ${formatPrice(res.data.subtotal, { exact: true })}.`,
+        ? fill(d.liveRemovedEmpty, { name })
+        : fill(d.liveRemoved, {
+            name,
+            count: res.data.itemCount,
+            items: res.data.itemCount === 1 ? t.item : t.items,
+            subtotal: formatPrice(res.data.subtotal, { exact: true }),
+          }),
     );
   }
 
@@ -159,10 +176,10 @@ export function CartDrawer() {
       >
         <SheetHeader className="shrink-0 border-b border-border pt-[max(1rem,env(safe-area-inset-top,0px))] pr-14 pb-3.5 pl-4 sm:pt-[max(1.25rem,env(safe-area-inset-top,0px))] sm:pr-14 sm:pb-4 sm:pl-6">
           <SheetTitle className="text-lg font-semibold tracking-[-0.015em] sm:text-xl">
-            Shopping Bag ({cart?.itemCount ?? visitor.bagCount})
+            {fill(d.title, { count: cart?.itemCount ?? visitor.bagCount })}
           </SheetTitle>
           <SheetDescription className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
-            Free insured delivery on every order.
+            {d.subtitle}
           </SheetDescription>
         </SheetHeader>
 
@@ -180,11 +197,12 @@ export function CartDrawer() {
                 />
                 {remainingForFreeShipping && remainingForFreeShipping > 0 ? (
                   <span>
-                    Add {formatPrice(remainingForFreeShipping.toFixed(2))} more for complimentary
-                    insured courier
+                    {fill(d.freeShippingRemaining, {
+                      amount: formatPrice(remainingForFreeShipping.toFixed(2)),
+                    })}
                   </span>
                 ) : (
-                  <span>Complimentary insured courier unlocked</span>
+                  <span>{d.freeShippingUnlocked}</span>
                 )}
               </span>
               <span className="tabular-nums-price shrink-0 font-semibold text-muted-foreground">
@@ -197,7 +215,7 @@ export function CartDrawer() {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={freeShippingProgressPct}
-              aria-label="Free insured shipping threshold progress"
+              aria-label={d.freeShippingProgressAria}
             >
               <div
                 className="ma-progress-fill h-full w-full bg-accent"
@@ -228,10 +246,10 @@ export function CartDrawer() {
                 </div>
               </Float>
               <p className="mt-4 text-lg font-semibold tracking-[-0.015em] text-foreground">
-                Your Shopping Bag Is Empty
+                {d.emptyTitle}
               </p>
               <p className="mt-1.5 max-w-xs text-sm leading-relaxed text-muted-foreground">
-                Explore ready-to-ship solitaires, eternity bands, and fine jewellery creations.
+                {d.emptyText}
               </p>
               <Button
                 asChild
@@ -239,7 +257,7 @@ export function CartDrawer() {
                 className="mt-6"
                 onClick={() => visitorStore.closeCartDrawer()}
               >
-                <Link href="/collections">Explore Collections</Link>
+                <Link href="/collections">{d.emptyAction}</Link>
               </Button>
             </m.div>
           ) : (
@@ -301,7 +319,7 @@ export function CartDrawer() {
                               variant="ghost"
                               size="icon"
                               className="-mt-1.5 -mr-1.5 size-9 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                              aria-label={`Remove ${item.productName} from shopping bag`}
+                              aria-label={fill(d.removeAria, { name: item.productName })}
                               disabled={isBusy}
                               onClick={() =>
                                 void handleRemoveItem(item.variantId, item.productName, item.id)
@@ -318,7 +336,9 @@ export function CartDrawer() {
 
                           {item.quantity > 1 && (
                             <p className="tabular-nums-price mt-1 text-xs text-muted-foreground">
-                              {formatPrice(item.unitPrice, { exact: true })} each
+                              {fill(d.each, {
+                                amount: formatPrice(item.unitPrice, { exact: true }),
+                              })}
                             </p>
                           )}
 
@@ -331,14 +351,16 @@ export function CartDrawer() {
                           ) : null}
 
                           {item.availableStock <= 0 ? (
-                            <p className="mt-1.5 text-xs font-medium text-destructive">Sold out</p>
+                            <p className="mt-1.5 text-xs font-medium text-destructive">
+                              {d.soldOut}
+                            </p>
                           ) : item.hasStockIssue ? (
                             <p className="mt-1.5 text-xs font-medium text-destructive">
-                              Only {item.availableStock} left
+                              {fill(d.onlyLeft, { count: item.availableStock })}
                             </p>
                           ) : item.availableStock <= 3 ? (
                             <p className="mt-1.5 text-xs font-medium text-accent-text">
-                              {item.availableStock} in stock
+                              {fill(d.inStock, { count: item.availableStock })}
                             </p>
                           ) : null}
                         </div>
@@ -347,7 +369,7 @@ export function CartDrawer() {
                       <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/70 pt-3">
                         {item.isCustomized ? (
                           <span className="text-xs font-medium text-muted-foreground">
-                            Custom piece · Qty 1
+                            {d.customQty}
                           </span>
                         ) : (
                           <QuantityStepper
@@ -359,7 +381,7 @@ export function CartDrawer() {
                             onChange={(qty) =>
                               void handleQuantityChange(item.variantId, qty, item.id)
                             }
-                            label={`Quantity for ${item.productName}`}
+                            label={fill(d.quantityLabel, { name: item.productName })}
                           />
                         )}
                         <p className="tabular-nums-price text-right text-sm font-semibold whitespace-nowrap text-foreground sm:text-base">
@@ -377,14 +399,12 @@ export function CartDrawer() {
         {cart && cart.items.length > 0 && (
           <div className="shrink-0 border-t border-border bg-card px-4 pt-3.5 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:px-6 sm:pt-4 sm:pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]">
             <div className="flex items-center justify-between gap-4">
-              <span className="text-sm font-medium text-muted-foreground">Subtotal</span>
+              <span className="text-sm font-medium text-muted-foreground">{d.subtotal}</span>
               <span className="tabular-nums-price text-lg font-semibold tracking-tight whitespace-nowrap text-foreground sm:text-xl">
                 <AnimatedCounter value={formatPrice(cart.subtotal, { exact: true })} />
               </span>
             </div>
-            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-              Taxes, insured courier delivery, and gift presentation calculated at checkout.
-            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{d.taxNote}</p>
             <div className="mt-3.5 flex flex-col items-center gap-2">
               <Button
                 asChild
@@ -392,14 +412,14 @@ export function CartDrawer() {
                 onClick={() => visitorStore.closeCartDrawer()}
                 className="w-full"
               >
-                <Link href="/checkout">Checkout</Link>
+                <Link href="/checkout">{d.checkout}</Link>
               </Button>
               <button
                 type="button"
                 onClick={() => visitorStore.closeCartDrawer()}
                 className="inline-flex h-9 cursor-pointer items-center justify-center rounded-md px-4 text-sm font-medium text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
               >
-                Continue shopping
+                {d.continueShopping}
               </button>
             </div>
           </div>

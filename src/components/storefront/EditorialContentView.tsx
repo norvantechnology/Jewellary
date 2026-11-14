@@ -1,3 +1,4 @@
+import { UiText } from "@/components/shared/UiText";
 import { EditorialToc } from "@/components/motion/EditorialToc";
 import { Reveal } from "@/components/motion/Reveal";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
@@ -119,9 +120,15 @@ export async function EditorialContentView({ slug }: { slug: string }) {
             </div>
 
             {showToc && (
-              <aside aria-label="Table of contents" className="hidden lg:sticky lg:top-24 lg:block">
-                <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                  On this page
+              <aside
+                aria-labelledby="editorial-toc-heading"
+                className="hidden lg:sticky lg:top-24 lg:block"
+              >
+                <p
+                  id="editorial-toc-heading"
+                  className="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+                >
+                  <UiText section="common" name="onThisPage" />
                 </p>
                 <EditorialToc entries={toc} />
               </aside>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import { ArrowUp } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
@@ -60,6 +62,7 @@ export function ScrollProgressBar() {
  * Smooth back-to-top button appearing after 600px scroll with fade + scale spring.
  */
 export function BackToTop() {
+  const ui = useUiText();
   const [visible, setVisible] = React.useState(false);
   const reducedMotion = useReducedMotionSafe();
 
@@ -95,7 +98,7 @@ export function BackToTop() {
           data-focus-hide=""
           type="button"
           onClick={scrollToTop}
-          aria-label="Back to top"
+          aria-label={ui.common.backToTop}
           initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.88, y: 8 }}
           animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
           exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.88, y: 8 }}

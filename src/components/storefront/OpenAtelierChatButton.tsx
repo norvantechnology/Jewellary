@@ -1,4 +1,5 @@
 "use client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { MessagesSquare } from "lucide-react";
@@ -22,7 +23,7 @@ interface OpenAtelierChatButtonProps {
  * an optional product, customization request, or order conversation.
  */
 export function OpenAtelierChatButton({
-  label = "Chat with atelier",
+  label,
   contextType = "GENERAL",
   contextRefId = null,
   title = null,
@@ -31,6 +32,7 @@ export function OpenAtelierChatButton({
   size = "sm",
   className,
 }: OpenAtelierChatButtonProps) {
+  const ui = useUiText();
   return (
     <Button
       type="button"
@@ -47,7 +49,7 @@ export function OpenAtelierChatButton({
       className={cn("min-h-11 gap-1.5 sm:min-h-10", className)}
     >
       <MessagesSquare className="size-4 shrink-0 stroke-[1.5]" aria-hidden="true" />
-      <span>{label}</span>
+      <span>{label ?? ui.chat.openButton}</span>
     </Button>
   );
 }

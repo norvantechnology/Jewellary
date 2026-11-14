@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { CheckCircle2, Copy, Download, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { useUiText } from "@/components/providers/UiTextProvider";
 import { FormField } from "@/components/shared/FormField";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ export function AccountTwoFactorSection({
   setupRequired = false,
 }: AccountTwoFactorSectionProps) {
   const router = useRouter();
+  const t = useUiText().account.twoFactor;
   const [enabledOverride, setEnabledOverride] = React.useState<boolean | null>(null);
   const enabled = enabledOverride ?? twoFactorEnabled;
   const [password, setPassword] = React.useState("");
@@ -48,7 +50,7 @@ export function AccountTwoFactorSection({
     e.preventDefault();
     setErrorMsg(null);
     if (!password) {
-      setErrorMsg("Enter your current password to begin 2FA setup.");
+      setErrorMsg(t.passwordRequiredSetup);
       return;
     }
 
@@ -57,13 +59,13 @@ export function AccountTwoFactorSection({
     setBusy(false);
 
     if (res.error) {
-      setErrorMsg(res.error.message ?? "Unable to initialize two-factor setup.");
+      setErrorMsg(res.error.message ?? t.setupError);
       return;
     }
 
     const data = res.data as { totpURI?: string; backupCodes?: string[] } | null;
     if (!data?.totpURI) {
-      setErrorMsg("Authenticator URI could not be generated. Please try again.");
+      setErrorMsg(t.uriError);
       return;
     }
 
@@ -85,7 +87,7 @@ export function AccountTwoFactorSection({
     setTotpUri(data.totpURI);
     setBackupCodes(Array.isArray(data.backupCodes) ? data.backupCodes : null);
     setPassword("");
-    toast.success("Scan the QR code and verify a 6-digit code to finish activation.");
+    toast.success(t.scanToast);
   }
 
   async function handleVerifyTotp(e: React.FormEvent) {
@@ -93,7 +95,7 @@ export function AccountTwoFactorSection({
     setErrorMsg(null);
     const code = totpCode.replace(/\s+/g, "");
     if (!/^\d{6}$/.test(code)) {
-      setErrorMsg("Enter the 6-digit verification code from your authenticator app.");
+      setErrorMsg(t.codeRequired);
       return;
     }
 
@@ -102,7 +104,7 @@ export function AccountTwoFactorSection({
     setBusy(false);
 
     if (res.error) {
-      setErrorMsg(res.error.message ?? "Verification code invalid or expired.");
+      setErrorMsg(res.error.message ?? t.codeInvalid);
       return;
     }
 
@@ -110,7 +112,7 @@ export function AccountTwoFactorSection({
     setTotpUri(null);
     setQrDataUrl(null);
     setTotpCode("");
-    toast.success("Two-factor authentication is now enabled.");
+    toast.success(t.enabledToast);
     router.refresh();
   }
 
@@ -118,7 +120,7 @@ export function AccountTwoFactorSection({
     e.preventDefault();
     setErrorMsg(null);
     if (!regenPassword) {
-      setErrorMsg("Enter your password to generate fresh backup codes.");
+      setErrorMsg(t.passwordRequiredRegen);
       return;
     }
 
@@ -127,21 +129,21 @@ export function AccountTwoFactorSection({
     setBusy(false);
 
     if (res.error) {
-      setErrorMsg(res.error.message ?? "Unable to regenerate backup codes.");
+      setErrorMsg(res.error.message ?? t.regenError);
       return;
     }
 
     const data = res.data as { backupCodes?: string[] } | null;
     setBackupCodes(Array.isArray(data?.backupCodes) ? data.backupCodes : null);
     setRegenPassword("");
-    toast.success("Generated new backup recovery codes. Store them safely.");
+    toast.success(t.regenToast);
   }
 
   async function handleDisableTwoFactor(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
     if (!disablePassword) {
-      setErrorMsg("Enter your password to disable two-factor authentication.");
+      setErrorMsg(t.passwordRequiredDisable);
       return;
     }
 
@@ -150,7 +152,7 @@ export function AccountTwoFactorSection({
     setBusy(false);
 
     if (res.error) {
-      setErrorMsg(res.error.message ?? "Unable to disable two-factor authentication.");
+      setErrorMsg(res.error.message ?? t.disableError);
       return;
     }
 
@@ -159,12 +161,12 @@ export function AccountTwoFactorSection({
     setTotpUri(null);
     setQrDataUrl(null);
     setDisablePassword("");
-    toast.success("Two-factor authentication disabled.");
+    toast.success(t.disabledToast);
     router.refresh();
   }
 
   function downloadBackupCodes(codes: string[]) {
-    const content = `Two-Factor Recovery Backup Codes\nGenerated: ${new Date().toISOString()}\n\n${codes.join("\n")}\n`;
+    const content = `${t.fileHeading}\n${t.fileGenerated} ${new Date().toISOString()}\n\n${codes.join("\n")}\n`;
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -184,20 +186,19 @@ export function AccountTwoFactorSection({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
-            Two-Factor Authentication (TOTP)
+            {" "}
+            {t.heading}{" "}
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Protect your account with an authenticator app code alongside your password.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground"> {t.intro} </p>
         </div>
         <Badge variant={enabled ? "success" : "outline"} className="gap-1.5">
           {enabled ? (
             <>
               <ShieldCheck className="size-4 stroke-[1.5]" aria-hidden="true" />
-              <span>Enabled</span>
+              <span>{t.enabledBadge}</span>
             </>
           ) : (
-            <span>Not Enabled</span>
+            <span>{t.notEnabledBadge}</span>
           )}
         </Badge>
       </div>
@@ -212,17 +213,17 @@ export function AccountTwoFactorSection({
             aria-hidden="true"
           />
           <div>
-            <p className="font-semibold">Two-Factor Authentication Required for Studio Access</p>
+            <p className="font-semibold">{t.requiredTitle}</p>
             <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-              Your store policy requires all Admin and Staff accounts to enable 2FA before accessing
-              management tools. Complete the authenticator setup below, then return to{" "}
+              {t.requiredText}{" "}
               <a
                 href="/admin"
                 className="font-medium text-accent-text underline underline-offset-4 hover:opacity-80"
               >
-                Admin Studio
-              </a>
-              .
+                {" "}
+                {t.adminStudio}{" "}
+              </a>{" "}
+              .{" "}
             </p>
           </div>
         </div>
@@ -238,16 +239,14 @@ export function AccountTwoFactorSection({
       )}
 
       {!hasPasswordAccount ? (
-        <p className="mt-4 text-sm text-muted-foreground">
-          TOTP two-factor setup requires a password-backed credential.
-        </p>
+        <p className="mt-4 text-sm text-muted-foreground"> {t.noPasswordText} </p>
       ) : !enabled && !totpUri ? (
         <form onSubmit={handleStartEnable} className="mt-5 max-w-md space-y-4">
           <FormField
             id="tfa-enable-password"
-            label="Confirm Current Password"
+            label={t.confirmPasswordLabel}
             required
-            hint="We verify your password before generating a new authenticator secret."
+            hint={t.confirmPasswordHint}
           >
             {(fp) => (
               <Input
@@ -261,7 +260,8 @@ export function AccountTwoFactorSection({
             )}
           </FormField>
           <Button type="submit" loading={busy}>
-            Begin 2FA Setup
+            {" "}
+            {t.beginSetup}{" "}
           </Button>
         </form>
       ) : !enabled && totpUri ? (
@@ -272,7 +272,7 @@ export function AccountTwoFactorSection({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={qrDataUrl}
-                  alt="Scan this QR code in your authenticator application"
+                  alt={t.qrAlt}
                   width={192}
                   height={192}
                   // Authenticator scanners require dark modules over a high-contrast light quiet zone even in dark mode.
@@ -281,12 +281,12 @@ export function AccountTwoFactorSection({
                 />
               ) : (
                 <div className="flex size-48 items-center justify-center text-xs text-muted-foreground">
-                  Preparing QR code…
+                  {t.preparingQr}
                 </div>
               )}
               {secret && (
                 <div className="mt-3 w-full space-y-1 text-center">
-                  <p className="text-xs text-muted-foreground">Manual entry key</p>
+                  <p className="text-xs text-muted-foreground">{t.manualKey}</p>
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <code
                       data-testid="totp-secret"
@@ -299,10 +299,10 @@ export function AccountTwoFactorSection({
                       variant="ghost"
                       size="icon"
                       className="size-11 shrink-0"
-                      aria-label="Copy authenticator key"
+                      aria-label={t.copyKeyLabel}
                       onClick={() => {
                         void navigator.clipboard.writeText(secret);
-                        toast.success("Copied authenticator key.");
+                        toast.success(t.copiedToast);
                       }}
                     >
                       <Copy className="size-5 stroke-[1.5]" aria-hidden="true" />
@@ -314,10 +314,10 @@ export function AccountTwoFactorSection({
 
             <form onSubmit={handleVerifyTotp} className="space-y-4">
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Scan the QR code using Google Authenticator, 1Password, or Bitwarden, then enter the
-                6-digit code shown to activate two-factor verification.
+                {" "}
+                {t.scanInstructions}{" "}
               </p>
-              <FormField id="tfa-verify-code" label="6-Digit Authenticator Code" required>
+              <FormField id="tfa-verify-code" label={t.codeLabel} required>
                 {(fp) => (
                   <Input
                     {...fp}
@@ -325,7 +325,7 @@ export function AccountTwoFactorSection({
                     inputMode="numeric"
                     autoComplete="one-time-code"
                     maxLength={8}
-                    placeholder="123456"
+                    placeholder={t.codePlaceholder}
                     value={totpCode}
                     onChange={(e) => setTotpCode(e.target.value)}
                     required
@@ -334,7 +334,8 @@ export function AccountTwoFactorSection({
               </FormField>
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" loading={busy}>
-                  Verify &amp; Enable 2FA
+                  {" "}
+                  {t.verifyEnable}{" "}
                 </Button>
                 <Button
                   type="button"
@@ -345,7 +346,8 @@ export function AccountTwoFactorSection({
                     setTotpCode("");
                   }}
                 >
-                  Cancel
+                  {" "}
+                  {t.cancel}{" "}
                 </Button>
               </div>
             </form>
@@ -355,7 +357,7 @@ export function AccountTwoFactorSection({
         <div className="mt-5 space-y-6">
           <p className="flex items-center gap-2 text-sm text-success">
             <CheckCircle2 className="size-5 shrink-0 stroke-[1.5]" aria-hidden="true" />
-            <span>Your sign-ins require a TOTP authenticator code or recovery backup code.</span>
+            <span>{t.activeText}</span>
           </p>
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -363,8 +365,8 @@ export function AccountTwoFactorSection({
               onSubmit={handleRegenerateBackupCodes}
               className="space-y-3 rounded-lg border border-border p-4"
             >
-              <p className="text-sm font-semibold text-foreground">Backup Recovery Codes</p>
-              <FormField id="tfa-regen-password" label="Password to Generate New Codes" required>
+              <p className="text-sm font-semibold text-foreground">{t.backupHeading}</p>
+              <FormField id="tfa-regen-password" label={t.regenPasswordLabel} required>
                 {(fp) => (
                   <Input
                     {...fp}
@@ -383,7 +385,8 @@ export function AccountTwoFactorSection({
                 loading={busy}
                 className="min-h-11 sm:min-h-9"
               >
-                Generate Backup Codes
+                {" "}
+                {t.regenButton}{" "}
               </Button>
             </form>
 
@@ -391,8 +394,8 @@ export function AccountTwoFactorSection({
               onSubmit={handleDisableTwoFactor}
               className="space-y-3 rounded-lg border border-border p-4"
             >
-              <p className="text-sm font-semibold text-foreground">Disable Two-Factor</p>
-              <FormField id="tfa-disable-password" label="Password to Disable 2FA" required>
+              <p className="text-sm font-semibold text-foreground">{t.disableHeading}</p>
+              <FormField id="tfa-disable-password" label={t.disablePasswordLabel} required>
                 {(fp) => (
                   <Input
                     {...fp}
@@ -411,7 +414,8 @@ export function AccountTwoFactorSection({
                 loading={busy}
                 className="min-h-11 sm:min-h-9"
               >
-                Disable 2FA
+                {" "}
+                {t.disableButton}{" "}
               </Button>
             </form>
           </div>
@@ -422,10 +426,8 @@ export function AccountTwoFactorSection({
         <div className="mt-5 rounded-lg border border-border bg-surface-2 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-semibold text-foreground">Save Your Backup Codes</p>
-              <p className="text-xs text-muted-foreground">
-                Each code works once if you lose access to your authenticator device.
-              </p>
+              <p className="text-sm font-semibold text-foreground">{t.saveCodesHeading}</p>
+              <p className="text-xs text-muted-foreground"> {t.saveCodesText} </p>
             </div>
             <Button
               type="button"
@@ -435,7 +437,7 @@ export function AccountTwoFactorSection({
               onClick={() => downloadBackupCodes(backupCodes)}
             >
               <Download className="size-4 stroke-[1.5]" aria-hidden="true" />
-              <span>Download .txt</span>
+              <span>{t.downloadTxt}</span>
             </Button>
           </div>
           <ul className="mt-3 grid grid-cols-2 gap-2 font-mono text-xs sm:grid-cols-5">

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BookOpen } from "lucide-react";
@@ -9,26 +10,15 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { Container, Section } from "@/components/shared/primitives";
 import { formatDate } from "@/lib/dates";
 import { buildBreadcrumbListJsonLd } from "@/lib/seo/jsonld";
-import { INDEXABLE_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { getPublishedArticles } from "@/modules/articles/article.service";
-import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getPublicStoreSettings();
-  return buildMetadata({
-    title: "Diamond & Fine Jewellery Buying Guides",
-    description:
-      "Independent gemological guidance on diamond proportions, 4Cs clarity grading, 18K gold vs platinum alloys, and ring sizing.",
-    pathname: "/guides",
-    canonical: "/guides",
-    storeName: settings.storeName,
-    siteDefaultOgImage: settings.defaultOgImageUrl,
-    robots: INDEXABLE_ROBOTS,
-  });
+  return buildPageMetadata((c) => c.pages.guides.seo, { pathname: "/guides" });
 }
 
 export default async function GuidesIndexPage() {
-  const articles = await getPublishedArticles();
+  const [articles, content] = await Promise.all([getPublishedArticles(), getSiteContent()]);
+  const page = content.pages.guides;
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd([
     { name: "Home", path: "/" },
     { name: "Guides", path: "/guides" },
@@ -41,20 +31,17 @@ export default async function GuidesIndexPage() {
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Guides" }]} />
 
         <header className="mt-3 mb-6 border-b border-border pb-6 md:mb-10">
-          <h1 className="type-h1 font-semibold text-foreground">
-            Diamond &amp; Fine Jewellery Guides
-          </h1>
+          <h1 className="type-h1 font-semibold text-foreground">{page.heading}</h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            Clear gemological notes written by our specialists to help you evaluate diamond cut,
-            certification, metal durability, and ring sizing with confidence.
+            {page.intro}
           </p>
         </header>
 
         {articles.length === 0 ? (
           <EmptyState
             icon={BookOpen}
-            title="Editorial Guides Forthcoming"
-            description="Our gemology notes are currently being prepared."
+            title={content.pages.guides.emptyTitle}
+            description={content.pages.guides.emptyDescription}
           />
         ) : (
           <RevealStagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
@@ -117,7 +104,7 @@ export default async function GuidesIndexPage() {
                         href={`/guides/${article.slug}`}
                         className="ma-link-underline group/link inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                       >
-                        <span>Read guide</span>
+                        <span>{content.pages.guides.readLabel}</span>
                         <ArrowRight
                           className="size-4 stroke-[1.5] transition-transform duration-150 ease-out group-hover/link:translate-x-1"
                           aria-hidden="true"

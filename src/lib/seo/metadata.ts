@@ -15,6 +15,8 @@ import {
   finalizeSeoTitle,
   interpolateSeoTemplate,
   mergeSeoTemplates,
+  SEO_TEMPLATE_TEXT,
+  fillSeoText,
 } from "@/lib/seo/templates";
 
 export { SITE_LOCALE, getSiteUrl, toAbsoluteUrl };
@@ -116,8 +118,11 @@ export interface BuildMetadataInput {
   storeName?: string;
   siteDefaultOgImage?: string | null;
   images?: Array<{ url: string; alt: string; width?: number; height?: number }>;
-  /** Set true on route segments that define their own `opengraph-image.tsx` file convention. */
-  useSegmentOgImage?: boolean;
+  /**
+   * Generated share image for this page (e.g. `/api/og/product/<slug>?v=…`). Used when no
+   * share-friendly (JPEG/PNG) image is given in `images`.
+   */
+  shareImage?: string;
   type?: "website" | "article";
   robots?: Metadata["robots"];
   publishedTime?: string | null;
@@ -137,40 +142,62 @@ export interface BuildMetadataInput {
   };
 }
 
+/** Default share card (home hero photo + headline), see src/app/api/og/default/route.tsx. */
+const MAX_TITLE_LENGTH = 60;
+
+export const DEFAULT_OG_IMAGE_PATH = "/api/og/default";
+
+function isGeneratedOgUrl(url: string): boolean {
+  return url.startsWith("/api/og/") || /^https?:\/\/[^/]+\/api\/og\//.test(url);
+}
+
+function isShareFriendlyImage(url: string | null | undefined): url is string {
+  return Boolean(url && /\.(jpe?g|png)$/i.test(url.split("?")[0]!));
+}
+
+function guessImageType(url: string): string {
+  return /\.png$/i.test(url.split("?")[0]!) ? "image/png" : "image/jpeg";
+}
+
 export function buildMetadata(input: BuildMetadataInput): Metadata {
   const storeName = input.storeName ?? env.NEXT_PUBLIC_SITE_NAME ?? DEFAULT_BRAND_NAME;
   const canonicalUrl = input.canonical
     ? toAbsoluteUrl(input.canonical)
     : toAbsoluteUrl(input.pathname);
+  // Google shows ~60 characters. Keep "Title | Brand" when it fits; otherwise drop the brand
+  // so the page's own keywords stay visible in search results and share previews.
+  const brandedTitle = input.title ? `${input.title} | ${storeName}` : storeName;
   const fullTitle =
-    input.absoluteTitle ?? (input.title ? `${input.title} | ${storeName}` : storeName);
+    input.absoluteTitle ??
+    (input.title && brandedTitle.length > MAX_TITLE_LENGTH ? input.title : brandedTitle);
   const socialTitle = input.ogTitle?.trim() || fullTitle;
   const socialDescription = input.ogDescription?.trim() || input.description;
 
-  const hasExplicitImages = Boolean(input.images && input.images.length > 0);
-  const fallbackOg = input.siteDefaultOgImage
-    ? toAbsoluteUrl(input.siteDefaultOgImage)
-    : input.useSegmentOgImage
-      ? null
-      : toAbsoluteUrl("/opengraph-image");
-
-  const resolvedImages = hasExplicitImages
-    ? input.images!.map((img) => ({
-        url: toAbsoluteUrl(img.url),
-        alt: img.alt,
-        width: img.width ?? 1200,
-        height: img.height ?? 630,
-      }))
-    : fallbackOg
-      ? [
-          {
-            url: fallbackOg,
-            alt: socialTitle,
-            width: 1200,
-            height: 630,
-          },
-        ]
-      : undefined;
+  // Share previews (WhatsApp, iMessage, Facebook, X...) need an absolute JPEG/PNG URL; WebP/SVG
+  // are ignored by several apps. Order: page's own JPEG/PNG → generated card → admin default →
+  // site default card.
+  const friendlyImages = (input.images ?? []).filter(
+    (img) => isShareFriendlyImage(img.url) || isGeneratedOgUrl(img.url),
+  );
+  const fallbackUrl =
+    input.shareImage ??
+    (isShareFriendlyImage(input.siteDefaultOgImage) ? input.siteDefaultOgImage : null) ??
+    DEFAULT_OG_IMAGE_PATH;
+  const resolvedImages = (
+    friendlyImages.length > 0
+      ? friendlyImages
+      : [{ url: fallbackUrl, alt: socialTitle, width: 1200, height: 630 }]
+  ).map((img) => {
+    const url = toAbsoluteUrl(img.url);
+    return {
+      url,
+      secureUrl: url.startsWith("https://") ? url : undefined,
+      type: guessImageType(img.url),
+      alt: img.alt || socialTitle,
+      width: img.width ?? 1200,
+      height: img.height ?? 630,
+    };
+  });
 
   const effectiveRobots =
     input.robots ?? (isNoindexRoutePath(input.pathname) ? NOINDEX_FOLLOW_ROBOTS : INDEXABLE_ROBOTS);
@@ -184,7 +211,7 @@ export function buildMetadata(input: BuildMetadataInput): Metadata {
           description: socialDescription,
           siteName: storeName,
           locale: SITE_LOCALE,
-          ...(resolvedImages ? { images: resolvedImages } : {}),
+          images: resolvedImages,
           ...(input.publishedTime ? { publishedTime: input.publishedTime } : {}),
           ...(input.modifiedTime ? { modifiedTime: input.modifiedTime } : {}),
           ...(input.authors ? { authors: input.authors } : {}),
@@ -196,7 +223,7 @@ export function buildMetadata(input: BuildMetadataInput): Metadata {
           description: socialDescription,
           siteName: storeName,
           locale: SITE_LOCALE,
-          ...(resolvedImages ? { images: resolvedImages } : {}),
+          images: resolvedImages,
         };
 
   const other: Record<string, string | number | Array<string | number>> = {};
@@ -233,7 +260,7 @@ export function buildMetadata(input: BuildMetadataInput): Metadata {
       : undefined;
 
   return {
-    title: input.absoluteTitle ? { absolute: input.absoluteTitle } : input.title,
+    title: { absolute: fullTitle },
     description: input.description,
     ...(parsedKeywords && parsedKeywords.length > 0 ? { keywords: parsedKeywords } : {}),
     ...(input.authors && input.authors.length > 0
@@ -288,7 +315,9 @@ export function formatProductMetaTitle(
     collection: product.categoryName,
     metal: product.metalType ?? product.stoneShape,
     carat: product.caratTotal,
-    cert: product.certificationLab ? `${product.certificationLab} Certified` : null,
+    cert: product.certificationLab
+      ? fillSeoText(SEO_TEMPLATE_TEXT.fallbacks.certifiedLabel, { lab: product.certificationLab })
+      : null,
     brand,
     price: options?.priceText,
   });
@@ -320,18 +349,22 @@ export function formatProductMetaDescription(
   const lead = product.subtitle?.trim() || product.description?.trim() || product.name;
   const fallbackSpecs = `${
     product.caratTotal ? `${Number(product.caratTotal).toFixed(2)}ct ` : ""
-  }${product.certificationLab ? `${product.certificationLab} certified` : "Independently certified"}, insured delivery & ${returnWindowDays}-day returns.`;
+  }${
+    product.certificationLab
+      ? fillSeoText(SEO_TEMPLATE_TEXT.fallbacks.certifiedLower, { lab: product.certificationLab })
+      : SEO_TEMPLATE_TEXT.fallbacks.independentlyCertified
+  }, ${fillSeoText(SEO_TEMPLATE_TEXT.fallbacks.productSpecsSuffix, { days: returnWindowDays })}`;
 
   if (options?.templates) {
     const vars: SeoTemplateVariables = {
       name: product.name,
       category: product.categoryName,
       collection: product.categoryName,
-      metal: product.metalType ?? "18K Gold & 950 Platinum",
+      metal: product.metalType ?? SEO_TEMPLATE_TEXT.fallbacks.metal,
       carat: product.caratTotal,
-      cert: product.certificationLab ?? "GIA / IGI",
+      cert: product.certificationLab ?? SEO_TEMPLATE_TEXT.fallbacks.cert,
       brand: options.storeName ?? DEFAULT_BRAND_NAME,
-      price: options.priceText ?? "atelier pricing",
+      price: options.priceText ?? SEO_TEMPLATE_TEXT.fallbacks.price,
     };
     const templated = interpolateSeoTemplate(templates.productDescription, vars);
     return finalizeSeoDescription(templated, lead);
@@ -390,7 +423,7 @@ export function formatCollectionMetaDescription(input: {
     collection: input.name,
     category: input.name,
     count: input.count > 0 ? input.count : "our",
-    priceRange: input.priceRange || "bespoke atelier pricing",
+    priceRange: input.priceRange || SEO_TEMPLATE_TEXT.fallbacks.priceRange,
     brand,
   });
   return finalizeSeoDescription(fallback ? `${fallback} ${interpolated}` : interpolated);

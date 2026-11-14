@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { Info, Loader2 } from "lucide-react";
@@ -45,6 +46,7 @@ function buildGroupSummaryRow(
   group: CustomizationOptionGroupDTO,
   input: SubmittedGroupInput | undefined,
   imageCount: number,
+  labels: { imageCount: string; image: string; images: string },
 ): SummaryRow | null {
   if (group.type === "SELECT" || group.type === "SWATCH") {
     const code = input?.value?.trim();
@@ -137,7 +139,10 @@ function buildGroupSummaryRow(
       return {
         code: group.code,
         label: group.label,
-        valueText: `${imageCount} ${imageCount === 1 ? "image" : "images"}`,
+        valueText: fill(labels.imageCount, {
+          count: imageCount,
+          noun: imageCount === 1 ? labels.image : labels.images,
+        }),
         missingRequired: false,
       };
     }
@@ -173,6 +178,7 @@ export function SummaryPanel({
   onSubmitClick,
   onCancel,
 }: SummaryPanelProps) {
+  const ui = useUiText();
   const { formatPrice } = useCurrency();
   const reducedMotion = useReducedMotionSafe();
   const { desktopStickyTop } = useHeaderOffset(variant === "page");
@@ -181,35 +187,41 @@ export function SummaryPanel({
   const rows = React.useMemo(() => {
     const result: SummaryRow[] = [];
     for (const group of visibleGroups) {
-      const row = buildGroupSummaryRow(group, inputs[group.code], imageCount);
+      const row = buildGroupSummaryRow(group, inputs[group.code], imageCount, {
+        imageCount: ui.customize.summary.imageCount,
+        image: ui.customize.options.image,
+        images: ui.customize.options.images,
+      });
       if (row) result.push(row);
     }
     return result;
-  }, [visibleGroups, inputs, imageCount]);
+  }, [visibleGroups, inputs, imageCount, ui]);
 
   const formattedEstimate = formatPrice(estimatedMinBase);
 
   const submitLabel =
     mode === "edit"
       ? submitting
-        ? "Saving..."
-        : "Save changes"
+        ? ui.customize.actions.saving
+        : ui.customize.actions.save
       : submitting
-        ? "Sending..."
-        : "Send request";
+        ? ui.customize.actions.sending
+        : ui.customize.actions.send;
 
   const contactLabel =
     contactUiChoice === "PHONE"
       ? customerPhone?.trim()
-        ? `Phone · ${customerPhone.trim()}`
-        : "Phone"
+        ? fill(ui.customize.summary.phoneWith, { phone: customerPhone.trim() })
+        : ui.customize.summary.phone
       : contactUiChoice === "CHAT"
-        ? `Atelier Chat · ${customerEmail?.trim() || "Email"}`
-        : customerEmail?.trim() || "Email";
+        ? fill(ui.customize.summary.chatWith, {
+            email: customerEmail?.trim() || ui.customize.summary.email,
+          })
+        : customerEmail?.trim() || ui.customize.summary.email;
 
   return (
     <aside
-      aria-label="Specification summary"
+      aria-label={ui.customize.summary.aria}
       style={
         variant === "page"
           ? ({ "--summary-sticky-top": `${desktopStickyTop}px` } as React.CSSProperties)
@@ -226,22 +238,22 @@ export function SummaryPanel({
           <h2 className="text-base leading-6 font-semibold text-foreground">
             {variant === "page" ? (
               <>
-                <span className="hidden lg:inline">Summary</span>
-                <span className="lg:hidden">Review</span>
+                <span className="hidden lg:inline">{ui.customize.summary.heading}</span>
+                <span className="lg:hidden">{ui.customize.summary.review}</span>
               </>
             ) : (
-              "Review"
+              ui.customize.summary.review
             )}
           </h2>
           {rows.some((r) => r.missingRequired) ? (
-            <span className="text-xs font-medium text-destructive">Action needed</span>
+            <span className="text-xs font-medium text-destructive">
+              {ui.customize.summary.actionNeeded}
+            </span>
           ) : null}
         </div>
 
         {rows.length === 0 && !showContactSummary ? (
-          <p className="text-sm text-muted-foreground">
-            Your selected specifications will appear here.
-          </p>
+          <p className="text-sm text-muted-foreground">{ui.customize.summary.empty}</p>
         ) : (
           <ul className="space-y-2.5 text-sm">
             {rows.map((row) => (
@@ -256,7 +268,7 @@ export function SummaryPanel({
                       row.valueText
                     ) : (
                       <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-                        Required
+                        {ui.customize.options.required}
                       </span>
                     )}
                   </div>
@@ -267,7 +279,7 @@ export function SummaryPanel({
                   onClick={() => onEditGroup(row.code)}
                   className="min-h-8 shrink-0 rounded px-1.5 text-xs font-medium text-accent-text underline underline-offset-4 hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
-                  Edit
+                  {ui.customize.summary.edit}
                 </button>
               </li>
             ))}
@@ -280,7 +292,9 @@ export function SummaryPanel({
                 )}
               >
                 <div className="min-w-0 flex-1 space-y-0.5">
-                  <span className="block text-xs text-muted-foreground">Contact</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {ui.customize.summary.contact}
+                  </span>
                   <div className="font-medium break-words text-foreground">
                     {customerName?.trim() ? `${customerName.trim()} · ` : ""}
                     {contactLabel}
@@ -292,7 +306,7 @@ export function SummaryPanel({
                     onClick={onEditDetails}
                     className="min-h-8 shrink-0 rounded px-1.5 text-xs font-medium text-accent-text underline underline-offset-4 hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
-                    Edit
+                    {ui.customize.summary.edit}
                   </button>
                 ) : null}
               </li>
@@ -304,21 +318,23 @@ export function SummaryPanel({
         <div className="space-y-1 rounded-lg bg-surface-2 p-3.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-medium text-foreground">Estimated price</span>
+              <span className="text-sm font-medium text-foreground">
+                {ui.customize.actions.estimatedPrice}
+              </span>
               <TooltipProvider delayDuration={150}>
                 <Tooltip open={infoOpen} onOpenChange={setInfoOpen}>
                   <TooltipTrigger asChild>
                     <button
                       type="button"
                       onClick={() => setInfoOpen((prev) => !prev)}
-                      aria-label="About estimated price: Final quote confirmed by our atelier."
+                      aria-label={ui.customize.summary.priceInfoAria}
                       className="inline-flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                     >
                       <Info className="size-3.5" aria-hidden="true" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-[220px] text-center">
-                    Final quote confirmed by our atelier.
+                    {ui.customize.summary.priceInfo}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -341,7 +357,7 @@ export function SummaryPanel({
             </div>
           </div>
 
-          <p className="text-xs text-muted-foreground">Typically ready in 3–4 weeks</p>
+          <p className="text-xs text-muted-foreground">{ui.customize.summary.readyIn}</p>
         </div>
 
         {/* Actions rendered inside SummaryPanel for Desktop Page single-scroll, or Cancel text link on mobile/drawer Review */}
@@ -367,7 +383,7 @@ export function SummaryPanel({
                   onClick={onCancel}
                   className="min-h-10 rounded px-3 text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
-                  Cancel
+                  {ui.customize.summary.cancel}
                 </button>
               </div>
             ) : null}
@@ -381,7 +397,7 @@ export function SummaryPanel({
               onClick={onCancel}
               className="min-h-10 rounded px-3 text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
-              Cancel
+              {ui.customize.summary.cancel}
             </button>
           </div>
         ) : null}

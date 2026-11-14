@@ -1,4 +1,7 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
+import { isTouchTextInputFocused } from "@/hooks/use-modal-history";
+import { useSearchSuggestions } from "@/hooks/use-search-suggestions";
 
 import * as React from "react";
 import Image from "next/image";
@@ -9,40 +12,6 @@ import { Price } from "@/components/shared/Price";
 import { cn } from "@/lib/utils";
 import type { PublicCategoryNodeDTO } from "@/modules/catalog/catalog.public";
 
-interface SuggestProduct {
-  id: string;
-  name: string;
-  slug: string;
-  sku: string;
-  categoryName: string;
-  priceMode: "FIXED" | "PRICE_ON_REQUEST";
-  basePrice: string;
-  imageUrl: string | null;
-  altText: string | null;
-}
-
-interface SuggestCategory {
-  id: string;
-  name: string;
-  path: string;
-  productCount: number;
-}
-
-interface SuggestResponse {
-  query: string;
-  categories: SuggestCategory[];
-  products: SuggestProduct[];
-}
-
-const POPULAR_TERMS = ["Solitaire", "Emerald Cut", "18K Gold", "Platinum", "GIA"] as const;
-
-const DISCOVERY_SHORTCUTS = [
-  { label: "All Jewellery", href: "/collections" },
-  { label: "Featured", href: "/collections?featured=1" },
-  { label: "New Arrivals", href: "/collections?new=1" },
-  { label: "Ready to Ship", href: "/collections?inStock=1" },
-] as const;
-
 export function HomeProductFinder({
   categories,
   currency = "USD",
@@ -50,6 +19,7 @@ export function HomeProductFinder({
   categories: PublicCategoryNodeDTO[];
   currency?: string;
 }) {
+  const ui = useUiText();
   const router = useRouter();
   const inputId = React.useId();
   const listboxId = React.useId();
@@ -58,10 +28,9 @@ export function HomeProductFinder({
 
   const [query, setQuery] = React.useState("");
   const [open, setOpen] = React.useState(false);
-  const [loading, setLoading] = React.useState(false);
-  const [results, setResults] = React.useState<SuggestResponse | null>(null);
-
   const trimmed = query.trim();
+  // Shared, cached and race-free suggestions (see use-search-suggestions.ts).
+  const suggestions = useSearchSuggestions(query, { limit: 6, enabled: open });
 
   const orderedCategories = React.useMemo(() => {
     const populated = categories.filter((c) => c.productCount > 0);
@@ -78,35 +47,6 @@ export function HomeProductFinder({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, []);
 
-  React.useEffect(() => {
-    if (!open || trimmed.length < 2) {
-      return;
-    }
-
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/search/suggest?q=${encodeURIComponent(trimmed)}&limit=6`, {
-          signal: controller.signal,
-        });
-        if (res.ok) {
-          const data = (await res.json()) as SuggestResponse;
-          setResults(data);
-        }
-      } catch {
-        // Ignore aborted or transient fetch errors
-      } finally {
-        setLoading(false);
-      }
-    }, 160);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [open, trimmed]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setOpen(false);
@@ -117,22 +57,18 @@ export function HomeProductFinder({
     }
   };
 
-  const handleSelectPopular = (term: string) => {
-    setQuery(term);
-    setOpen(true);
-    inputRef.current?.focus();
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
-      setOpen(false);
+      // On phones some keyboards send Escape when hidden: keep the results, just drop focus.
+      if (!isTouchTextInputFocused()) setOpen(false);
       inputRef.current?.blur();
     }
   };
 
   const showDropdown = open;
-  const activeResults = trimmed.length >= 2 ? results : null;
-  const isSearching = trimmed.length >= 2 && loading;
+  const activeResults = suggestions.data;
+  const isSearching = suggestions.status === "loading";
+  const failed = suggestions.status === "error";
   const hasMatches =
     Boolean(activeResults) &&
     ((activeResults?.products.length ?? 0) > 0 || (activeResults?.categories.length ?? 0) > 0);
@@ -144,14 +80,14 @@ export function HomeProductFinder({
         <form
           onSubmit={handleSubmit}
           role="search"
-          aria-label="Find jewellery pieces"
+          aria-label={ui.collections.finder.formAria}
           className={cn(
             "flex items-center gap-1 rounded-xl border border-border bg-surface p-1.5 shadow-sm transition-colors",
             "focus-within:border-border-strong focus-within:ring-2 focus-within:ring-accent/20",
           )}
         >
           <label htmlFor={inputId} className="sr-only">
-            Search jewellery by stone shape, metal, or SKU
+            {ui.collections.finder.inputLabel}
           </label>
           <Search
             className="ml-2 size-4 shrink-0 text-text-muted sm:ml-3"
@@ -169,13 +105,10 @@ export function HomeProductFinder({
             onChange={(e) => {
               const next = e.target.value;
               setQuery(next);
-              if (next.trim().length < 2) {
-                setResults(null);
-              }
               setOpen(true);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Search rings, solitaire, 18K gold..."
+            placeholder={ui.collections.finder.placeholder}
             autoComplete="off"
             className="min-h-11 min-w-0 flex-1 bg-transparent px-1.5 text-base text-text placeholder:text-text-muted focus:outline-none sm:px-2 sm:text-sm"
           />
@@ -185,10 +118,9 @@ export function HomeProductFinder({
               type="button"
               onClick={() => {
                 setQuery("");
-                setResults(null);
                 inputRef.current?.focus();
               }}
-              aria-label="Clear search query"
+              aria-label={ui.collections.finder.clearAria}
               className="inline-flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
             >
               <X className="size-4" strokeWidth={1.75} aria-hidden="true" />
@@ -199,7 +131,7 @@ export function HomeProductFinder({
             type="submit"
             className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-on-primary transition-colors hover:bg-primary-hover sm:px-4"
           >
-            <span>Find</span>
+            <span>{ui.collections.finder.submit}</span>
             <ArrowRight
               className="hidden size-3.5 sm:inline"
               strokeWidth={1.75}
@@ -213,45 +145,60 @@ export function HomeProductFinder({
           <div
             id={listboxId}
             role="region"
-            aria-label="Search suggestions"
+            aria-label={ui.collections.finder.suggestionsAria}
             className="absolute inset-x-0 top-full mt-2 overflow-hidden rounded-xl border border-border bg-surface shadow-md"
           >
-            {trimmed.length < 2 ? (
+            {trimmed.length < 2 && orderedCategories.length === 0 ? (
+              <p className="p-4 text-sm text-text-muted">{ui.collections.finder.typeToSearch}</p>
+            ) : trimmed.length < 2 ? (
               <div className="p-3.5 sm:p-4">
                 <p className="mb-2 text-xs font-medium tracking-wider text-text-muted uppercase">
-                  Popular searches
+                  {ui.collections.finder.popularHeading}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {POPULAR_TERMS.map((term) => (
-                    <button
-                      key={term}
-                      type="button"
-                      onClick={() => handleSelectPopular(term)}
-                      className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 text-xs font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-3"
+                  {orderedCategories.map((category) => (
+                    <Link
+                      key={category.id}
+                      href={`/collections/${category.path}`}
+                      onClick={() => setOpen(false)}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 text-xs font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-3"
                     >
                       <Sparkles
                         className="size-3 text-accent-text"
                         strokeWidth={1.75}
                         aria-hidden="true"
                       />
-                      <span>{term}</span>
-                    </button>
+                      <span>{category.name}</span>
+                    </Link>
                   ))}
                 </div>
               </div>
-            ) : isSearching && !activeResults ? (
-              <div className="p-4 text-sm text-text-muted">Searching…</div>
+            ) : isSearching ? (
+              <div className="p-4 text-sm text-text-muted" role="status" aria-live="polite">
+                {ui.collections.finder.searching}
+              </div>
+            ) : failed ? (
+              <div className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-text-2">{ui.collections.finder.loadError}</p>
+                <button
+                  type="button"
+                  onClick={suggestions.retry}
+                  className="inline-flex min-h-10 cursor-pointer items-center text-sm font-medium text-accent-text hover:underline"
+                >
+                  {ui.collections.finder.retry}
+                </button>
+              </div>
             ) : !hasMatches ? (
               <div className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-text-2">
-                  No instant matches for &ldquo;{trimmed}&rdquo;.
+                  {fill(ui.collections.finder.noMatches, { query: trimmed })}
                 </p>
                 <Link
                   href={`/search?q=${encodeURIComponent(trimmed)}`}
                   onClick={() => setOpen(false)}
                   className="inline-flex min-h-10 items-center gap-1 text-sm font-medium text-accent-text hover:underline"
                 >
-                  <span>Search full catalog</span>
+                  <span>{ui.collections.finder.searchAll}</span>
                   <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </Link>
               </div>
@@ -260,7 +207,7 @@ export function HomeProductFinder({
                 {activeResults && activeResults.categories.length > 0 && (
                   <div className="p-3">
                     <p className="mb-2 px-1 text-[11px] font-medium tracking-wider text-text-muted uppercase">
-                      Collections
+                      {ui.collections.finder.collectionsHeading}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {activeResults.categories.map((cat) => (
@@ -290,7 +237,7 @@ export function HomeProductFinder({
                 {activeResults && activeResults.products.length > 0 && (
                   <div className="p-2">
                     <p className="px-2 pt-1 pb-1 text-[11px] font-medium tracking-wider text-text-muted uppercase">
-                      Pieces
+                      {ui.collections.finder.piecesHeading}
                     </p>
                     <ul className="space-y-1">
                       {activeResults.products.map((item) => (
@@ -327,7 +274,9 @@ export function HomeProductFinder({
                             </div>
                             <div className="shrink-0 text-right text-sm font-medium text-text">
                               {item.priceMode === "PRICE_ON_REQUEST" ? (
-                                <span className="text-xs text-text-muted">Enquire</span>
+                                <span className="text-xs text-text-muted">
+                                  {ui.collections.finder.askUs}
+                                </span>
                               ) : (
                                 <Price amount={item.basePrice} currency={currency} />
                               )}
@@ -356,9 +305,12 @@ export function HomeProductFinder({
       </div>
 
       {/* Quick-browse horizontal shelf on mobile, clean wrap on tablet/desktop */}
-      <nav aria-label="Quick category shortcuts" className="relative z-10 w-full min-w-0">
+      <nav
+        aria-label={ui.collections.finder.shortcutsAria}
+        className="relative z-10 w-full min-w-0"
+      >
         <div className="flex w-full min-w-0 scrollbar-none gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
-          {DISCOVERY_SHORTCUTS.map((shortcut) => (
+          {ui.collections.finder.shortcuts.map((shortcut) => (
             <Link
               key={shortcut.href}
               href={shortcut.href}

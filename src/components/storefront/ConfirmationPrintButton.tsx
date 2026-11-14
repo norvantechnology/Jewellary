@@ -1,10 +1,13 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import { Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 export function ConfirmationPrintButton({ className }: { className?: string }) {
+  const t = useUiText().orders;
   return (
     <Button
       type="button"
@@ -13,7 +16,7 @@ export function ConfirmationPrintButton({ className }: { className?: string }) {
       onClick={() => window.print()}
     >
       <Printer className="size-5 stroke-[1.5]" aria-hidden="true" />
-      <span>Print Receipt</span>
+      <span>{t.printReceipt}</span>
     </Button>
   );
 }

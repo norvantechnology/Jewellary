@@ -1,5 +1,7 @@
 "use client";
 
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -20,6 +22,7 @@ const DynamicCartDrawer = dynamic(
 );
 
 export function HeaderWishlistAction({ initialCount }: { initialCount: number }) {
+  const ui = useUiText();
   const hydrated = useVisitorHydrated();
   const count = useWishlistCount(initialCount);
   const reducedMotion = useReducedMotionSafe();
@@ -48,7 +51,7 @@ export function HeaderWishlistAction({ initialCount }: { initialCount: number })
         <TooltipTrigger asChild>
           <Link
             href="/wishlist"
-            aria-label={`Wishlist (${count} saved items)`}
+            aria-label={fill(ui.wishlist.headerAria, { count })}
             className="transition-ui relative hidden size-11 items-center justify-center rounded-md text-text-2 hover:bg-surface-3 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:inline-flex"
           >
             <span ref={iconRef} className="inline-flex">
@@ -65,13 +68,14 @@ export function HeaderWishlistAction({ initialCount }: { initialCount: number })
             )}
           </Link>
         </TooltipTrigger>
-        <TooltipContent className="hidden lg:block">Wishlist</TooltipContent>
+        <TooltipContent className="hidden lg:block">{ui.wishlist.headerTooltip}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 }
 
 export function HeaderCartAction({ initialCount }: { initialCount: number }) {
+  const ui = useUiText();
   const hydrated = useVisitorHydrated();
   const count = useBagCount(initialCount);
   const cartDrawerMounted = useCartDrawerMounted();
@@ -121,7 +125,7 @@ export function HeaderCartAction({ initialCount }: { initialCount: number }) {
                   visitorStore.openCartDrawer();
                 }
               }}
-              aria-label={`Shopping bag (${count} items)`}
+              aria-label={fill(ui.cart.headerAria, { count })}
               className="transition-ui relative inline-flex size-11 items-center justify-center rounded-md text-text-2 hover:bg-surface-3 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               <span ref={iconRef} className="inline-flex">
@@ -138,7 +142,7 @@ export function HeaderCartAction({ initialCount }: { initialCount: number }) {
               )}
             </Link>
           </TooltipTrigger>
-          <TooltipContent className="hidden lg:block">Shopping bag</TooltipContent>
+          <TooltipContent className="hidden lg:block">{ui.cart.headerTooltip}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
 

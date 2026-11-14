@@ -1,4 +1,6 @@
 "use client";
+import { isTouchTextInputFocused } from "@/hooks/use-modal-history";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import dynamic from "next/dynamic";
@@ -35,16 +37,10 @@ const LazyStarterProductPicker = dynamic(
   { ssr: false },
 );
 
-const QUICK_TOPIC_CHIPS = [
-  "Metal & engraving options",
-  "Compare diamond cuts & carat",
-  "Bespoke commission timeline",
-];
-
-function formatRelativeTime(iso: string | null): string {
+function formatRelativeTime(iso: string | null, justNow: string): string {
   if (!iso) return "";
   const diffMin = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (diffMin < 1) return "now";
+  if (diffMin < 1) return justNow;
   if (diffMin < 60) return `${diffMin}m`;
   const diffHr = Math.round(diffMin / 60);
   if (diffHr < 24) return `${diffHr}h`;
@@ -66,6 +62,7 @@ export function ChatWidgetPanel({
   onClose,
   onTotalUnreadChange,
 }: ChatWidgetPanelProps) {
+  const ui = useUiText();
   const pathname = usePathname();
   const { formatPrice } = useCurrency();
   const isLeftAlignedRoute =
@@ -82,7 +79,7 @@ export function ChatWidgetPanel({
   const [supportStatus, setSupportStatus] = React.useState<{
     isOnline: boolean;
     hoursLabel: string;
-  }>(syncBoot?.supportStatus ?? { isOnline: true, hoursLabel: "Online" });
+  }>(syncBoot?.supportStatus ?? { isOnline: true, hoursLabel: ui.chat.online });
   const [activeDetail, setActiveDetail] = React.useState<ChatConversationDetailDTO | null>(
     syncBoot?.activeDetail ?? null,
   );
@@ -282,7 +279,7 @@ export function ChatWidgetPanel({
             setView("THREAD");
           }
         } catch {
-          toast.error("Unable to open concierge context.");
+          toast.error(ui.chat.contextError);
         }
       })();
       return;
@@ -304,7 +301,7 @@ export function ChatWidgetPanel({
       }
     });
     return () => cancelAnimationFrame(raf);
-  }, [open, pendingOpenDetail, onConsumePendingDetail, conversations]);
+  }, [open, pendingOpenDetail, onConsumePendingDetail, conversations, ui]);
 
   // Lightweight socket listener for unread / conversation list previews (no refetch!)
   React.useEffect(() => {
@@ -354,6 +351,11 @@ export function ChatWidgetPanel({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
+        // Android keyboards can send Escape when dismissed: only hide the keyboard then.
+        if (isTouchTextInputFocused()) {
+          (document.activeElement as HTMLElement).blur();
+          return;
+        }
         if (starterPickerOpen) {
           setStarterPickerOpen(false);
           return;
@@ -383,8 +385,12 @@ export function ChatWidgetPanel({
 
     window.addEventListener("keydown", handleKeyDown);
     const raf = requestAnimationFrame(() => {
+      // On phones don't focus the text box (it would pop the keyboard over the panel).
+      const touch = window.matchMedia("(pointer: coarse)").matches;
       const target = panelRef.current?.querySelector<HTMLElement>(
-        "textarea:not([disabled]), input:not([disabled]), button:not([disabled])",
+        touch
+          ? "button:not([disabled])"
+          : "textarea:not([disabled]), input:not([disabled]), button:not([disabled])",
       );
       target?.focus({ preventScroll: true });
     });
@@ -412,7 +418,7 @@ export function ChatWidgetPanel({
           conversationId: "pending",
           senderId: null,
           senderRole: "CUSTOMER",
-          senderName: "You",
+          senderName: ui.chat.you,
           type: "TEXT",
           body: trimmed,
           attachments: [],
@@ -442,7 +448,7 @@ export function ChatWidgetPanel({
         error?: unknown;
       } | null;
       if (!res.ok || !json?.data?.conversation) {
-        throw new Error(extractApiErrorMessage(json, "Unable to start conversation."));
+        throw new Error(extractApiErrorMessage(json, ui.chat.startError));
       }
 
       const conv = json.data.conversation;
@@ -473,7 +479,7 @@ export function ChatWidgetPanel({
         starterTextRef.current = trimmed;
         setStarterText(trimmed);
       }
-      toast.error(err instanceof Error ? err.message : "Could not start chat.");
+      toast.error(err instanceof Error ? err.message : ui.chat.startFailed);
     }
   }
 
@@ -495,7 +501,7 @@ export function ChatWidgetPanel({
         error?: unknown;
       } | null;
       if (!res.ok || !json?.data?.conversation) {
-        throw new Error(extractApiErrorMessage(json, "Unable to start conversation."));
+        throw new Error(extractApiErrorMessage(json, ui.chat.startError));
       }
       const conv = json.data.conversation;
       userChoseNewRef.current = false;
@@ -519,7 +525,7 @@ export function ChatWidgetPanel({
         }),
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unable to share item.");
+      toast.error(err instanceof Error ? err.message : ui.chat.shareError);
     }
   }
 
@@ -537,14 +543,14 @@ export function ChatWidgetPanel({
           guestEmail: trimmed,
         }),
       });
-      if (!res.ok) throw new Error("Unable to save email.");
+      if (!res.ok) throw new Error(ui.chat.emailSaveError);
       setGuestEmailSaved(true);
       setConversations((prev) =>
         prev.map((c) => (c.id === activeConversationId ? { ...c, customerEmail: trimmed } : c)),
       );
-      toast.success("We'll notify you by email when we reply.");
+      toast.success(ui.chat.emailSaved);
     } catch {
-      toast.error("Please enter a valid email address.");
+      toast.error(ui.chat.emailInvalid);
     } finally {
       setSavingGuestEmail(false);
     }
@@ -569,7 +575,7 @@ export function ChatWidgetPanel({
     <section
       ref={panelRef}
       role="dialog"
-      aria-label="Atelier Concierge Chat"
+      aria-label={ui.chat.panelAria}
       aria-modal={isMobileViewport ? true : undefined}
       style={
         isMobileViewport
@@ -616,7 +622,7 @@ export function ChatWidgetPanel({
           <button
             type="button"
             onClick={() => setView("LIST")}
-            aria-label="View all conversations"
+            aria-label={ui.chat.viewAllAria}
             className="relative inline-flex size-10 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors after:absolute after:-inset-0.5 hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <ChevronLeft className="size-5" aria-hidden="true" />
@@ -632,7 +638,7 @@ export function ChatWidgetPanel({
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] leading-tight font-semibold text-text">
-            Atelier Concierge
+            {ui.chat.title}
           </p>
           <p className="mt-0.5 flex items-center gap-1.5 text-xs leading-tight text-text-muted">
             <span
@@ -642,7 +648,7 @@ export function ChatWidgetPanel({
               aria-hidden="true"
             />
             <span className="truncate">
-              {supportStatus.isOnline ? "Online" : "We reply by email"}
+              {supportStatus.isOnline ? ui.chat.online : ui.chat.offline}
             </span>
           </p>
         </div>
@@ -658,8 +664,8 @@ export function ChatWidgetPanel({
                 setActiveConversationId(null);
                 setView("NEW");
               }}
-              aria-label="New conversation"
-              title="New conversation"
+              aria-label={ui.chat.newConversation}
+              title={ui.chat.newConversation}
               className="relative inline-flex size-10 items-center justify-center rounded-full text-text-muted transition-colors after:absolute after:-inset-0.5 hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               <Plus className="size-4.5" aria-hidden="true" />
@@ -669,7 +675,7 @@ export function ChatWidgetPanel({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close concierge chat"
+            aria-label={ui.chat.closeAria}
             className="relative inline-flex size-10 items-center justify-center rounded-full text-text-muted transition-colors after:absolute after:-inset-0.5 hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <X className="size-4.5" aria-hidden="true" />
@@ -682,7 +688,7 @@ export function ChatWidgetPanel({
         {view === "LIST" ? (
           <div className="flex-1 space-y-2 overflow-y-auto overscroll-contain p-3">
             {conversations.length === 0 ? (
-              <p className="py-12 text-center text-sm text-text-muted">No conversations yet.</p>
+              <p className="py-12 text-center text-sm text-text-muted">{ui.chat.noConversations}</p>
             ) : (
               conversations.map((conv) => (
                 <button
@@ -707,17 +713,17 @@ export function ChatWidgetPanel({
                     <div className="flex items-center gap-2">
                       <span className="truncate text-[13px] font-semibold text-text">
                         {conv.contextType === "GENERAL"
-                          ? "Atelier Concierge"
+                          ? ui.chat.title
                           : conv.contextType.replace("_", " ")}
                       </span>
                       {conv.lastMessageAt ? (
                         <span className="shrink-0 text-[11px] text-text-muted">
-                          {formatRelativeTime(conv.lastMessageAt)}
+                          {formatRelativeTime(conv.lastMessageAt, ui.chat.justNow)}
                         </span>
                       ) : null}
                     </div>
                     <p className="mt-1 truncate text-xs text-text-muted">
-                      {conv.lastMessagePreview || "Conversation opened"}
+                      {conv.lastMessagePreview || ui.chat.conversationOpened}
                     </p>
                   </div>
                   {conv.unreadCount > 0 ? (
@@ -737,8 +743,8 @@ export function ChatWidgetPanel({
               initialDetail={
                 activeDetail?.conversation.id === activeConversationId ? activeDetail : null
               }
-              suggestedPrompts={QUICK_TOPIC_CHIPS}
-              composerPlaceholder="Ask concierge…"
+              suggestedPrompts={ui.chat.quickTopics}
+              composerPlaceholder={ui.chat.composerPlaceholder}
               defaultShareOpen={defaultShareOpen}
               initialFiles={pendingFiles}
               isMobileViewport={isMobileViewport}
@@ -780,8 +786,8 @@ export function ChatWidgetPanel({
                   required
                   value={guestEmailInput}
                   onChange={(e) => setGuestEmailInput(e.target.value)}
-                  placeholder="Email for reply updates (optional)"
-                  aria-label="Email for reply notifications"
+                  placeholder={ui.chat.emailPlaceholder}
+                  aria-label={ui.chat.emailAria}
                   className="h-8 min-w-0 flex-1 rounded-full border border-border bg-surface px-3 text-xs text-text placeholder:text-text-muted focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                 />
                 <button
@@ -789,12 +795,12 @@ export function ChatWidgetPanel({
                   disabled={savingGuestEmail}
                   className="inline-flex h-8 shrink-0 items-center rounded-full bg-primary px-3 text-xs font-medium text-on-primary"
                 >
-                  Save
+                  {ui.chat.saveEmail}
                 </button>
                 <button
                   type="button"
                   onClick={() => setEmailPromptDismissed(true)}
-                  aria-label="Dismiss email prompt"
+                  aria-label={ui.chat.dismissEmailAria}
                   className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface"
                 >
                   <X className="size-3.5" aria-hidden="true" />
@@ -813,7 +819,7 @@ export function ChatWidgetPanel({
                       <div className="max-w-[82%] rounded-2xl rounded-br-[4px] bg-primary px-3.5 py-2.5 text-left text-[15px] leading-[1.45] text-on-primary">
                         {m.body}
                       </div>
-                      <span className="mt-1 text-[11px] text-text-muted">Sending…</span>
+                      <span className="mt-1 text-[11px] text-text-muted">{ui.chat.sending}</span>
                     </div>
                   ))}
                 </div>
@@ -822,12 +828,12 @@ export function ChatWidgetPanel({
                   <div className="mb-3 flex size-11 items-center justify-center rounded-full border border-border bg-surface-2 text-accent-text">
                     <Sparkles className="size-5" aria-hidden="true" />
                   </div>
-                  <h2 className="text-base font-semibold text-text">How can we help?</h2>
+                  <h2 className="text-base font-semibold text-text">{ui.chat.emptyTitle}</h2>
                   <p className="mt-1 max-w-[260px] text-[13px] text-text-muted">
-                    Speak directly with our concierge about sizing, stones, or commissions.
+                    {ui.chat.emptyText}
                   </p>
                   <div className="mt-4 flex w-full max-w-[300px] flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center">
-                    {QUICK_TOPIC_CHIPS.map((prompt) => (
+                    {ui.chat.quickTopics.map((prompt) => (
                       <button
                         key={prompt}
                         type="button"
@@ -868,11 +874,11 @@ export function ChatWidgetPanel({
                       setStarterPlusOpen(false);
                       starterFileRef.current?.click();
                     }}
-                    aria-label="Attach images"
+                    aria-label={ui.chat.attachAria}
                     className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-medium text-text hover:bg-surface-2"
                   >
                     <ImagePlus className="size-4" aria-hidden="true" />
-                    <span>Photo</span>
+                    <span>{ui.chat.photo}</span>
                   </button>
                   <button
                     type="button"
@@ -881,11 +887,11 @@ export function ChatWidgetPanel({
                       void prefetchShareProducts(true);
                       setStarterPickerOpen(true);
                     }}
-                    aria-label="Share product or reference"
+                    aria-label={ui.chat.shareAria}
                     className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-medium text-text hover:bg-surface-2"
                   >
                     <Paperclip className="size-4" aria-hidden="true" />
-                    <span>Share piece</span>
+                    <span>{ui.chat.sharePiece}</span>
                   </button>
                 </div>
               ) : null}
@@ -896,20 +902,20 @@ export function ChatWidgetPanel({
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                   multiple
-                  aria-label="Upload chat image attachments"
+                  aria-label={ui.chat.uploadAria}
                   className="hidden"
                   onChange={(e) => {
                     const picked = e.target.files ? Array.from(e.target.files) : [];
                     e.target.value = "";
                     if (picked.length > 0) {
-                      void handleStartConversation(starterText || "Shared reference image", picked);
+                      void handleStartConversation(starterText || ui.chat.sharedImage, picked);
                     }
                   }}
                 />
                 <button
                   type="button"
                   onClick={() => setStarterPlusOpen((o) => !o)}
-                  aria-label="More attachment actions"
+                  aria-label={ui.chat.moreActionsAria}
                   className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none min-[360px]:hidden"
                 >
                   <Plus className="size-5" aria-hidden="true" />
@@ -917,7 +923,7 @@ export function ChatWidgetPanel({
                 <button
                   type="button"
                   onClick={() => starterFileRef.current?.click()}
-                  aria-label="Attach images"
+                  aria-label={ui.chat.attachAria}
                   className="hidden size-10 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none min-[360px]:inline-flex"
                 >
                   <ImagePlus className="size-5" aria-hidden="true" />
@@ -929,7 +935,7 @@ export function ChatWidgetPanel({
                     void prefetchShareProducts(true);
                     setStarterPickerOpen((o) => !o);
                   }}
-                  aria-label="Share product or reference"
+                  aria-label={ui.chat.shareAria}
                   className="hidden size-10 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none min-[360px]:inline-flex"
                 >
                   <Paperclip className="size-5" aria-hidden="true" />
@@ -951,13 +957,13 @@ export function ChatWidgetPanel({
                       void handleStartConversation(starterText);
                     }
                   }}
-                  placeholder="Ask concierge…"
-                  aria-label="Message atelier concierge"
+                  placeholder={ui.chat.composerPlaceholder}
+                  aria-label={ui.chat.messageAria}
                   className="max-h-32 min-h-10 flex-1 resize-none rounded-[20px] border border-border-strong bg-surface px-3.5 py-2 text-[15px] leading-[1.35] text-text placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 />
                 <button
                   type="submit"
-                  aria-label="Send message"
+                  aria-label={ui.chat.sendAria}
                   className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-95"
                 >
                   <ArrowUp className="size-4.5" strokeWidth={2.25} aria-hidden="true" />

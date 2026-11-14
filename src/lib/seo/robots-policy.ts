@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
 import { getSiteUrl } from "@/lib/seo/site";
 
-export const ROBOTS_ALLOW_PATHS = ["/", "/_next/static/", "/_next/image"];
+// /api/og/ = social share images. Facebook/WhatsApp, X and LinkedIn obey robots.txt, so the
+// more specific Allow must beat the /api Disallow or link previews show no image.
+export const ROBOTS_ALLOW_PATHS = ["/", "/api/og/", "/_next/static/", "/_next/image"];
 
 export const ROBOTS_DISALLOW_PATHS = [
   "/admin",
@@ -15,7 +17,6 @@ export const ROBOTS_DISALLOW_PATHS = [
   "/forgot-password",
   "/reset-password",
   "/verify-email",
-  "/dev",
   "/_next/",
 ];
 

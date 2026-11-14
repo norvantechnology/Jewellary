@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -11,7 +13,11 @@ import {
   menuContainerVariants,
   menuItemVariants,
 } from "@/lib/motion";
-import type { NavCategoryGroup, NavCollectionLink } from "@/components/layout/navigation-data";
+import type {
+  NavCategoryGroup,
+  NavCollectionLink,
+  NavLabels,
+} from "@/components/layout/navigation-data";
 
 export interface MegaMenuPortalProps {
   open: boolean;
@@ -21,6 +27,7 @@ export interface MegaMenuPortalProps {
   reducedMotion: boolean;
   categoryGroups: NavCategoryGroup[];
   collections: NavCollectionLink[];
+  labels: NavLabels;
   closeMenu: (restoreFocus?: boolean) => void;
   handleMouseEnterZone: () => void;
   handleMouseLeaveZone: () => void;
@@ -35,11 +42,13 @@ export function MegaMenuPortal({
   reducedMotion,
   categoryGroups,
   collections,
+  labels,
   closeMenu,
   handleMouseEnterZone,
   handleMouseLeaveZone,
   handlePanelKeyDown,
 }: MegaMenuPortalProps) {
+  const ui = useUiText();
   return createPortal(
     <AnimatePresence>
       {open && (
@@ -65,7 +74,7 @@ export function MegaMenuPortal({
               ref={panelRef}
               id={panelId}
               role="region"
-              aria-label="Shop by category and collections"
+              aria-label={ui.layout.megaMenuLabel}
               variants={reducedMotion ? fadeInVariants : menuContainerVariants}
               initial="hidden"
               animate="visible"
@@ -78,7 +87,7 @@ export function MegaMenuPortal({
               <div className="grid grid-cols-4 gap-8">
                 <div className="col-span-3">
                   <p className="mb-4 text-xs font-medium tracking-wider text-text-muted uppercase">
-                    Shop by category
+                    {labels.shopByCategory}
                   </p>
                   <div className="grid grid-cols-4 items-start gap-6">
                     {categoryGroups.map((group) => (
@@ -117,7 +126,7 @@ export function MegaMenuPortal({
                   className="col-span-1 border-l border-border pl-6"
                 >
                   <p className="mb-4 text-xs font-medium tracking-wider text-text-muted uppercase">
-                    Collections
+                    {labels.collections}
                   </p>
                   <ul className="flex flex-col gap-2">
                     {collections.map((item) => (
@@ -138,7 +147,7 @@ export function MegaMenuPortal({
                     onClick={() => closeMenu(false)}
                     className="group mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent-text transition-colors hover:underline focus-visible:underline focus-visible:outline-none"
                   >
-                    <span>View all collections</span>
+                    <span>{labels.viewAllCollections}</span>
                     <ArrowRight
                       className="size-3.5 transition-transform duration-200 group-hover:translate-x-1"
                       strokeWidth={1.5}

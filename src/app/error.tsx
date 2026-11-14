@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import { useEffect } from "react";
 import { ShieldAlert } from "lucide-react";
 import { Float } from "@/components/motion/Float";
@@ -14,6 +16,7 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useUiText().errors;
   useEffect(() => {
     console.error("Unhandled route error", error.digest);
   }, [error]);
@@ -28,12 +31,12 @@ export default function AppError({
             </div>
           </Float>
           <FadeIn>
-            <h1 className="type-h1 font-semibold text-foreground">Something Went Wrong</h1>
+            <h1 className="type-h1 font-semibold text-foreground">{t.heading}</h1>
             <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
-              We encountered a temporary error loading this page. Your bag and account remain safe.
+              {t.text}
             </p>
             <Button type="button" onClick={reset} className="mt-8">
-              Try again
+              {t.retry}
             </Button>
           </FadeIn>
         </Container>

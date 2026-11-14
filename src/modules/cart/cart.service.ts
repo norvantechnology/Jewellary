@@ -339,7 +339,7 @@ export async function addCartItemForOwner(
 
   if (variant.product.priceMode !== "FIXED") {
     throw new ValidationError(
-      "This high-jewellery creation requires a private bespoke consultation rather than direct bag checkout.",
+      "This piece is made to order. Contact us for a price instead of adding it to your cart.",
     );
   }
 
@@ -381,7 +381,7 @@ export async function addCartItemForOwner(
     );
   }
   if (nextQty > 10) {
-    throw new ValidationError("Maximum 10 units per piece in a single bag.");
+    throw new ValidationError("You can add up to 10 of each item to your cart.");
   }
 
   if (existingItem) {
@@ -435,9 +435,7 @@ export async function updateCartItemQtyForOwner(
   });
   if (existingTarget?.customizationRequestId) {
     if (quantity > 1) {
-      throw new ValidationError(
-        "Bespoke quoted pieces are commissioned individually (quantity 1).",
-      );
+      throw new ValidationError("Custom quoted pieces are made one at a time (quantity 1).");
     }
     return getCartForOwner(owner);
   }

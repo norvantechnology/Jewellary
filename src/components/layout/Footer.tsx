@@ -1,3 +1,4 @@
+import { UiText } from "@/components/shared/UiText";
 import * as React from "react";
 import Link from "next/link";
 import { Globe } from "lucide-react";
@@ -71,44 +72,24 @@ function SocialIcon({ label }: { label: string }) {
   return <Globe className="size-5" strokeWidth={1.5} aria-hidden="true" />;
 }
 
-export function Footer({ config }: { config: SiteHeaderConfig }) {
-  const shopLinks = [
-    { label: "All Jewellery", href: "/collections" },
-    ...config.categories.slice(0, 4).map((cat) => ({
-      label: cat.name,
-      href: `/collections/${cat.path}`,
-    })),
-  ];
+export interface FooterContent {
+  blurb: string;
+  copyright: string;
+  columns: Array<{ heading: string; links: Array<{ label: string; href: string }> }>;
+}
 
-  const sections: FooterSectionGroup[] = [
-    {
-      id: "shop",
-      heading: "Shop",
-      links: shopLinks,
-    },
-    {
-      id: "client-care",
-      heading: "Client care",
-      links: [
-        { label: "Concierge", href: "/contact" },
-        { label: "Track an Order", href: "/orders/track" },
-        { label: "Shipping & Returns", href: "/shipping-returns" },
-        { label: "Ring Size Guide", href: "/ring-size-guide" },
-        { label: "Care Guide", href: "/care-guide" },
-        { label: "FAQ", href: "/faq" },
-      ],
-    },
-    {
-      id: "company",
-      heading: "Company",
-      links: [
-        { label: "Atelier", href: "/about" },
-        { label: "Guides", href: "/guides" },
-        { label: "Privacy Policy", href: "/privacy" },
-        { label: "Terms of Service", href: "/terms" },
-      ],
-    },
-  ];
+export function Footer({ config, content }: { config: SiteHeaderConfig; content: FooterContent }) {
+  const categoryLinks = config.categories.slice(0, 4).map((cat) => ({
+    label: cat.name,
+    href: `/collections/${cat.path}`,
+  }));
+
+  // Column text comes from site-content.json → site.footer; the first column also lists categories.
+  const sections: FooterSectionGroup[] = content.columns.map((column, idx) => ({
+    id: `footer-${idx}`,
+    heading: column.heading,
+    links: idx === 0 ? [...column.links, ...categoryLinks] : column.links,
+  }));
 
   const socialLinks = config.socialLinks ?? [];
 
@@ -127,9 +108,7 @@ export function Footer({ config }: { config: SiteHeaderConfig }) {
               className="text-footer-text [&_svg]:text-footer-accent"
               linkClassName="focus-visible:outline-footer-accent"
             />
-            <p className="mt-3 max-w-sm text-sm text-footer-muted">
-              Certified diamonds set in recycled 18K gold and 950 platinum.
-            </p>
+            <p className="mt-3 max-w-sm text-sm text-footer-muted">{content.blurb}</p>
 
             <FooterNewsletterForm />
           </div>
@@ -173,12 +152,19 @@ export function Footer({ config }: { config: SiteHeaderConfig }) {
         {/* Bottom Bar */}
         <div className="mt-10 flex flex-col items-center gap-4 border-t border-footer-border pt-6 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
           <p className="text-xs text-footer-subtle">
-            &copy; <CurrentYear /> {config.siteName}. All rights reserved.
+            &copy; <CurrentYear /> {config.siteName}. {content.copyright}
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end sm:gap-3">
             {socialLinks.length > 0 && (
-              <div className="flex items-center gap-2" aria-label="Social media links">
+              <div
+                className="flex items-center gap-2"
+                role="group"
+                aria-labelledby="footer-social-label"
+              >
+                <span id="footer-social-label" className="sr-only">
+                  <UiText section="layout" name="socialLinks" />
+                </span>
                 {socialLinks.map((social) => (
                   <a
                     key={social.href}
@@ -201,14 +187,14 @@ export function Footer({ config }: { config: SiteHeaderConfig }) {
                 prefetch={false}
                 className="ma-link-underline inline-flex min-h-11 items-center px-1.5 hover:text-footer-accent focus-visible:text-footer-accent"
               >
-                Privacy
+                <UiText section="layout" name="footerPrivacy" />
               </Link>
               <Link
                 href="/terms"
                 prefetch={false}
                 className="ma-link-underline inline-flex min-h-11 items-center px-1.5 hover:text-footer-accent focus-visible:text-footer-accent"
               >
-                Terms
+                <UiText section="layout" name="footerTerms" />
               </Link>
             </div>
 

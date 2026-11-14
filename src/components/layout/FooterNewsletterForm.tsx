@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import { AlertCircle, Check, CheckCircle2 } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
@@ -14,6 +16,7 @@ import { subscribeNewsletterAction } from "@/modules/newsletter/newsletter.actio
 const SIMPLE_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function FooterNewsletterForm() {
+  const t = useUiText().newsletterForm;
   const [email, setEmail] = React.useState("");
   const [emailError, setEmailError] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
@@ -71,37 +74,35 @@ export function FooterNewsletterForm() {
     }
 
     if (result.data.status === "already_subscribed") {
-      setStatusMessage("You are already confirmed on our private atelier dispatch list.");
-      void notifyInfo("Already subscribed to atelier updates.");
+      setStatusMessage(t.alreadyStatus);
+      void notifyInfo(t.alreadyToast);
       return;
     }
 
     setEmail("");
     abuse.refreshToken();
     setSubscribedSuccess(true);
-    setStatusMessage("Please check your inbox to confirm your subscription (double opt-in).");
-    void notifySuccess("Confirmation email sent — please verify your address.");
+    setStatusMessage(t.successStatus);
+    void notifySuccess(t.successToast);
   }
 
   const buttonStateKey = isSubmitting ? "sending" : subscribedSuccess ? "subscribed" : "idle";
 
   return (
     <div ref={formWrapRef} className="mt-5 max-w-sm">
-      <p className="mb-1 text-sm font-semibold text-footer-text">Newsletter</p>
-      <p className="mb-3 text-sm text-footer-muted">
-        Receive previews of new releases and atelier notes.
-      </p>
+      <p className="mb-1 text-sm font-semibold text-footer-text">{t.heading}</p>
+      <p className="mb-3 text-sm text-footer-muted">{t.text}</p>
       <form onSubmit={onSubmit} className="space-y-2" noValidate>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <label htmlFor="footer-newsletter-email" className="sr-only">
-            Email address for newsletter
+            {t.emailLabel}
           </label>
           <Input
             id="footer-newsletter-email"
             name="email"
             type="email"
             autoComplete="email"
-            placeholder="you@example.com"
+            placeholder={t.placeholder}
             value={email}
             onFocus={abuse.activate}
             onPointerEnter={abuse.activate}
@@ -130,14 +131,14 @@ export function FooterNewsletterForm() {
                 className="inline-flex items-center gap-1.5"
               >
                 {isSubmitting ? (
-                  "Sending…"
+                  t.sending
                 ) : subscribedSuccess ? (
                   <>
                     <Check className="size-4" strokeWidth={2} aria-hidden="true" />
-                    <span>Subscribed</span>
+                    <span>{t.subscribed}</span>
                   </>
                 ) : (
-                  "Subscribe"
+                  t.submit
                 )}
               </m.span>
             </AnimatePresence>

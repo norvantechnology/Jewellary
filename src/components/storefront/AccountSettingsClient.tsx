@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { FormField } from "@/components/shared/FormField";
 import { AccountTwoFactorSection } from "@/components/storefront/AccountTwoFactorSection";
@@ -25,6 +26,7 @@ export function AccountSettingsClient({
   requireTwoFactorPrompt?: boolean;
 }) {
   const router = useRouter();
+  const t = useUiText().account.settings;
   const [name, setName] = React.useState(profile.name);
   const [phone, setPhone] = React.useState(profile.phone ?? "");
   const [profileErrors, setProfileErrors] = React.useState<Record<string, string[]>>({});
@@ -47,7 +49,7 @@ export function AccountSettingsClient({
       const response = await fetch("/api/account/export", { cache: "no-store" });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        toast.error(body?.error ?? "Unable to export personal data right now.");
+        toast.error(body?.error ?? t.exportError);
         return;
       }
       const blob = await response.blob();
@@ -59,9 +61,9 @@ export function AccountSettingsClient({
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
-      toast.success("Personal data export downloaded.");
+      toast.success(t.exportDoneToast);
     } catch {
-      toast.error("Unable to download personal data right now.");
+      toast.error(t.downloadError);
     } finally {
       setExportingData(false);
     }
@@ -80,7 +82,7 @@ export function AccountSettingsClient({
         setProfileErrors(res.error.fieldErrors ?? {});
         return;
       }
-      toast.success("Profile updated");
+      toast.success(t.profileSavedToast);
       router.refresh();
     });
   }
@@ -99,7 +101,7 @@ export function AccountSettingsClient({
         setPasswordErrors(res.error.fieldErrors ?? {});
         return;
       }
-      toast.success("Password updated");
+      toast.success(t.passwordSavedToast);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -116,11 +118,11 @@ export function AccountSettingsClient({
         return;
       }
       await authClient.signOut();
-      toast.success("Your account has been closed and personal details anonymized.");
+      toast.success(t.closedToast);
       router.replace("/");
       router.refresh();
     } catch {
-      toast.error("Unable to complete account closure.");
+      toast.error(t.closeError);
       setDeleting(false);
     }
   }
@@ -129,18 +131,22 @@ export function AccountSettingsClient({
     <div className="space-y-6 md:space-y-8">
       <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
         <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
-          Personal Details
+          {" "}
+          {t.profileHeading}{" "}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Update the client profile used for receipts and private concierge communication.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground"> {t.profileIntro} </p>
 
         <form onSubmit={handleSaveProfile} className="mt-5 max-w-lg space-y-4">
-          <FormField id="settings-email" label="Email Address">
+          <FormField id="settings-email" label={t.emailLabel}>
             {(fp) => <Input {...fp} value={profile.email} disabled readOnly />}
           </FormField>
 
-          <FormField id="settings-name" label="Full Name" required error={profileErrors.name?.[0]}>
+          <FormField
+            id="settings-name"
+            label={t.nameLabel}
+            required
+            error={profileErrors.name?.[0]}
+          >
             {(fp) => (
               <Input {...fp} value={name} onChange={(e) => setName(e.target.value)} required />
             )}
@@ -148,8 +154,8 @@ export function AccountSettingsClient({
 
           <FormField
             id="settings-phone"
-            label="Phone Number"
-            hint="Used by armoured courier dispatchers prior to insured delivery."
+            label={t.phoneLabel}
+            hint={t.phoneHint}
             error={profileErrors.phone?.[0]}
           >
             {(fp) => (
@@ -160,26 +166,28 @@ export function AccountSettingsClient({
                 autoComplete="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+1 555 234 5678"
+                placeholder={t.phonePlaceholder}
               />
             )}
           </FormField>
 
           <Button type="submit" loading={savingProfile}>
-            Save Profile
+            {" "}
+            {t.saveProfile}{" "}
           </Button>
         </form>
       </section>
 
       <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
         <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
-          Password &amp; Security
+          {" "}
+          {t.passwordHeading}{" "}
         </h2>
         {profile.hasPasswordAccount ? (
           <form onSubmit={handleChangePassword} className="mt-5 max-w-lg space-y-4">
             <FormField
               id="settings-current-password"
-              label="Current Password"
+              label={t.currentPasswordLabel}
               required
               error={passwordErrors.currentPassword?.[0]}
             >
@@ -197,9 +205,9 @@ export function AccountSettingsClient({
 
             <FormField
               id="settings-new-password"
-              label="New Password"
+              label={t.newPasswordLabel}
               required
-              hint="Minimum 10 characters."
+              hint={t.passwordHint}
               error={passwordErrors.newPassword?.[0]}
             >
               {(fp) => (
@@ -216,7 +224,7 @@ export function AccountSettingsClient({
 
             <FormField
               id="settings-confirm-password"
-              label="Confirm New Password"
+              label={t.confirmPasswordLabel}
               required
               error={passwordErrors.confirmPassword?.[0]}
             >
@@ -233,14 +241,12 @@ export function AccountSettingsClient({
             </FormField>
 
             <Button type="submit" variant="outline" loading={savingPassword}>
-              Update Password
+              {" "}
+              {t.updatePassword}{" "}
             </Button>
           </form>
         ) : (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Your account signs in via single sign-on provider authentication. Password settings are
-            managed by your identity provider.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground"> {t.ssoText} </p>
         )}
       </section>
 
@@ -255,12 +261,10 @@ export function AccountSettingsClient({
         className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6"
       >
         <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
-          Personal Data Export
+          {" "}
+          {t.exportHeading}{" "}
         </h2>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          Download a portable JSON copy of your client profile, saved shipping and billing
-          addresses, order history, saved wishlist items, and studio enquiries.
-        </p>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground"> {t.exportIntro} </p>
         <div className="mt-4">
           <Button
             type="button"
@@ -269,23 +273,23 @@ export function AccountSettingsClient({
             onClick={() => void handleDownloadData()}
           >
             <Download className="size-5 stroke-[1.5]" aria-hidden="true" />
-            <span>Download my data</span>
+            <span>{t.exportButton}</span>
           </Button>
         </div>
       </section>
 
       <section className="rounded-xl border border-destructive/40 bg-card p-4 shadow-sm sm:p-6">
         <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
-          Close &amp; Anonymize Account
+          {" "}
+          {t.closeHeading}{" "}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Closing your account permanently removes saved addresses, wishlists, sessions, and
-          personal profile details. Historical order invoices remain anonymized for legal and tax
-          record retention.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground"> {t.closeIntro} </p>
 
         <div className="mt-5 max-w-md space-y-3">
-          <FormField id="delete-confirm-email" label={`Type "${profile.email}" to confirm`}>
+          <FormField
+            id="delete-confirm-email"
+            label={fill(t.closeConfirmLabel, { email: profile.email })}
+          >
             {(fp) => (
               <Input
                 {...fp}
@@ -306,12 +310,11 @@ export function AccountSettingsClient({
             }
             onClick={() => setDeleteDialogOpen(true)}
           >
-            Delete My Account
+            {" "}
+            {t.closeButton}{" "}
           </Button>
           {profile.role === "ADMIN" && (
-            <p className="text-xs text-muted-foreground">
-              Administrator accounts cannot be self-deleted. Assign another administrator first.
-            </p>
+            <p className="text-xs text-muted-foreground"> {t.adminCannotClose} </p>
           )}
         </div>
       </section>
@@ -319,9 +322,9 @@ export function AccountSettingsClient({
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="Confirm Permanent Account Deletion"
-        description="This action permanently anonymizes your client profile, removes saved addresses and wishlist items, and closes your login credentials. This cannot be undone."
-        confirmLabel="Permanently Delete Account"
+        title={t.closeDialogTitle}
+        description={t.closeDialogText}
+        confirmLabel={t.closeDialogConfirm}
         destructive
         loading={deleting}
         onConfirm={handleConfirmDeleteAccount}

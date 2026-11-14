@@ -36,7 +36,7 @@ export const addToCartAction = createAction(
   async ({ variantId, quantity }) => {
     const owner = await resolveCurrentCartOwner(true);
     if (!owner) {
-      throw new ValidationError("Unable to initialize shopping bag session.");
+      throw new ValidationError("We couldn't load your cart. Please refresh the page.");
     }
     const cart = await addCartItemForOwner(owner, variantId, quantity);
     revalidatePath("/cart");
@@ -53,7 +53,7 @@ export const updateCartItemQtyAction = createAction(
   async ({ variantId, quantity, cartItemId }) => {
     const owner = await resolveCurrentCartOwner(false);
     if (!owner) {
-      throw new ValidationError("Your shopping bag session has expired.");
+      throw new ValidationError("Your cart session expired. Please refresh the page.");
     }
     const cart = await updateCartItemQtyForOwner(owner, variantId, quantity, cartItemId);
     revalidatePath("/cart");
@@ -87,7 +87,7 @@ export const saveCartItemForLaterAction = createAction(
   async ({ variantId, cartItemId }) => {
     const owner = await resolveCurrentCartOwner(false);
     if (!owner) {
-      throw new ValidationError("Your shopping bag session has expired.");
+      throw new ValidationError("Your cart session expired. Please refresh the page.");
     }
     const wishlistVariantIds = await saveCartItemForLater(owner, variantId, cartItemId);
     const cart = await getCurrentCartSummary();

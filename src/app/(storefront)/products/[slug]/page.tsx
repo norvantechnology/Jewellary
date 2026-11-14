@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getSiteContent } from "@/modules/site-content/site-content.service";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Reveal, RevealStagger } from "@/components/motion/Reveal";
@@ -57,8 +58,8 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   const resolved = await getPublicProductBySlug(slug);
   if (!resolved || resolved.kind !== "product") {
     return buildMetadata({
-      title: "Fine Jewellery Creation",
-      description: "Explore GIA and IGI certified diamonds and fine heirloom pieces.",
+      title: (await getSiteContent()).pages.product.seo.title,
+      description: (await getSiteContent()).pages.product.seo.description,
       pathname: `/products/${slug}`,
       storeName: settings.storeName,
       robots: NOINDEX_FOLLOW_ROBOTS,
@@ -67,18 +68,12 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   const { product } = resolved;
   const canonicalPath = product.canonicalOverride ?? `/products/${product.slug}`;
+  // Admin-set share image wins; otherwise a generated 1200x630 JPEG with the product photo.
+  // ?v= changes when the product is edited so WhatsApp & co. fetch the new image.
   const ogImages = product.ogImageUrl
     ? [{ url: product.ogImageUrl, alt: product.name, width: 1200, height: 630 }]
-    : product.images[0]?.url && !product.images[0].url.endsWith(".svg")
-      ? [
-          {
-            url: product.images[0].url,
-            alt: product.images[0].altText ?? product.name,
-            width: 1200,
-            height: 1200,
-          },
-        ]
-      : undefined;
+    : undefined;
+  const shareImage = `/api/og/product/${encodeURIComponent(product.slug)}?v=${Date.parse(product.updatedAt) || 0}`;
 
   const priceText =
     product.priceMode === "PRICE_ON_REQUEST"
@@ -109,7 +104,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     storeName: settings.storeName,
     siteDefaultOgImage: settings.defaultOgImageUrl,
     images: ogImages,
-    useSegmentOgImage: true,
+    shareImage,
     pinterestProduct:
       product.priceMode === "FIXED"
         ? {
@@ -123,12 +118,14 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 }
 
 async function ProductPageBody({ params }: ProductPageProps) {
-  const [{ slug }, settings, zones, articles] = await Promise.all([
+  const [{ slug }, settings, zones, articles, siteContent] = await Promise.all([
     params,
     getPublicStoreSettings(),
     getAllShippingZones(true),
     getPublishedArticles(),
+    getSiteContent(),
   ]);
+  const copy = siteContent.pages.product;
   const resolved = await getPublicProductBySlug(slug);
 
   if (!resolved) {
@@ -250,7 +247,7 @@ async function ProductPageBody({ params }: ProductPageProps) {
           <div className="space-y-4 lg:col-span-7">
             <Reveal>
               <h2 className="type-h2 font-display font-semibold text-foreground">
-                Frequently Asked Questions
+                {copy.faqHeading}
               </h2>
             </Reveal>
             <Accordion
@@ -260,7 +257,7 @@ async function ProductPageBody({ params }: ProductPageProps) {
             >
               <AccordionItem value="faq-1">
                 <AccordionTrigger className="min-h-14 py-4 text-left text-base font-medium">
-                  How are the diamonds and precious metals verified?
+                  {copy.faqVerifiedQuestion}
                 </AccordionTrigger>
                 <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
                   {product.certificationLab
@@ -271,7 +268,7 @@ async function ProductPageBody({ params }: ProductPageProps) {
 
               <AccordionItem value="faq-2">
                 <AccordionTrigger className="min-h-14 py-4 text-left text-base font-medium">
-                  What are the insured delivery and return terms?
+                  {copy.faqDeliveryQuestion}
                 </AccordionTrigger>
                 <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
                   {deliveryLabel} Eligible unworn pieces may be returned within{" "}
@@ -284,7 +281,7 @@ async function ProductPageBody({ params }: ProductPageProps) {
                 className={customFaqs.length > 0 || product.warrantyText ? undefined : "border-b-0"}
               >
                 <AccordionTrigger className="min-h-14 py-4 text-left text-base font-medium">
-                  Can ring sizing or metal finishes be customized?
+                  {copy.faqCustomizeQuestion}
                 </AccordionTrigger>
                 <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
                   {product.hasSizing
@@ -306,7 +303,7 @@ async function ProductPageBody({ params }: ProductPageProps) {
                   className={customFaqs.length > 0 ? undefined : "border-b-0"}
                 >
                   <AccordionTrigger className="min-h-14 py-4 text-left text-base font-medium">
-                    What lifetime care and warranty coverage applies?
+                    {copy.faqWarrantyQuestion}
                   </AccordionTrigger>
                   <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
                     {product.warrantyText}
@@ -333,7 +330,9 @@ async function ProductPageBody({ params }: ProductPageProps) {
 
           <aside className="space-y-4 lg:col-span-5">
             <Reveal delayMs={50}>
-              <h2 className="type-h2 font-display font-semibold text-foreground">Buying Guides</h2>
+              <h2 className="type-h2 font-display font-semibold text-foreground">
+                {copy.guidesHeading}
+              </h2>
             </Reveal>
             <div className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm md:p-6">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border pb-3 text-xs font-medium">
@@ -380,14 +379,12 @@ async function ProductPageBody({ params }: ProductPageProps) {
                 </ul>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Visit our{" "}
                   <Link
                     href="/guides"
                     className="inline-flex min-h-11 items-center text-accent-text underline underline-offset-4"
                   >
-                    Diamond &amp; Fine Jewellery Guides
-                  </Link>{" "}
-                  for 4Cs grading and metal comparison notes.
+                    {copy.guidesEmptyText}
+                  </Link>
                 </p>
               )}
             </div>
@@ -398,7 +395,7 @@ async function ProductPageBody({ params }: ProductPageProps) {
           <section className="mt-12 border-t border-border pt-10 sm:mt-16 sm:pt-12">
             <Reveal>
               <h2 className="type-h2 font-display font-semibold text-foreground">
-                Complementary Pieces
+                {copy.relatedHeading}
               </h2>
             </Reveal>
             <RevealStagger className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">

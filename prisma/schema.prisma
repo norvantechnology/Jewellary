@@ -503,6 +503,7 @@ model CategoryFacet {
   facet    Facet    @relation(fields: [facetId], references: [id], onDelete: Cascade)
 
   @@id([categoryId, facetId])
+  @@index([facetId])
 }
 
 model ProductFacetValue {
@@ -1091,7 +1092,7 @@ model CustomizationRequest {
   @@index([status, quoteExpiresAt])
   @@index([orderId])
   @@index([createdAt])
-  @@index([status, reminder24hSentAt, quoteExpiresAt])
+  @@index([status, reminder24hSentAt, quoteExpiresAt], map: "customization_requests_status_reminder24hSentAt_quoteExpi_idx")
   @@index([assignedToId])
   @@index([reviewedById])
   @@index([variantId])
@@ -1259,7 +1260,6 @@ model Message {
 
   @@unique([conversationId, clientTempId])
   @@index([conversationId, seq])
-  @@index([conversationId, seq(sort: Desc)], map: "messages_conversationId_seq_desc_idx")
   @@index([conversationId, senderRole, readAt])
   @@index([conversationId, createdAt])
   @@index([senderId])
@@ -1433,3 +1433,14 @@ model SeoAuditRun {
   @@map("seo_audit_runs")
 }
 
+
+/// Admin edits to storefront page content. `data` is a partial override deep-merged over
+/// data/frontend/site-content.json (the defaults), so new keys in the file always appear.
+model SiteContent {
+  id          String   @id @default("default")
+  data        Json
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("site_content")
+}

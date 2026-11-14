@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import { X } from "lucide-react";
 import { AnimatePresence, m, useDragControls, type PanInfo } from "motion/react";
@@ -13,6 +15,7 @@ import {
   sheetBottomVariants,
   useReducedMotionSafe,
 } from "@/lib/motion";
+import { keepOpenOnKeyboardEscape, useModalHistory } from "@/hooks/use-modal-history";
 import { cn } from "@/lib/utils";
 
 interface SheetContextValue {
@@ -43,6 +46,8 @@ export function Sheet({
     },
     [controlledOpen, onOpenChange],
   );
+
+  useModalHistory(open, () => handleOpenChange(false));
 
   const contextValue = React.useMemo(
     () => ({ open, onClose: () => handleOpenChange(false) }),
@@ -97,8 +102,10 @@ export function SheetContent({
   enableHorizontalDrag = true,
   className,
   children,
+  onEscapeKeyDown,
   ...props
 }: SheetContentProps) {
+  const ui = useUiText();
   const { open, onClose } = React.useContext(SheetContext);
   const reducedMotion = useReducedMotionSafe();
   const dragControls = useDragControls();
@@ -177,7 +184,15 @@ export function SheetContent({
                 )}
               />
             </RadixDialog.Overlay>
-            <RadixDialog.Content forceMount asChild {...props}>
+            <RadixDialog.Content
+              forceMount
+              asChild
+              onEscapeKeyDown={(event) => {
+                keepOpenOnKeyboardEscape(event);
+                onEscapeKeyDown?.(event);
+              }}
+              {...props}
+            >
               <m.div
                 key="sheet-content"
                 variants={panelVariants}
@@ -220,7 +235,7 @@ export function SheetContent({
                 {children}
                 {!hideClose && (
                   <RadixDialog.Close
-                    aria-label="Close panel"
+                    aria-label={ui.common.closePanel}
                     className="transition-ui absolute top-3 right-3 z-20 inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-text-muted hover:bg-surface-3 hover:text-text focus-visible:outline-2 focus-visible:outline-accent"
                   >
                     <X className="size-5" strokeWidth={1.5} aria-hidden="true" />

@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import Image from "next/image";
@@ -147,10 +148,13 @@ function findMatchingVariant(
   return exact ?? null;
 }
 
-function formatStockLabel(stock: number): { text: string; tone: "muted" | "warning" | "sold" } {
-  if (stock <= 0) return { text: "Sold out", tone: "sold" };
-  if (stock <= 5) return { text: `${stock} left`, tone: "warning" };
-  return { text: "In stock", tone: "muted" };
+function formatStockLabel(
+  stock: number,
+  labels: { soldOutStock: string; leftStock: string; inStock: string },
+): { text: string; tone: "muted" | "warning" | "sold" } {
+  if (stock <= 0) return { text: labels.soldOutStock, tone: "sold" };
+  if (stock <= 5) return { text: fill(labels.leftStock, { count: stock }), tone: "warning" };
+  return { text: labels.inStock, tone: "muted" };
 }
 
 export function QuickSelectVariantModal({
@@ -160,6 +164,7 @@ export function QuickSelectVariantModal({
   initialVariantId,
   onAdded,
 }: QuickSelectVariantModalProps) {
+  const ui = useUiText();
   const router = useRouter();
   const isMobile = useIsMobileViewport();
   const { formatPrice } = useCurrency();
@@ -289,8 +294,12 @@ export function QuickSelectVariantModal({
 
     onAdded?.(selectedVariant.title);
     setAddedSuccess(true);
-    setLiveStatus(`${product.name} (${selectedVariant.title}) added to bag.`);
-    void notifySuccess(`${product.name} (${selectedVariant.title}) added to bag.`);
+    const addedMessage = fill(ui.productCard.quickSelect.addedToast, {
+      name: product.name,
+      variant: selectedVariant.title,
+    });
+    setLiveStatus(addedMessage);
+    void notifySuccess(addedMessage);
 
     closeTimerRef.current = setTimeout(() => {
       handleOpenChange(false);
@@ -326,7 +335,7 @@ export function QuickSelectVariantModal({
             {product.name}
           </TitleComponent>
           <DescriptionComponent className="sr-only">
-            Choose options and quantity for {product.name}.
+            {fill(ui.productCard.quickSelect.dialogDescription, { name: product.name })}
           </DescriptionComponent>
           <div className="mt-1">
             <Price
@@ -342,14 +351,14 @@ export function QuickSelectVariantModal({
             onClick={() => handleOpenChange(false)}
             className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-accent-text underline-offset-4 hover:text-accent-hover hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            <span>View full details</span>
+            <span>{ui.productCard.quickSelect.viewDetails}</span>
           </Link>
         </div>
 
         <button
           type="button"
           onClick={() => handleOpenChange(false)}
-          aria-label="Close options dialog"
+          aria-label={ui.productCard.quickSelect.closeAria}
           className="transition-ui -mt-1 -mr-2 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-text-muted hover:bg-surface-3 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           <X className="size-5" strokeWidth={1.5} aria-hidden="true" />
@@ -364,14 +373,18 @@ export function QuickSelectVariantModal({
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold tracking-[0.06em] text-text-2 uppercase">
-              Metal
+              {ui.productCard.quickSelect.metal}
             </span>
             {grouping.metals.length === 1 && (
               <span className="text-xs font-medium text-text">{grouping.metals[0]}</span>
             )}
           </div>
           {grouping.metals.length >= 2 && (
-            <div role="radiogroup" aria-label="Select metal" className="flex flex-wrap gap-2">
+            <div
+              role="radiogroup"
+              aria-label={ui.productCard.quickSelect.metalAria}
+              className="flex flex-wrap gap-2"
+            >
               {grouping.metals.map((metal) => {
                 const isSelected = (selectedVariant?.metal?.trim() ?? null) === metal;
                 const candidate = findMatchingVariant(
@@ -432,11 +445,11 @@ export function QuickSelectVariantModal({
       {grouping.stoneSpecs.length >= 2 && (
         <div className="space-y-2">
           <span className="block text-xs font-semibold tracking-[0.06em] text-text-2 uppercase">
-            Carat &amp; Stone
+            {ui.productCard.quickSelect.caratStone}
           </span>
           <div
             role="radiogroup"
-            aria-label="Select carat or specification"
+            aria-label={ui.productCard.quickSelect.caratAria}
             className="flex flex-wrap gap-2"
           >
             {grouping.stoneSpecs.map((spec) => {
@@ -482,7 +495,7 @@ export function QuickSelectVariantModal({
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold tracking-[0.06em] text-text-2 uppercase">
-              Size
+              {ui.productCard.quickSelect.size}
             </span>
             {product.hasSizing && (
               <button
@@ -491,14 +504,14 @@ export function QuickSelectVariantModal({
                 className="inline-flex min-h-8 cursor-pointer items-center gap-1 text-xs font-medium text-accent-text underline-offset-4 hover:text-accent-hover hover:underline focus-visible:outline-2 focus-visible:outline-accent"
               >
                 <Ruler className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
-                <span>Size guide</span>
+                <span>{ui.productCard.quickSelect.sizeGuide}</span>
               </button>
             )}
           </div>
 
           <div
             role="radiogroup"
-            aria-label="Select size"
+            aria-label={ui.productCard.quickSelect.sizeAria}
             className="grid grid-cols-4 gap-2 sm:grid-cols-6"
           >
             {grouping.sizes.map((size) => {
@@ -522,8 +535,12 @@ export function QuickSelectVariantModal({
                   aria-checked={isSelected}
                   aria-label={
                     isOut
-                      ? `Size ${formatSizePillLabel(size)} — Sold out`
-                      : `Size ${formatSizePillLabel(size)}`
+                      ? fill(ui.productCard.quickSelect.sizeSoldOutAria, {
+                          size: formatSizePillLabel(size),
+                        })
+                      : fill(ui.productCard.quickSelect.sizeAriaLabel, {
+                          size: formatSizePillLabel(size),
+                        })
                   }
                   disabled={isOut}
                   onClick={() => matchingVariant && selectVariant(matchingVariant.id)}
@@ -553,10 +570,13 @@ export function QuickSelectVariantModal({
           <span className="text-text-muted">
             {selectedVariant.stoneSpec && grouping.stoneSpecs.length < 2
               ? selectedVariant.stoneSpec
-              : "Availability"}
+              : ui.productCard.quickSelect.availability}
           </span>
           {(() => {
-            const stock = formatStockLabel(selectedVariant.availableStock);
+            const stock = formatStockLabel(
+              selectedVariant.availableStock,
+              ui.productCard.quickSelect,
+            );
             return (
               <span
                 className={cn(
@@ -578,7 +598,7 @@ export function QuickSelectVariantModal({
     <div className="space-y-2.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold tracking-[0.06em] text-text-2 uppercase">
-          Select Option
+          {ui.productCard.quickSelect.selectOption}
         </span>
         {product.hasSizing && (
           <button
@@ -587,12 +607,16 @@ export function QuickSelectVariantModal({
             className="inline-flex min-h-8 cursor-pointer items-center gap-1 text-xs font-medium text-accent-text underline-offset-4 hover:text-accent-hover hover:underline focus-visible:outline-2 focus-visible:outline-accent"
           >
             <Ruler className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
-            <span>Size guide</span>
+            <span>{ui.productCard.quickSelect.sizeGuide}</span>
           </button>
         )}
       </div>
 
-      <div role="radiogroup" aria-label="Available options" className="space-y-2">
+      <div
+        role="radiogroup"
+        aria-label={ui.productCard.quickSelect.optionsAria}
+        className="space-y-2"
+      >
         {product.variants.map((variant) => {
           const isSelected = variant.id === selectedVariant?.id;
           const outOfStock = variant.availableStock <= 0;
@@ -602,7 +626,7 @@ export function QuickSelectVariantModal({
           const secondaryLine = secondaryParts.join(" · ");
           const priceDiff = Number(variant.price) - basePriceNum;
           const showPriceDiff = Number.isFinite(priceDiff) && Math.abs(priceDiff) > 0.009;
-          const stock = formatStockLabel(variant.availableStock);
+          const stock = formatStockLabel(variant.availableStock, ui.productCard.quickSelect);
 
           return (
             <button
@@ -677,11 +701,15 @@ export function QuickSelectVariantModal({
       {product.priceMode === "FIXED" && availableStock > 0 && (
         <div className="border-t border-border pt-4">
           <div className="flex items-center justify-between gap-4">
-            <span className="text-sm font-medium text-text">Quantity</span>
+            <span className="text-sm font-medium text-text">
+              {ui.productCard.quickSelect.quantity}
+            </span>
             <QuantityStepper value={safeQty} min={1} max={maxQty} onChange={setQuantity} />
           </div>
           {isAtMaxStock && (
-            <p className="mt-1.5 text-right text-xs text-warning">Max available reached</p>
+            <p className="mt-1.5 text-right text-xs text-warning">
+              {ui.productCard.quickSelect.maxReached}
+            </p>
           )}
         </div>
       )}
@@ -703,7 +731,7 @@ export function QuickSelectVariantModal({
       {product.priceMode === "PRICE_ON_REQUEST" ? (
         <Button asChild size="lg" className="h-12 w-full" onClick={() => handleOpenChange(false)}>
           <Link href={`/contact?type=BESPOKE&product=${encodeURIComponent(product.name)}`}>
-            Enquire with Concierge
+            {ui.productCard.quickSelect.enquireConcierge}
           </Link>
         </Button>
       ) : availableStock <= 0 ? (
@@ -714,7 +742,7 @@ export function QuickSelectVariantModal({
             disabled
             className="h-12 min-h-12 w-full min-[420px]:w-auto min-[420px]:flex-1"
           >
-            Sold Out
+            {ui.productCard.quickSelect.soldOut}
           </Button>
           <Button
             asChild
@@ -724,14 +752,16 @@ export function QuickSelectVariantModal({
             onClick={() => handleOpenChange(false)}
           >
             <Link href={`/contact?type=GENERAL&product=${encodeURIComponent(product.name)}`}>
-              Concierge enquiry
+              {ui.productCard.quickSelect.conciergeEnquiry}
             </Link>
           </Button>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between sm:hidden">
-            <span className="text-xs font-medium text-text-muted">Total</span>
+            <span className="text-xs font-medium text-text-muted">
+              {ui.productCard.quickSelect.total}
+            </span>
             <span className="tabular-nums-price text-base font-semibold text-text">
               {formatPrice(lineTotalNum)}
             </span>
@@ -755,7 +785,13 @@ export function QuickSelectVariantModal({
               ) : (
                 <ShoppingBag className="size-4" strokeWidth={1.5} aria-hidden="true" />
               )}
-              <span>{busyMode === "bag" ? "Adding…" : addedSuccess ? "Added" : "Add to Bag"}</span>
+              <span>
+                {busyMode === "bag"
+                  ? ui.productCard.quickSelect.adding
+                  : addedSuccess
+                    ? ui.productCard.quickSelect.added
+                    : ui.productCard.quickSelect.addToBag}
+              </span>
             </Button>
 
             <Button
@@ -771,7 +807,11 @@ export function QuickSelectVariantModal({
               ) : (
                 <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
               )}
-              <span>{busyMode === "buy" ? "Preparing…" : "Buy Now"}</span>
+              <span>
+                {busyMode === "buy"
+                  ? ui.productCard.quickSelect.preparing
+                  : ui.productCard.quickSelect.buyNow}
+              </span>
             </Button>
           </div>
         </div>
@@ -788,7 +828,7 @@ export function QuickSelectVariantModal({
             className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-medium text-accent-text transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             <Sparkles className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-            <span>Want something unique? Customize this piece &rarr;</span>
+            <span>{ui.productCard.quickSelect.customizeLink}</span>
           </button>
         </div>
       )}

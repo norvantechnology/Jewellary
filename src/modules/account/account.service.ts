@@ -84,7 +84,7 @@ function mapCustomerOrderSummaryRow(o: {
     total: o.total.toFixed(dp),
     baseTotal: o.baseTotal.toFixed(2),
     itemCount: o.items.reduce((sum, item) => sum + item.quantity, 0),
-    firstItemTitle: o.items[0]?.titleSnapshot ?? "Atelier Commission",
+    firstItemTitle: o.items[0]?.titleSnapshot ?? "Custom order",
     firstItemImage: o.items[0]?.imageUrlSnapshot ?? null,
     itemThumbnails: o.items.slice(0, 3).map((item) => ({
       title: item.titleSnapshot,

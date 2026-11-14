@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { NOINDEX_FOLLOW_ROBOTS } from "@/lib/seo/metadata";
+import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
 import Link from "next/link";
 import { MailX, Sparkles } from "lucide-react";
 import { Float } from "@/components/motion/Float";
@@ -7,23 +9,33 @@ import { FadeIn } from "@/components/motion/Reveal";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const metadata: Metadata = {
-  title: "Newsletter Preferences",
-  robots: { index: false, follow: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildPageMetadata((c) => c.pages.newsletter.seo, {
+    pathname: "/newsletter",
+    robots: NOINDEX_FOLLOW_ROBOTS,
+  });
+}
 
 async function NewsletterStatusBody({
   searchParams,
 }: {
   searchParams: Promise<{ action?: string; status?: string }>;
 }) {
-  const sp = await searchParams;
+  const [sp, siteContent] = await Promise.all([searchParams, getSiteContent()]);
+  const page = siteContent.pages.newsletter;
   const action = sp.action ?? "";
   const status = sp.status ?? "";
 
   const isConfirmed = action === "confirm" && status === "confirmed";
   const isUnsubscribed = action === "unsubscribe" && status === "unsubscribed";
   const isInvalid = status === "invalid";
+  const state = isConfirmed
+    ? page.confirmed
+    : isUnsubscribed
+      ? page.unsubscribed
+      : isInvalid
+        ? page.invalid
+        : page.default;
 
   return (
     <section className="mx-auto flex min-h-[60dvh] max-w-xl flex-col items-center justify-center px-4 py-12 text-center md:py-16">
@@ -52,31 +64,19 @@ async function NewsletterStatusBody({
         </Float>
 
         <h1 className="text-2xl leading-[1.2] font-semibold tracking-[-0.015em] text-foreground sm:text-3xl">
-          {isConfirmed
-            ? "Subscription Confirmed"
-            : isUnsubscribed
-              ? "You Have Unsubscribed"
-              : isInvalid
-                ? "Link Expired or Invalid"
-                : "Atelier Dispatches"}
+          {state.heading}
         </h1>
 
         <p className="mt-3 text-base leading-relaxed text-muted-foreground sm:text-sm">
-          {isConfirmed
-            ? "Thank you for verifying your address. You will receive occasional dispatches on newly graded stones, seasonal solitaires, and private salon previews."
-            : isUnsubscribed
-              ? "Your email address has been removed from future atelier dispatches. You may subscribe again at any time from the footer."
-              : isInvalid
-                ? "This verification or unsubscribe link has already been used or has expired. Please enter your email again in the footer below if you would like a fresh confirmation link."
-                : "Manage your email subscription preferences using the confirmation or unsubscribe link sent to your inbox."}
+          {state.text}
         </p>
 
         <div className="mt-6 flex flex-col justify-center gap-3 min-[480px]:flex-row min-[480px]:flex-wrap">
           <Button asChild className="w-full min-[480px]:w-auto">
-            <Link href="/collections">Explore Collections</Link>
+            <Link href="/collections">{page.primaryCta}</Link>
           </Button>
           <Button asChild variant="outline" className="w-full min-[480px]:w-auto">
-            <Link href="/">Return Home</Link>
+            <Link href="/">{page.secondaryCta}</Link>
           </Button>
         </div>
       </FadeIn>

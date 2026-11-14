@@ -1,4 +1,5 @@
 "use client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import Link from "next/link";
@@ -15,19 +16,33 @@ interface AccountShellProps {
     email: string;
     role: UserRole;
   };
+  /** Tab labels from site-content.json → site.accountNav. */
+  labels: AccountNavLabels;
   children: React.ReactNode;
 }
 
-const ACCOUNT_NAV_ITEMS = [
-  { label: "Overview", href: "/account", icon: LayoutGrid, exact: true },
-  { label: "Orders", href: "/account/orders", icon: Package, exact: false },
-  { label: "Customizations", href: "/account/customizations", icon: Sparkles, exact: false },
-  { label: "Addresses", href: "/account/addresses", icon: MapPin, exact: false },
-  { label: "Wishlist", href: "/wishlist", icon: Heart, exact: false },
-  { label: "Settings", href: "/account/settings", icon: Settings, exact: false },
-];
+export interface AccountNavLabels {
+  overview: string;
+  orders: string;
+  customizations: string;
+  addresses: string;
+  wishlist: string;
+  settings: string;
+  adminStudio: string;
+}
 
-export function AccountShell({ user, children }: AccountShellProps) {
+const ACCOUNT_NAV_LINKS = [
+  { key: "overview", href: "/account", icon: LayoutGrid, exact: true },
+  { key: "orders", href: "/account/orders", icon: Package, exact: false },
+  { key: "customizations", href: "/account/customizations", icon: Sparkles, exact: false },
+  { key: "addresses", href: "/account/addresses", icon: MapPin, exact: false },
+  { key: "wishlist", href: "/wishlist", icon: Heart, exact: false },
+  { key: "settings", href: "/account/settings", icon: Settings, exact: false },
+] as const;
+
+export function AccountShell({ user, labels, children }: AccountShellProps) {
+  const ui = useUiText();
+  const ACCOUNT_NAV_ITEMS = ACCOUNT_NAV_LINKS.map((item) => ({ ...item, label: labels[item.key] }));
   const pathname = usePathname();
   const reducedMotion = useReducedMotionSafe();
   const mobileNavRef = React.useRef<HTMLElement>(null);
@@ -54,7 +69,7 @@ export function AccountShell({ user, children }: AccountShellProps) {
               className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border-strong bg-surface px-4 text-sm font-medium text-text transition-colors duration-150 ease-out hover:border-accent hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent"
             >
               <ShieldCheck className="size-5 stroke-[1.5] text-accent-text" aria-hidden="true" />
-              <span>Admin Studio</span>
+              <span>{labels.adminStudio}</span>
             </Link>
           )}
           <SignOutButton />
@@ -64,7 +79,7 @@ export function AccountShell({ user, children }: AccountShellProps) {
       {/* Mobile horizontal navigation pills */}
       <nav
         ref={mobileNavRef}
-        aria-label="Account sections"
+        aria-label={ui.account.navAria}
         className="mb-6 flex scrollbar-none gap-2 overflow-x-auto pb-1 lg:hidden"
       >
         {ACCOUNT_NAV_ITEMS.map((item) => {
@@ -99,7 +114,7 @@ export function AccountShell({ user, children }: AccountShellProps) {
         <aside className="hidden lg:col-span-3 lg:block">
           <nav
             ref={desktopNavRef}
-            aria-label="Account navigation"
+            aria-label={ui.account.navAria}
             className="sticky top-24 space-y-1 rounded-lg border border-border bg-surface p-3 shadow-sm"
           >
             {ACCOUNT_NAV_ITEMS.map((item) => {

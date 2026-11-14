@@ -1,4 +1,5 @@
 "use client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import Link from "next/link";
@@ -22,6 +23,7 @@ export function CustomizeSuccessState({
   variant,
   onDone,
 }: CustomizeSuccessStateProps) {
+  const ui = useUiText();
   const [copied, setCopied] = React.useState(false);
 
   async function handleCopy() {
@@ -45,11 +47,11 @@ export function CustomizeSuccessState({
 
       {variant === "page" ? (
         <h1 className="mt-4 font-sans text-2xl font-semibold tracking-tight text-foreground">
-          Request sent
+          {ui.customize.success.title}
         </h1>
       ) : (
         <h2 className="mt-4 font-sans text-2xl font-semibold tracking-tight text-foreground">
-          Request sent
+          {ui.customize.success.title}
         </h2>
       )}
 
@@ -60,7 +62,7 @@ export function CustomizeSuccessState({
         <button
           type="button"
           onClick={() => void handleCopy()}
-          aria-label={copied ? "Request number copied" : "Copy request number"}
+          aria-label={copied ? ui.customize.success.copied : ui.customize.success.copy}
           className="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         >
           {copied ? (
@@ -71,7 +73,7 @@ export function CustomizeSuccessState({
         </button>
       </div>
 
-      <p className="mt-3 text-sm text-muted-foreground">We&apos;ll email you within 24 hours</p>
+      <p className="mt-3 text-sm text-muted-foreground">{ui.customize.success.emailNote}</p>
 
       <div className="mt-7 flex w-full flex-col gap-2.5">
         <Button asChild size="lg" className="min-h-12 w-full">
@@ -79,7 +81,7 @@ export function CustomizeSuccessState({
             href={signedInUser ? `/account/customizations/${detail.id}` : "/account/customizations"}
             onClick={() => onDone?.()}
           >
-            View my requests
+            {ui.customize.success.viewRequests}
           </Link>
         </Button>
 
@@ -98,7 +100,7 @@ export function CustomizeSuccessState({
           }
         >
           <MessagesSquare className="size-4 shrink-0" aria-hidden="true" />
-          <span>Chat with the atelier</span>
+          <span>{ui.customize.success.chat}</span>
         </Button>
 
         {onDone ? (
@@ -108,7 +110,7 @@ export function CustomizeSuccessState({
             onClick={onDone}
             className="mx-auto mt-1 text-sm text-muted-foreground hover:text-foreground"
           >
-            Continue shopping
+            {ui.customize.success.continue}
           </Button>
         ) : (
           <Button
@@ -116,7 +118,7 @@ export function CustomizeSuccessState({
             variant="link"
             className="mx-auto mt-1 text-sm text-muted-foreground hover:text-foreground"
           >
-            <Link href={`/products/${productSlug}`}>Continue shopping</Link>
+            <Link href={`/products/${productSlug}`}>{ui.customize.success.continue}</Link>
           </Button>
         )}
       </div>

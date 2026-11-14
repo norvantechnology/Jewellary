@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { getSiteContent } from "@/modules/site-content/site-content.service";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -34,8 +35,8 @@ export async function generateMetadata({ params }: GuideDetailPageProps): Promis
   const resolved = await resolvePublishedArticleBySlug(slug);
   if (!resolved || resolved.kind !== "article") {
     return buildMetadata({
-      title: "Diamond Buying Guide",
-      description: "Independent gemological guidance and fine jewellery education.",
+      title: (await getSiteContent()).pages.guideArticle.seo.title,
+      description: (await getSiteContent()).pages.guideArticle.seo.description,
       pathname: "/guides",
       storeName: settings.storeName,
       siteDefaultOgImage: settings.defaultOgImageUrl,
@@ -43,7 +44,8 @@ export async function generateMetadata({ params }: GuideDetailPageProps): Promis
   }
 
   const { article } = resolved;
-  const ogImg = article.ogImageUrl || article.coverImageUrl;
+  // Admin-set share image wins; otherwise a generated JPEG card with the cover photo.
+  const shareImage = `/api/og/guide/${encodeURIComponent(article.slug)}?v=${Date.parse(article.updatedAt) || 0}`;
   return buildMetadata({
     title: article.seoTitle ?? article.title,
     description: article.seoDescription ?? article.excerpt,
@@ -58,21 +60,21 @@ export async function generateMetadata({ params }: GuideDetailPageProps): Promis
     publishedTime: article.publishedAt ?? article.updatedAt,
     modifiedTime: article.updatedAt,
     authors: [article.authorName],
-    images: ogImg
-      ? [
-          {
-            url: ogImg,
-            alt: article.coverAltText ?? article.title,
-          },
-        ]
+    images: article.ogImageUrl
+      ? [{ url: article.ogImageUrl, alt: article.coverAltText ?? article.title }]
       : undefined,
-    useSegmentOgImage: true,
+    shareImage,
     robots: article.noindex ? NOINDEX_FOLLOW_ROBOTS : INDEXABLE_ROBOTS,
   });
 }
 
 async function GuideArticleBody({ params }: GuideDetailPageProps) {
-  const [{ slug }, settings] = await Promise.all([params, getPublicStoreSettings()]);
+  const [{ slug }, settings, siteContent] = await Promise.all([
+    params,
+    getPublicStoreSettings(),
+    getSiteContent(),
+  ]);
+  const copy = siteContent.pages.guideArticle;
   const resolved = await resolvePublishedArticleBySlug(slug);
 
   if (!resolved) {
@@ -208,7 +210,7 @@ async function GuideArticleBody({ params }: GuideDetailPageProps) {
             {showToc && (
               <aside aria-label="Table of contents" className="hidden lg:sticky lg:top-24 lg:block">
                 <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                  On this page
+                  {copy.tocHeading}
                 </p>
                 <EditorialToc entries={toc} />
               </aside>
@@ -218,7 +220,7 @@ async function GuideArticleBody({ params }: GuideDetailPageProps) {
           {article.seoFaqs && article.seoFaqs.length > 0 && (
             <section className="mt-10 max-w-[760px] space-y-4 border-t border-border pt-8">
               <h2 className="type-h2 font-display font-semibold text-foreground">
-                Frequently Asked Questions
+                {copy.faqHeading}
               </h2>
               <div className="divide-y divide-border rounded-xl border border-border bg-card px-5">
                 {article.seoFaqs.map((faq, idx) => (
@@ -250,25 +252,22 @@ async function GuideArticleBody({ params }: GuideDetailPageProps) {
 
           <div className="mt-12 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-5 shadow-sm sm:p-8">
             <div className="max-w-xl">
-              <p className="type-h3 font-semibold text-foreground">
-                Explore Pieces Mentioned in This Guide
-              </p>
+              <p className="type-h3 font-semibold text-foreground">{copy.ctaHeading}</p>
               <p className="mt-1.5 text-base leading-relaxed text-muted-foreground sm:text-sm">
-                Compare GIA and IGI graded pieces directly in our collection or speak with a
-                specialist.
+                {copy.ctaText}
               </p>
             </div>
             <div className="flex w-full flex-col gap-3 min-[480px]:flex-row min-[480px]:flex-wrap sm:w-auto">
               {resolvedRelatedPath && (
                 <Button asChild className="w-full min-[480px]:w-auto">
                   <Link href={`/collections/${resolvedRelatedPath}`} className="gap-2">
-                    <span>Shop Collection</span>
+                    <span>{copy.ctaPrimaryLabel}</span>
                     <ArrowRight className="size-5 stroke-[1.5]" aria-hidden="true" />
                   </Link>
                 </Button>
               )}
               <Button asChild variant="outline" className="w-full min-[480px]:w-auto">
-                <Link href="/contact?type=PRODUCT">Ask a Gemologist</Link>
+                <Link href="/contact?type=PRODUCT">{copy.ctaSecondaryLabel}</Link>
               </Button>
             </div>
           </div>
@@ -278,9 +277,7 @@ async function GuideArticleBody({ params }: GuideDetailPageProps) {
               <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <Reveal>
-                    <h2 className="type-h2 font-semibold text-foreground">
-                      Corresponding Atelier Creations
-                    </h2>
+                    <h2 className="type-h2 font-semibold text-foreground">{copy.relatedHeading}</h2>
                   </Reveal>
                 </div>
                 {resolvedRelatedPath && (
@@ -288,7 +285,7 @@ async function GuideArticleBody({ params }: GuideDetailPageProps) {
                     href={`/collections/${resolvedRelatedPath}`}
                     className="ma-link-underline inline-flex min-h-11 items-center text-xs font-semibold tracking-wider text-accent-text uppercase"
                   >
-                    View All
+                    {copy.relatedLinkLabel}
                   </Link>
                 )}
               </div>

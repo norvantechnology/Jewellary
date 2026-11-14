@@ -5,9 +5,12 @@ import { DeferredOverlays } from "@/components/layout/DeferredOverlays";
 import { NavigationProgress } from "@/components/layout/NavigationProgress";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { MotionProvider } from "@/components/motion/MotionProvider";
+import { UiTextProvider } from "@/components/providers/UiTextProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { BRAND_PALETTE } from "@/lib/brand-palette";
 import { INDEXABLE_ROBOTS, SITE_LOCALE, getSiteUrl } from "@/lib/seo/metadata";
+import { DEFAULT_BRAND_NAME } from "@/lib/seo/site";
+import { getSiteContent } from "@/modules/site-content/site-content.service";
 import "./globals.css";
 
 // Display / headings: Cormorant Garamond. Body / UI: Jost.
@@ -32,7 +35,7 @@ const fontSans = localFont({
 });
 
 const siteUrl = getSiteUrl();
-const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "Maison Aurelia";
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? DEFAULT_BRAND_NAME;
 
 function getImageCdnOrigin(): string | null {
   const raw = process.env.NEXT_PUBLIC_IMAGE_CDN_URL;
@@ -46,59 +49,62 @@ function getImageCdnOrigin(): string | null {
 
 const imageCdnOrigin = getImageCdnOrigin();
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  applicationName: siteName,
-  title: {
-    default: `${siteName} — Certified Diamonds & Fine Jewellery`,
-    template: `%s | ${siteName}`,
-  },
-  description:
-    "Discover GIA and IGI certified diamonds, handcrafted engagement rings, and 18K fine jewellery with transparent provenance and insured delivery.",
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon-48.png", sizes: "48x48", type: "image/png" },
-      { url: "/icon-96.png", sizes: "96x96", type: "image/png" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
-    shortcut: ["/favicon.ico"],
-  },
-  manifest: "/manifest.webmanifest",
-  openGraph: {
-    type: "website",
-    locale: SITE_LOCALE,
-    siteName,
-  },
-  twitter: {
-    card: "summary_large_image",
-  },
-  robots: INDEXABLE_ROBOTS,
-  verification: {
-    ...(process.env.GOOGLE_SITE_VERIFICATION
-      ? { google: process.env.GOOGLE_SITE_VERIFICATION }
-      : {}),
-    ...(process.env.BING_SITE_VERIFICATION || process.env.PINTEREST_SITE_VERIFICATION
-      ? {
-          other: {
-            ...(process.env.BING_SITE_VERIFICATION
-              ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION }
-              : {}),
-            ...(process.env.PINTEREST_SITE_VERIFICATION
-              ? { "p:domain_verify": process.env.PINTEREST_SITE_VERIFICATION }
-              : {}),
-          },
-        }
-      : {}),
-  },
-};
+// Default title, title template and description: data/frontend/site-content.json → site.seo
+export async function generateMetadata(): Promise<Metadata> {
+  const { seo } = (await getSiteContent()).site;
+  return {
+    metadataBase: new URL(siteUrl),
+    applicationName: siteName,
+    title: {
+      default: seo.defaultTitle,
+      template: seo.titleTemplate,
+    },
+    description: seo.description,
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
+    icons: {
+      icon: [
+        { url: "/favicon.ico", sizes: "any" },
+        { url: "/icon-48.png", sizes: "48x48", type: "image/png" },
+        { url: "/icon-96.png", sizes: "96x96", type: "image/png" },
+        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
+      apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+      shortcut: ["/favicon.ico"],
+    },
+    manifest: "/manifest.webmanifest",
+    openGraph: {
+      type: "website",
+      locale: SITE_LOCALE,
+      siteName,
+    },
+    twitter: {
+      card: "summary_large_image",
+    },
+    robots: INDEXABLE_ROBOTS,
+    verification: {
+      ...(process.env.GOOGLE_SITE_VERIFICATION
+        ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+        : {}),
+      ...(process.env.BING_SITE_VERIFICATION || process.env.PINTEREST_SITE_VERIFICATION
+        ? {
+            other: {
+              ...(process.env.BING_SITE_VERIFICATION
+                ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION }
+                : {}),
+              ...(process.env.PINTEREST_SITE_VERIFICATION
+                ? { "p:domain_verify": process.env.PINTEREST_SITE_VERIFICATION }
+                : {}),
+            },
+          }
+        : {}),
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -110,11 +116,12 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { ui } = await getSiteContent();
   return (
     <html
       lang="en"
@@ -131,12 +138,14 @@ export default function RootLayout({
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-on-primary focus:shadow-md"
         >
-          Skip to main content
+          {ui.common.skipToContent}
         </a>
         <ThemeProvider imageCdnOrigin={imageCdnOrigin}>
           <MotionProvider>
-            {children}
-            <DeferredOverlays gaId={process.env.NEXT_PUBLIC_GA_ID} />
+            <UiTextProvider value={ui}>
+              {children}
+              <DeferredOverlays gaId={process.env.NEXT_PUBLIC_GA_ID} />
+            </UiTextProvider>
           </MotionProvider>
         </ThemeProvider>
       </body>

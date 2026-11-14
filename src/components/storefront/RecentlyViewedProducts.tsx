@@ -1,4 +1,5 @@
 "use client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { Reveal, RevealStagger } from "@/components/motion/Reveal";
@@ -24,6 +25,7 @@ export function RecentlyViewedProducts({
   /** Load the first card's image eagerly when this section is above the fold (e.g. empty bag). */
   prioritizeFirst?: boolean;
 }) {
+  const ui = useUiText();
   const ids = useRecentlyViewedIds(excludeProductId);
   const [products, setProducts] = React.useState<PublicProductCardDTO[]>([]);
 
@@ -72,7 +74,7 @@ export function RecentlyViewedProducts({
           id="recently-viewed-heading"
           className="type-h2 font-display font-semibold text-foreground"
         >
-          Recently Viewed
+          {ui.product.recentlyViewed}
         </h2>
       </Reveal>
       <RevealStagger className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">

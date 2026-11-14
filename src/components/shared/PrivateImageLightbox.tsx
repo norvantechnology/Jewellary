@@ -1,5 +1,8 @@
 "use client";
 
+import { useModalHistory } from "@/hooks/use-modal-history";
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
@@ -22,8 +25,11 @@ export function PrivateImageLightbox({
   onClose,
   onChangeIndex,
 }: PrivateImageLightboxProps) {
+  const ui = useUiText();
   const [zoomedIndex, setZoomedIndex] = React.useState<number | null>(null);
   const zoomed = activeIndex !== null && zoomedIndex === activeIndex;
+  // Phone Back closes the viewer instead of leaving the page.
+  useModalHistory(activeIndex !== null, onClose);
 
   React.useEffect(() => {
     if (activeIndex === null) return;
@@ -62,7 +68,7 @@ export function PrivateImageLightbox({
           key="private-lightbox"
           role="dialog"
           aria-modal="true"
-          aria-label={current.alt || "Image preview"}
+          aria-label={current.alt || ui.layout.imagePreview}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -85,7 +91,7 @@ export function PrivateImageLightbox({
                 <button
                   type="button"
                   onClick={() => setZoomedIndex((z) => (z === activeIndex ? null : activeIndex))}
-                  aria-label={zoomed ? "Reset zoom" : "Zoom in"}
+                  aria-label={zoomed ? ui.layout.imageResetZoom : ui.layout.imageZoomIn}
                   className="inline-flex size-10 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                   {zoomed ? <ZoomOut className="size-4" /> : <ZoomIn className="size-4" />}
@@ -93,7 +99,7 @@ export function PrivateImageLightbox({
                 <button
                   type="button"
                   onClick={onClose}
-                  aria-label="Close image preview"
+                  aria-label={ui.layout.imageClose}
                   className="inline-flex size-10 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                   <X className="size-4" />
@@ -117,7 +123,7 @@ export function PrivateImageLightbox({
                   <button
                     type="button"
                     onClick={() => onChangeIndex((activeIndex - 1 + images.length) % images.length)}
-                    aria-label="Previous image"
+                    aria-label={ui.layout.imagePrevious}
                     className="absolute top-1/2 left-3 inline-flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card/90 text-foreground shadow-sm hover:bg-card"
                   >
                     <ChevronLeft className="size-5" />
@@ -125,7 +131,7 @@ export function PrivateImageLightbox({
                   <button
                     type="button"
                     onClick={() => onChangeIndex((activeIndex + 1) % images.length)}
-                    aria-label="Next image"
+                    aria-label={ui.layout.imageNext}
                     className="absolute top-1/2 right-3 inline-flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card/90 text-foreground shadow-sm hover:bg-card"
                   >
                     <ChevronRight className="size-5" />

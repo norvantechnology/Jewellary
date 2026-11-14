@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { AlertCircle, CheckCircle2, ChevronDown, Loader2, MailCheck } from "lucide-react";
@@ -38,11 +39,7 @@ interface CustomizeDetailsStepProps {
   onVerifyOtp: () => void;
 }
 
-const CONTACT_CHOICES: Array<{ value: ContactUiChoice; label: string }> = [
-  { value: "EMAIL", label: "Email" },
-  { value: "PHONE", label: "Phone" },
-  { value: "CHAT", label: "Chat" },
-];
+const CONTACT_VALUES: ContactUiChoice[] = ["EMAIL", "PHONE", "CHAT"];
 
 export function CustomizeDetailsStep({
   baseUid,
@@ -73,6 +70,7 @@ export function CustomizeDetailsStep({
   onSendOtp,
   onVerifyOtp,
 }: CustomizeDetailsStepProps) {
+  const ui = useUiText();
   const [changingIdentity, setChangingIdentity] = React.useState(false);
   const [showMoreDetails, setShowMoreDetails] = React.useState(
     Boolean(preferredTimeline.trim() || preferredDate.trim() || customerNote.trim()),
@@ -112,9 +110,9 @@ export function CustomizeDetailsStep({
           id={`${baseUid}-details-heading`}
           className="text-base leading-6 font-semibold text-foreground"
         >
-          Your details
+          {ui.customize.details.heading}
         </h2>
-        <span className="text-xs text-muted-foreground">Required for quote delivery</span>
+        <span className="text-xs text-muted-foreground">{ui.customize.details.requiredNote}</span>
       </div>
 
       {/* Identity: Compact single row for signed-in users, or inputs */}
@@ -124,7 +122,7 @@ export function CustomizeDetailsStep({
           className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-2/60 px-3.5 py-3"
         >
           <p className="min-w-0 truncate text-sm text-foreground">
-            <span className="text-muted-foreground">Sending as </span>
+            <span className="text-muted-foreground">{ui.customize.details.sendingAs} </span>
             <span className="font-medium">{customerName}</span>
             <span className="text-muted-foreground"> · </span>
             <span className="text-muted-foreground">{customerEmail}</span>
@@ -135,7 +133,7 @@ export function CustomizeDetailsStep({
               onClick={() => setChangingIdentity(true)}
               className="min-h-8 shrink-0 rounded px-1.5 text-[13px] font-medium text-accent-text underline underline-offset-4 hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
-              Change
+              {ui.customize.details.change}
             </button>
           ) : null}
         </div>
@@ -144,7 +142,7 @@ export function CustomizeDetailsStep({
           {mode === "create" && signedInUser ? (
             <div className="flex items-center justify-between">
               <span className="text-[13px] text-muted-foreground">
-                Contact details for this request
+                {ui.customize.details.contactLegend}
               </span>
               {customerName.trim() && customerEmail.trim() && !hasIdentityError ? (
                 <button
@@ -152,7 +150,7 @@ export function CustomizeDetailsStep({
                   onClick={() => setChangingIdentity(false)}
                   className="text-[13px] font-medium text-accent-text underline underline-offset-4 hover:opacity-80"
                 >
-                  Use signed-in account
+                  {ui.customize.details.useAccount}
                 </button>
               ) : null}
             </div>
@@ -161,14 +159,14 @@ export function CustomizeDetailsStep({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label htmlFor={nameId} className="block text-sm font-medium text-foreground">
-                Full name
+                {ui.customize.details.nameLabel}
               </label>
               <Input
                 id={nameId}
                 autoComplete="name"
                 value={customerName}
                 onChange={(e) => onCustomerNameChange(e.target.value)}
-                placeholder="Evelyn Sinclair"
+                placeholder={ui.customize.details.namePlaceholder}
                 aria-invalid={Boolean(fieldErrors.customerName) || undefined}
                 aria-describedby={fieldErrors.customerName ? `${nameId}-error` : undefined}
                 className={cn(
@@ -190,7 +188,7 @@ export function CustomizeDetailsStep({
 
             <div className="space-y-1.5">
               <label htmlFor={emailId} className="block text-sm font-medium text-foreground">
-                Email address
+                {ui.customize.details.emailLabel}
               </label>
               <Input
                 id={emailId}
@@ -198,7 +196,7 @@ export function CustomizeDetailsStep({
                 autoComplete="email"
                 value={customerEmail}
                 onChange={(e) => onCustomerEmailChange(e.target.value)}
-                placeholder="you@example.com"
+                placeholder={ui.customize.details.emailPlaceholder}
                 aria-invalid={Boolean(fieldErrors.customerEmail) || undefined}
                 aria-describedby={fieldErrors.customerEmail ? `${emailId}-error` : undefined}
                 className={cn(
@@ -225,7 +223,7 @@ export function CustomizeDetailsStep({
               {isEmailOtpVerified ? (
                 <p className="flex items-center gap-2 text-xs font-medium text-success">
                   <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
-                  <span>Email verified for instant bespoke quote tracking.</span>
+                  <span>{ui.customize.details.emailVerified}</span>
                 </p>
               ) : (
                 <div className="space-y-2.5">
@@ -237,8 +235,8 @@ export function CustomizeDetailsStep({
                       />
                       <span>
                         {otpSentTo
-                          ? `Code sent to ${otpSentTo}`
-                          : "Verify email now to speed up atelier review"}
+                          ? fill(ui.customize.details.codeSentTo, { email: otpSentTo })
+                          : ui.customize.details.verifyPrompt}
                       </span>
                     </p>
                     <Button
@@ -250,7 +248,11 @@ export function CustomizeDetailsStep({
                       className="h-8 text-xs"
                     >
                       {sendingOtp ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                      <span>{otpSentTo ? "Resend code" : "Send code"}</span>
+                      <span>
+                        {otpSentTo
+                          ? ui.customize.details.resendCode
+                          : ui.customize.details.sendCode}
+                      </span>
                     </Button>
                   </div>
 
@@ -261,8 +263,8 @@ export function CustomizeDetailsStep({
                         maxLength={6}
                         value={otpCode}
                         onChange={(e) => onOtpCodeChange(e.target.value.replace(/\D/g, ""))}
-                        placeholder="6-digit code"
-                        aria-label="Email verification code"
+                        placeholder={ui.customize.details.codePlaceholder}
+                        aria-label={ui.customize.details.codeAria}
                         className="h-10 max-w-[160px] text-center tracking-widest tabular-nums"
                       />
                       <Button
@@ -273,7 +275,7 @@ export function CustomizeDetailsStep({
                         className="h-10"
                       >
                         {verifyingOtp ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                        <span>Verify</span>
+                        <span>{ui.customize.details.verify}</span>
                       </Button>
                     </div>
                   ) : null}
@@ -290,14 +292,17 @@ export function CustomizeDetailsStep({
           id={`${baseUid}-contact-pref-label`}
           className="block text-sm font-medium text-foreground"
         >
-          Preferred contact
+          {ui.customize.details.preferredContact}
         </span>
         <div
           role="radiogroup"
           aria-labelledby={`${baseUid}-contact-pref-label`}
           className="grid grid-cols-3 gap-1 rounded-lg border border-border bg-surface-2 p-1"
         >
-          {CONTACT_CHOICES.map((choice) => {
+          {CONTACT_VALUES.map((value) => ({
+            value,
+            label: ui.customize.details.contactChoices[value],
+          })).map((choice) => {
             const active = contactUiChoice === choice.value;
             return (
               <button
@@ -325,7 +330,7 @@ export function CustomizeDetailsStep({
       {contactUiChoice === "PHONE" ? (
         <div className="space-y-1.5">
           <label htmlFor={phoneId} className="block text-sm font-medium text-foreground">
-            Phone number
+            {ui.customize.details.phoneLabel}
           </label>
           <Input
             id={phoneId}
@@ -354,7 +359,7 @@ export function CustomizeDetailsStep({
         </div>
       ) : null}
 
-      {/* Collapsed "Add more details (optional)" disclosure */}
+      {/* Collapsed ui.customize.details.moreDetails disclosure */}
       <div className="border-t border-border pt-3">
         <button
           type="button"
@@ -364,7 +369,7 @@ export function CustomizeDetailsStep({
           onClick={() => setShowMoreDetails((prev) => !prev)}
           className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-1 text-left text-sm font-medium text-foreground hover:text-accent-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
-          <span>Add more details (optional)</span>
+          <span>{ui.customize.details.moreDetails}</span>
           <ChevronDown
             className={cn(
               "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
@@ -379,20 +384,20 @@ export function CustomizeDetailsStep({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <label htmlFor={occasionId} className="block text-sm font-medium text-foreground">
-                  Occasion or timeline
+                  {ui.customize.details.occasionLabel}
                 </label>
                 <Input
                   id={occasionId}
                   value={preferredTimeline}
                   onChange={(e) => onPreferredTimelineChange(e.target.value)}
-                  placeholder="e.g. Proposal in December"
+                  placeholder={ui.customize.details.occasionPlaceholder}
                   className="h-12 rounded-xl text-base"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label htmlFor={dateId} className="block text-sm font-medium text-foreground">
-                  Target wear date
+                  {ui.customize.details.targetDate}
                 </label>
                 <Input
                   id={dateId}
@@ -407,7 +412,7 @@ export function CustomizeDetailsStep({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label htmlFor={noteId} className="block text-sm font-medium text-foreground">
-                  Atelier notes
+                  {ui.customize.details.notesLabel}
                 </label>
                 <span className="text-[13px] text-muted-foreground tabular-nums">
                   {customerNote.length}/1000
@@ -420,7 +425,7 @@ export function CustomizeDetailsStep({
                 maxLength={1000}
                 value={customerNote}
                 onChange={(e) => onCustomerNoteChange(e.target.value)}
-                placeholder="Share diamond preferences, heirloom inspiration, or sizing details..."
+                placeholder={ui.customize.details.notesPlaceholder}
                 className="min-h-[96px] resize-none rounded-xl text-base"
               />
             </div>

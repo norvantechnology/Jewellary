@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import dynamic from "next/dynamic";
@@ -66,21 +67,12 @@ interface CollectionFiltersProps {
 
 type ArrayFilterKey = "metal" | "shape" | "origin" | "color" | "clarity" | "certification";
 
-const ARRAY_FILTER_LABELS: Record<ArrayFilterKey, string> = {
-  metal: "Metal",
-  certification: "Certification",
-  shape: "Diamond shape",
-  origin: "Origin",
-  color: "Colour grade",
-  clarity: "Clarity",
-};
-
-const SORT_OPTIONS: Array<{ value: CollectionSortOption; label: string }> = [
-  { value: "featured", label: "Featured" },
-  { value: "newest", label: "Newest" },
-  { value: "price-asc", label: "Price: Low to High" },
-  { value: "price-desc", label: "Price: High to Low" },
-  { value: "carat-desc", label: "Carat: High to Low" },
+const SORT_VALUES: CollectionSortOption[] = [
+  "featured",
+  "newest",
+  "price-asc",
+  "price-desc",
+  "carat-desc",
 ];
 
 const SESSION_OPEN_GROUPS_KEY = "ma_filter_open_groups_v1";
@@ -135,6 +127,12 @@ export function CollectionFilters({
   errorMessage = null,
   children,
 }: CollectionFiltersProps) {
+  const ui = useUiText();
+  // Labels from site-content.json → ui.collections
+  const ARRAY_FILTER_LABELS: Record<ArrayFilterKey, string> = ui.collections.filters.groupLabels;
+  const SORT_OPTIONS = SORT_VALUES.map((value) => ({ value, label: ui.collections.sort[value] }));
+  const pieceNoun = (count: number) =>
+    count === 1 ? ui.collections.filters.piece : ui.collections.filters.pieces;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -387,7 +385,7 @@ export function CollectionFilters({
     activeChips.push({
       id: "inStock",
       kind: "inStock",
-      label: "In stock",
+      label: ui.collections.filters.inStockChip,
     });
   }
 
@@ -572,7 +570,7 @@ export function CollectionFilters({
       <AccordionItem value="availability" className="border-b border-border">
         <AccordionTrigger className="hover:no-underline">
           <span className="flex items-center gap-2">
-            <span>Availability</span>
+            <span>{ui.collections.filters.availability}</span>
             <GroupHeaderBadge count={inStockOnly ? 1 : 0} />
           </span>
         </AccordionTrigger>
@@ -582,7 +580,7 @@ export function CollectionFilters({
               htmlFor={`${scope}-instock`}
               className="cursor-pointer text-sm font-normal text-text"
             >
-              In stock only
+              {ui.collections.filters.inStockOnly}
             </Label>
             <Switch
               id={`${scope}-instock`}
@@ -618,9 +616,9 @@ export function CollectionFilters({
             inputValues={priceInputs}
             placeholderMin={String(displayPriceMinBound)}
             placeholderMax={String(displayPriceMaxBound)}
-            ariaLabelMin={`Minimum price in ${currency.code}`}
-            ariaLabelMax={`Maximum price in ${currency.code}`}
-            sliderAriaLabel="Price range"
+            ariaLabelMin={fill(ui.collections.filters.minPriceAria, { currency: currency.code })}
+            ariaLabelMax={fill(ui.collections.filters.maxPriceAria, { currency: currency.code })}
+            sliderAriaLabel={ui.collections.filters.priceRangeAria}
             prefix={currency.symbol}
             helperRangeText={priceHelperText}
             inputMode="numeric"
@@ -639,7 +637,9 @@ export function CollectionFilters({
       {/* 3. Category / Collection (if applicable) */}
       {subcategories.length > 0 && (
         <AccordionItem value="category" className="border-b border-border last:border-b-0">
-          <AccordionTrigger className="hover:no-underline">Category</AccordionTrigger>
+          <AccordionTrigger className="hover:no-underline">
+            {ui.collections.filters.category}
+          </AccordionTrigger>
           <AccordionContent>
             <ul className="space-y-0.5">
               {subcategories.map((sub) => (
@@ -670,7 +670,7 @@ export function CollectionFilters({
       <AccordionItem value="carat" className="border-b border-border last:border-b-0">
         <AccordionTrigger className="hover:no-underline">
           <span className="flex items-center gap-2">
-            <span>Carat</span>
+            <span>{ui.collections.filters.carat}</span>
             <GroupHeaderBadge count={caratActive ? 1 : 0} />
           </span>
         </AccordionTrigger>
@@ -686,9 +686,9 @@ export function CollectionFilters({
             inputValues={caratInputs}
             placeholderMin={caratMinBound.toFixed(2)}
             placeholderMax={caratMaxBound.toFixed(2)}
-            ariaLabelMin="Minimum carat"
-            ariaLabelMax="Maximum carat"
-            sliderAriaLabel="Carat weight range"
+            ariaLabelMin={ui.collections.filters.minCaratAria}
+            ariaLabelMax={ui.collections.filters.maxCaratAria}
+            sliderAriaLabel={ui.collections.filters.caratRangeAria}
             suffix="ct"
             helperRangeText={caratHelperText}
             inputMode="decimal"
@@ -724,12 +724,15 @@ export function CollectionFilters({
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
-        {`Showing ${totalCount} ${totalCount === 1 ? "piece" : "pieces"}`}
+        {fill(ui.collections.filters.showingStatus, {
+          count: totalCount,
+          noun: pieceNoun(totalCount),
+        })}
       </div>
 
       {/* Desktop Sticky Sidebar */}
       <aside
-        aria-label="Catalogue filters"
+        aria-label={ui.collections.filters.sidebarAria}
         className={cn(
           "hidden shrink-0 transition-opacity lg:block lg:w-[280px] xl:w-[300px]",
           isPending && "pointer-events-none opacity-65",
@@ -738,7 +741,9 @@ export function CollectionFilters({
         <div className="filter-sidebar-scroll sticky top-[calc(var(--site-header-h)+1rem)] max-h-[calc(100dvh-var(--site-header-h)-2rem)] overflow-y-auto rounded-2xl border border-border bg-surface p-5">
           <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold text-text">Filters</h2>
+              <h2 className="text-base font-semibold text-text">
+                {ui.collections.filters.heading}
+              </h2>
               {activeChips.length > 0 && (
                 <span className="tabular-nums-price inline-flex min-w-5 items-center justify-center rounded-full bg-accent-tint px-2 py-0.5 text-xs font-semibold text-accent-text">
                   {activeChips.length}
@@ -751,7 +756,7 @@ export function CollectionFilters({
                 onClick={clearAllFilters}
                 className="inline-flex min-h-8 cursor-pointer items-center px-1.5 text-xs font-medium text-accent-text hover:text-accent-hover hover:underline"
               >
-                Clear all
+                {ui.collections.filters.clearAll}
               </button>
             )}
           </div>
@@ -797,7 +802,7 @@ export function CollectionFilters({
           </div>
 
           <p className="tabular-nums-price shrink-0 pl-1 text-xs font-medium text-text-muted sm:text-sm">
-            <AnimatedCounter value={totalCount} /> {totalCount === 1 ? "piece" : "pieces"}
+            <AnimatedCounter value={totalCount} /> {pieceNoun(totalCount)}
           </p>
         </div>
 
@@ -811,12 +816,12 @@ export function CollectionFilters({
         >
           <div className="hidden items-center justify-between gap-4 lg:flex">
             <p className="tabular-nums-price text-sm text-text-2">
-              <AnimatedCounter value={totalCount} /> {totalCount === 1 ? "piece" : "pieces"}
+              <AnimatedCounter value={totalCount} /> {pieceNoun(totalCount)}
             </p>
 
             <div className="flex items-center gap-2.5">
               <span id="sort-label" className="sr-only text-sm text-text-2 lg:not-sr-only">
-                Sort by
+                {ui.collections.filters.sortBy}
               </span>
               <Select
                 value={currentSort}
@@ -866,7 +871,7 @@ export function CollectionFilters({
                 onClick={clearAllFilters}
                 className="inline-flex h-8 shrink-0 cursor-pointer items-center px-2 text-xs font-medium text-accent-text hover:text-accent-hover hover:underline"
               >
-                Clear all
+                {ui.collections.filters.clearAll}
               </button>
             </div>
           )}

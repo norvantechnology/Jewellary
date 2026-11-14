@@ -16,4 +16,5 @@ export const CACHE_TAGS = {
   settings: "settings",
   shipping: "shipping",
   currencies: "currencies",
+  siteContent: "site-content",
 } as const;

@@ -19,22 +19,22 @@ export function ResetPasswordEmail({
     <EmailLayout
       siteName={siteName}
       previewText={`Reset your ${siteName} account password`}
-      heading="Password Reset Request"
+      heading="Reset your password"
       contactEmail={contactEmail}
     >
-      <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {recipientName},</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {recipientName},</Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        We received a request to reset the password for your {siteName} account. Select the button
-        below to choose a new password.
+        We received a request to reset the password for your {siteName} account. Tap the button
+        below to choose a new one.
       </Text>
       <Section style={{ margin: "24px 0" }}>
         <Button href={resetUrl} style={EMAIL_BUTTON_STYLE}>
-          Reset Password
+          Reset password
         </Button>
       </Section>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        This link expires shortly for your security. If you did not ask to reset your password, no
-        changes have been made to your account.
+        For your security, this link expires soon. If you didn’t ask to reset your password, you can
+        ignore this email. Your account hasn’t changed.
       </Text>
     </EmailLayout>
   );

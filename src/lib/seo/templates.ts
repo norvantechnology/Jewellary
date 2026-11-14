@@ -1,3 +1,5 @@
+import { SITE_CONTENT_DEFAULTS } from "@/modules/site-content/site-content.shared";
+
 export interface SeoTemplateVariables {
   name?: string | null;
   category?: string | null;
@@ -28,26 +30,33 @@ export interface SeoTemplatesConfig {
   pageDescription: string;
 }
 
+/**
+ * Automatic SEO wording lives in data/frontend/site-content.json → site.seoTemplates (file-only).
+ * Admin > SEO > Templates can override the product/collection templates per store.
+ */
+export const SEO_TEMPLATE_TEXT = SITE_CONTENT_DEFAULTS.site.seoTemplates;
+
 export const DEFAULT_SEO_TEMPLATES: SeoTemplatesConfig = {
-  homeTitle: "{brand} | Certified Diamond Engagement Rings & Fine Jewellery",
-  homeDescription:
-    "Explore GIA-certified diamond engagement rings, bespoke solitaires, and heirloom fine jewellery crafted in recycled 18K gold and 950 platinum.",
-  productTitle: "{name} – {metal}, {carat}ct {cert} | {brand}",
-  productDescription:
-    "{name} crafted in {metal} with {carat}ct {cert} certified diamond quality ({price}). Complimentary insured delivery & 30-day atelier returns.",
-  collectionTitle: "{collection} – Certified Diamond Jewellery | {brand}",
-  collectionDescription:
-    "Shop {count} {collection} pieces in 18K gold and 950 platinum ({priceRange}). Independently certified diamonds with insured global delivery.",
-  facetTitle: "{name} – {collection} | {brand}",
-  facetDescription:
-    "Discover {count} curated {name} designs in {collection} ({priceRange}). GIA & IGI certified diamonds crafted to order by {brand}.",
-  guideTitle: "{name} | {brand} Journal",
-  guideDescription:
-    "{excerpt} Expert gemology guidance from the {brand} atelier on certification, precious metals, sizing, and heirloom jewellery care.",
-  pageTitle: "{name} | {brand}",
-  pageDescription:
-    "{excerpt} Official information and bespoke client concierge standards from {brand}, purveyors of certified fine diamond jewellery.",
+  homeTitle: SEO_TEMPLATE_TEXT.homeTitle,
+  homeDescription: SEO_TEMPLATE_TEXT.homeDescription,
+  productTitle: SEO_TEMPLATE_TEXT.productTitle,
+  productDescription: SEO_TEMPLATE_TEXT.productDescription,
+  collectionTitle: SEO_TEMPLATE_TEXT.collectionTitle,
+  collectionDescription: SEO_TEMPLATE_TEXT.collectionDescription,
+  facetTitle: SEO_TEMPLATE_TEXT.facetTitle,
+  facetDescription: SEO_TEMPLATE_TEXT.facetDescription,
+  guideTitle: SEO_TEMPLATE_TEXT.guideTitle,
+  guideDescription: SEO_TEMPLATE_TEXT.guideDescription,
+  pageTitle: SEO_TEMPLATE_TEXT.pageTitle,
+  pageDescription: SEO_TEMPLATE_TEXT.pageDescription,
 };
+
+/** Replaces {name}-style placeholders in a template from site.seoTemplates. */
+export function fillSeoText(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
+    key in values ? String(values[key]) : match,
+  );
+}
 
 export function mergeSeoTemplates(raw?: Partial<SeoTemplatesConfig> | null): SeoTemplatesConfig {
   if (!raw || typeof raw !== "object") {
@@ -217,7 +226,7 @@ export function interpolateSeoTemplate(template: string, variables: SeoTemplateV
     metal: variables.metal?.trim() ?? "",
     carat: caratStr,
     cert: variables.cert?.trim() ?? "",
-    brand: variables.brand?.trim() ?? "Maison Aurelia",
+    brand: variables.brand?.trim() ?? SITE_CONTENT_DEFAULTS.siteConfig.brandName,
     price: variables.price?.trim() ?? "",
     collection: variables.collection?.trim() ?? variables.category?.trim() ?? "",
     page: variables.page ? String(variables.page) : "",

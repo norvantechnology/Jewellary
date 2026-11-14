@@ -10,6 +10,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   void error;
+  // Renders outside the root layout (no UiTextProvider), so this text stays in code.
 
   return (
     <html lang="en">

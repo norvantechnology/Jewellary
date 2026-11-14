@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import Image from "next/image";
@@ -9,42 +10,10 @@ import { m } from "motion/react";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { markModalNavigation } from "@/hooks/use-modal-history";
+import { useSearchSuggestions } from "@/hooks/use-search-suggestions";
 import { menuContainerVariants, menuItemVariants } from "@/lib/motion";
 
-interface SuggestProduct {
-  id: string;
-  name: string;
-  slug: string;
-  sku: string;
-  categoryName: string;
-  priceMode: "FIXED" | "PRICE_ON_REQUEST";
-  basePrice: string;
-  imageUrl: string | null;
-  altText: string | null;
-}
-
-interface SuggestCategory {
-  id: string;
-  name: string;
-  path: string;
-  productCount: number;
-}
-
-interface SuggestGuide {
-  id: string;
-  title: string;
-  slug: string;
-  authorName: string;
-}
-
-interface SuggestResponse {
-  query: string;
-  categories: SuggestCategory[];
-  products: SuggestProduct[];
-  guides?: SuggestGuide[];
-}
-
-const POPULAR_CHIPS = ["Solitaire", "Platinum", "18K Gold", "Oval", "GIA"] as const;
 const RECENT_STORAGE_KEY = "ma_recent_searches";
 
 function readRecentSearches(): string[] {
@@ -86,11 +55,18 @@ export function HeaderSearchDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const ui = useUiText();
   const router = useRouter();
   const { formatPrice } = useCurrency();
   const [query, setQuery] = React.useState("");
-  const [results, setResults] = React.useState<SuggestResponse | null>(null);
-  const [loading, setLoading] = React.useState(false);
+  // Shared, cached and race-free suggestions (see use-search-suggestions.ts).
+  const suggestions = useSearchSuggestions(query, { limit: 5, enabled: open });
+  const results = suggestions.data;
+  const loading = suggestions.status === "loading";
+  const failed = suggestions.status === "error";
+  // Before typing: the store's real top categories (from the database), never a fixed list.
+  const browse = useSearchSuggestions("", { limit: 6, minLength: 0, enabled: open });
+  const browseCategories = browse.data?.categories ?? [];
   const mounted = React.useSyncExternalStore(
     emptySubscribe,
     () => true,
@@ -113,38 +89,11 @@ export function HeaderSearchDialog({
     return () => window.clearTimeout(focusTimer);
   }, [open]);
 
-  React.useEffect(() => {
-    if (!open) return;
-    const trimmed = query.trim();
-    const controller = new AbortController();
-
-    const timer = window.setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/search/suggest?q=${encodeURIComponent(trimmed)}&limit=5`, {
-          signal: controller.signal,
-        });
-        if (res.ok) {
-          const data = (await res.json()) as SuggestResponse;
-          setResults(data);
-        }
-      } catch {
-        // Ignore aborted or failed fetches cleanly
-      } finally {
-        setLoading(false);
-      }
-    }, 180);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [query, open]);
-
   const submitSearch = (term: string) => {
     const clean = term.trim();
     if (!clean) return;
     saveRecentSearch(clean);
+    markModalNavigation();
     onOpenChange(false);
     router.push(`/search?q=${encodeURIComponent(clean)}`);
   };
@@ -172,10 +121,8 @@ export function HeaderSearchDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex flex-col gap-0 overflow-hidden p-0 max-sm:inset-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:w-screen max-sm:max-w-none max-sm:rounded-none max-sm:border-0 sm:inset-auto sm:top-[10%] sm:left-1/2 sm:max-h-[80dvh] sm:w-[calc(100%-2rem)] sm:max-w-[600px] sm:-translate-x-1/2 sm:translate-y-0 sm:rounded-lg">
-        <DialogTitle className="sr-only">Search Maison Aurelia catalogue</DialogTitle>
-        <DialogDescription className="sr-only">
-          Search across fine jewellery pieces, collections, and buying guides.
-        </DialogDescription>
+        <DialogTitle className="sr-only">{ui.search.dialogTitle}</DialogTitle>
+        <DialogDescription className="sr-only">{ui.search.dialogDescription}</DialogDescription>
 
         {/* Search input header bar (leaves room right for Dialog close X) */}
         <form
@@ -188,7 +135,7 @@ export function HeaderSearchDialog({
             aria-hidden="true"
           />
           <label htmlFor="header-search-input" className="sr-only">
-            Search jewellery, SKU, stone shape, or collection
+            {ui.search.inputLabel}
           </label>
           <input
             id="header-search-input"
@@ -196,7 +143,7 @@ export function HeaderSearchDialog({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search rings, carats, collections, guides..."
+            placeholder={ui.search.placeholder}
             className="h-14 w-full min-w-0 flex-1 border-0 bg-transparent px-1 text-base text-foreground shadow-none ring-0 outline-none placeholder:text-muted-foreground focus:ring-0 focus:outline-none focus-visible:shadow-none focus-visible:ring-0 focus-visible:outline-none md:text-sm [&::-webkit-search-cancel-button]:hidden"
           />
           {query.length > 0 && (
@@ -206,7 +153,7 @@ export function HeaderSearchDialog({
                 setQuery("");
                 inputRef.current?.focus();
               }}
-              aria-label="Clear search query"
+              aria-label={ui.search.clearAria}
               className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <X className="size-4" strokeWidth={1.5} aria-hidden="true" />
@@ -217,7 +164,7 @@ export function HeaderSearchDialog({
               type="submit"
               className="inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              Search
+              {ui.search.submit}
             </button>
           ) : (
             <kbd className="hidden rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-flex">
@@ -230,23 +177,20 @@ export function HeaderSearchDialog({
           {/* Quick / Recent & Popular chips when input is short */}
           {trimmed.length < 2 && (
             <div className="mb-5 space-y-4">
-              <p className="text-xs text-muted-foreground">
-                Type a stone shape, metal (e.g. Platinum, 18K Gold), GIA report, or SKU. Press Enter
-                to view all matching pieces.
-              </p>
+              <p className="text-xs text-muted-foreground">{ui.search.hint}</p>
 
               {recentSearches.length > 0 && (
                 <div>
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      Recent
+                      {ui.search.recentHeading}
                     </p>
                     <button
                       type="button"
                       onClick={handleClearRecent}
                       className="inline-flex min-h-11 cursor-pointer items-center px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
                     >
-                      Clear
+                      {ui.search.clearRecent}
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -264,46 +208,61 @@ export function HeaderSearchDialog({
                 </div>
               )}
 
-              <div>
-                <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                  Popular Searches
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {POPULAR_CHIPS.map((chip) => (
-                    <button
-                      key={chip}
-                      type="button"
-                      onClick={() => setQuery(chip)}
-                      className="transition-ui inline-flex min-h-11 cursor-pointer items-center rounded-full border border-border bg-card px-3.5 text-xs font-medium text-foreground hover:border-foreground/35 hover:bg-muted"
-                    >
-                      {chip}
-                    </button>
-                  ))}
+              {browseCategories.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                    {ui.search.popularHeading}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {browseCategories.map((category) => (
+                      <Link
+                        key={category.id}
+                        href={`/collections/${category.path}`}
+                        onClick={() => onOpenChange(false)}
+                        className="transition-ui inline-flex min-h-11 items-center rounded-full border border-border bg-card px-3.5 text-xs font-medium text-foreground hover:border-foreground/35 hover:bg-muted"
+                      >
+                        {category.name}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
           {loading && trimmed.length >= 2 && (
             <div className="space-y-3 py-2" role="status" aria-live="polite">
-              <span className="sr-only">Searching catalogue…</span>
+              <span className="sr-only">{ui.search.searching}</span>
               <Skeleton className="h-16 w-full rounded-lg" />
               <Skeleton className="h-16 w-full rounded-lg" />
               <Skeleton className="h-16 w-full rounded-lg" />
+            </div>
+          )}
+
+          {failed && trimmed.length >= 2 && (
+            <div className="py-8 text-center" role="alert">
+              <p className="text-sm text-muted-foreground">{ui.search.loadError}</p>
+              <button
+                type="button"
+                onClick={suggestions.retry}
+                className="mt-3 inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-accent-text hover:underline"
+              >
+                {ui.search.retry}
+              </button>
             </div>
           )}
 
           {!loading && results && !hasAnyResults && trimmed.length >= 2 && (
             <div className="py-8 text-center">
               <p className="text-sm text-muted-foreground">
-                No pieces match &ldquo;{trimmed}&rdquo;.
+                {fill(ui.search.noMatches, { query: trimmed })}
               </p>
               <Link
                 href={`/search?q=${encodeURIComponent(trimmed)}`}
                 onClick={() => onOpenChange(false)}
                 className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent-text hover:underline"
               >
-                Search full catalogue <ArrowRight className="size-4" aria-hidden="true" />
+                {ui.search.searchAll} <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
             </div>
           )}
@@ -318,9 +277,9 @@ export function HeaderSearchDialog({
             >
               {/* Products */}
               {hasProducts && (
-                <section aria-label="Matching products">
+                <section aria-label={ui.search.productsAria}>
                   <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                    Products
+                    {ui.search.productsHeading}
                   </p>
                   <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
                     {results.products.map((product) => (
@@ -362,7 +321,7 @@ export function HeaderSearchDialog({
                           </div>
                           <span className="tabular-nums-price max-w-[40%] shrink-0 text-right text-xs font-medium text-foreground sm:text-sm">
                             {product.priceMode === "PRICE_ON_REQUEST"
-                              ? "Upon request"
+                              ? ui.search.priceOnRequest
                               : formatPrice(product.basePrice)}
                           </span>
                         </Link>
@@ -374,9 +333,9 @@ export function HeaderSearchDialog({
 
               {/* Collections */}
               {hasCategories && (
-                <section aria-label="Matching collections">
+                <section aria-label={ui.search.collectionsAria}>
                   <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                    Collections
+                    {ui.search.collectionsHeading}
                   </p>
                   <ul className="space-y-1">
                     {results.categories.map((cat) => (
@@ -396,7 +355,14 @@ export function HeaderSearchDialog({
                           </span>
                           {cat.productCount > 0 && (
                             <span className="tabular-nums-price text-xs text-muted-foreground">
-                              {cat.productCount} {cat.productCount === 1 ? "piece" : "pieces"}
+                              {fill(
+                                cat.productCount === 1
+                                  ? ui.search.pieceCount
+                                  : ui.search.piecesCount,
+                                {
+                                  count: cat.productCount,
+                                },
+                              )}
                             </span>
                           )}
                         </Link>
@@ -408,9 +374,9 @@ export function HeaderSearchDialog({
 
               {/* Guides */}
               {hasGuides && (
-                <section aria-label="Matching guides">
+                <section aria-label={ui.search.guidesAria}>
                   <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                    Guides
+                    {ui.search.guidesHeading}
                   </p>
                   <ul className="space-y-1">
                     {results.guides?.map((guide) => (
@@ -449,7 +415,7 @@ export function HeaderSearchDialog({
                     }}
                     className="flex min-h-11 items-center justify-between rounded-md bg-muted px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/80"
                   >
-                    <span>View all results for &ldquo;{trimmed}&rdquo;</span>
+                    <span>{fill(ui.search.viewAll, { query: trimmed })}</span>
                     <ArrowRight className="size-4 text-accent-text" aria-hidden="true" />
                   </Link>
                 </div>

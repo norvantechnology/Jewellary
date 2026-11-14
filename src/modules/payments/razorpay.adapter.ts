@@ -165,6 +165,73 @@ export class RazorpayPaymentAdapter implements PaymentProviderAdapter {
     };
   }
 
+  /**
+   * Confirms a payment right after the Razorpay Checkout popup succeeds (Razorpay's recommended
+   * flow), so the order is marked paid immediately; the webhook remains a backup and is
+   * de-duplicated. Steps: verify the checkout signature with the key secret, then fetch the
+   * payment from Razorpay (never trust the browser) and capture it if it is only authorized.
+   */
+  async verifyCheckoutPayment(input: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+    expectedAmountMinor: number;
+    expectedCurrency: string;
+    orderId: string;
+    orderNumber: string;
+  }): Promise<VerifiedWebhookEvent> {
+    if (!env.RAZORPAY_KEY_SECRET) {
+      throw new PaymentError("Razorpay API credentials are not configured.");
+    }
+    const expected = crypto
+      .createHmac("sha256", env.RAZORPAY_KEY_SECRET)
+      .update(`${input.razorpayOrderId}|${input.razorpayPaymentId}`)
+      .digest("hex");
+    const given = Buffer.from(input.razorpaySignature, "utf8");
+    const wanted = Buffer.from(expected, "utf8");
+    if (given.length !== wanted.length || !crypto.timingSafeEqual(given, wanted)) {
+      throw new ValidationError("Invalid Razorpay payment signature.");
+    }
+
+    const rzp = this.getClient();
+    let payment = await rzp.payments.fetch(input.razorpayPaymentId);
+    if (payment.order_id !== input.razorpayOrderId) {
+      throw new ValidationError("Razorpay payment does not belong to this order.");
+    }
+    if (payment.status === "authorized") {
+      // Auto-capture is off in the Razorpay account: capture the exact order amount now.
+      payment = await rzp.payments.capture(
+        input.razorpayPaymentId,
+        input.expectedAmountMinor,
+        input.expectedCurrency.toUpperCase(),
+      );
+    }
+
+    const status: VerifiedWebhookEvent["status"] =
+      payment.status === "captured"
+        ? "succeeded"
+        : payment.status === "failed"
+          ? "failed"
+          : "ignored";
+
+    return {
+      provider: "RAZORPAY",
+      // Stable id: repeated confirmations of the same payment are processed once.
+      eventId: `checkout_${input.razorpayPaymentId}`,
+      eventType: `checkout.payment.${payment.status}`,
+      intentId: input.razorpayOrderId,
+      chargeId: input.razorpayPaymentId,
+      orderIdFromMetadata: input.orderId,
+      orderNumberFromMetadata: input.orderNumber,
+      status,
+      failureReason: payment.error_description ?? null,
+      amountMinor: typeof payment.amount === "number" ? payment.amount : Number(payment.amount),
+      currency: payment.currency ? String(payment.currency).toUpperCase() : null,
+      refundAmountMode: null,
+      rawPayload: { id: payment.id, status: payment.status, order_id: payment.order_id },
+    };
+  }
+
   async createRefund(input: CreateRefundInput): Promise<CreateRefundResult> {
     if (env.PAYMENT_TEST_SANDBOX === "true") {
       return {

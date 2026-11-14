@@ -1,0 +1,2351 @@
+{
+  "_readme": "WHAT: All fixed (non-database) text and SEO for the storefront. HOW IT IS USED: pages read this through getSiteContent() in src/modules/site-content/site-content.service.ts. EDITING: change text in Admin > Page Content (saved to the database, overrides this file, live instantly) or edit this file and redeploy. Admin > Page Content > Reset to defaults goes back to this file. COMMENTS: any key starting with '_' (like this one) is a note for editors; it is never shown on the site and cannot be changed from admin. TOKENS: {{siteName}}, {{contactEmail}}, {{returnWindowDays}}, {{freeShippingThreshold}}, {{signatureThreshold}} are filled in from Admin > Settings. RULES: keep every key; only change the text values. Lists can grow or shrink. Products, categories, banners, prices and articles are NOT here - they come from the database.",
+  "siteConfig": {
+    "_comment": "FILE-ONLY technical SEO settings. Read directly from this file when the server starts (src/lib/seo/site.ts), so they are hidden in Admin and admin edits never touch them. Change here and redeploy.",
+    "brandName": "Maison Aurelia",
+    "_brandName": "Fallback brand name for SEO tags and structured data when Admin > Settings has no store name.",
+    "legalName": "Maison Aurelia Fine Jewelry Ltd.",
+    "_legalName": "Registered company name used in Organization structured data (JSON-LD) for Google.",
+    "canonicalOrigin": "https://maisonaurelia.com",
+    "_canonicalOrigin": "Production domain. Used for canonical links, sitemap and feeds whenever NEXT_PUBLIC_SITE_URL is localhost or a placeholder.",
+    "locale": "en_US",
+    "_locale": "Open Graph locale (og:locale) for social share previews.",
+    "language": "en-US",
+    "_language": "Page language used in structured data and hreflang.",
+    "sitemap": [
+      {
+        "path": "/",
+        "slug": "/",
+        "label": "Home",
+        "priority": 1.0,
+        "changeFrequency": "daily"
+      },
+      {
+        "path": "/collections",
+        "slug": "collections",
+        "label": "Shop All Jewelry",
+        "priority": 0.9,
+        "changeFrequency": "daily"
+      },
+      {
+        "path": "/guides",
+        "slug": "guides",
+        "label": "Buying Guides",
+        "priority": 0.8,
+        "changeFrequency": "weekly"
+      },
+      {
+        "path": "/about",
+        "slug": "about",
+        "label": "About Us",
+        "priority": 0.6,
+        "changeFrequency": "monthly"
+      },
+      {
+        "path": "/contact",
+        "slug": "contact",
+        "label": "Contact Us",
+        "priority": 0.7,
+        "changeFrequency": "monthly"
+      },
+      {
+        "path": "/faq",
+        "slug": "faq",
+        "label": "FAQ",
+        "priority": 0.6,
+        "changeFrequency": "monthly"
+      },
+      {
+        "path": "/shipping-returns",
+        "slug": "shipping-returns",
+        "label": "Shipping & Returns",
+        "priority": 0.6,
+        "changeFrequency": "monthly"
+      },
+      {
+        "path": "/ring-size-guide",
+        "slug": "ring-size-guide",
+        "label": "Ring Size Guide",
+        "priority": 0.7,
+        "changeFrequency": "monthly"
+      },
+      {
+        "path": "/care-guide",
+        "slug": "care-guide",
+        "label": "Jewelry Care Guide",
+        "priority": 0.6,
+        "changeFrequency": "monthly"
+      },
+      {
+        "path": "/newsletter",
+        "slug": "newsletter",
+        "label": "Newsletter",
+        "priority": 0.4,
+        "changeFrequency": "monthly"
+      },
+      {
+        "path": "/privacy",
+        "slug": "privacy",
+        "label": "Privacy Policy",
+        "priority": 0.3,
+        "changeFrequency": "yearly"
+      },
+      {
+        "path": "/terms",
+        "slug": "terms",
+        "label": "Terms of Service",
+        "priority": 0.3,
+        "changeFrequency": "yearly"
+      }
+    ],
+    "_sitemap": "Static pages listed in /sitemap.xml. priority (0.0-1.0) and changeFrequency (daily|weekly|monthly|yearly) are hints to search engines. label is shown in Admin > SEO.",
+    "noindexPaths": [
+      "/cart",
+      "/checkout",
+      "/account",
+      "/admin",
+      "/login",
+      "/register",
+      "/forgot-password",
+      "/reset-password",
+      "/verify-email",
+      "/orders",
+      "/wishlist",
+      "/search",
+      "/customize",
+      "/api"
+    ],
+    "_noindexPaths": "URL prefixes search engines must NOT index (private, cart, account, search results). Pages under these paths get a noindex robots tag and are left out of the sitemap."
+  },
+  "site": {
+    "_comment": "Text used on every page: default SEO, the header menu, the footer and the account area.",
+    "seo": {
+      "_comment": "Site-wide SEO defaults (src/app/layout.tsx), used when a page has no SEO of its own. titleTemplate wraps every page title: %s = the page title.",
+      "defaultTitle": "Diamond Engagement Rings & Fine Jewelry | {{siteName}}",
+      "titleTemplate": "%s | {{siteName}}",
+      "description": "Shop GIA and IGI certified diamond engagement rings, wedding bands and fine jewelry in 18K recycled gold and platinum. Free insured shipping and easy returns."
+    },
+    "header": {
+      "_comment": "Main menu labels in the desktop header, the Collections drop-down and the mobile menu. Links are fixed; only the labels change.",
+      "allJewellery": "Shop all",
+      "collections": "Collections",
+      "guides": "Buying guides",
+      "atelier": "About us",
+      "concierge": "Contact us",
+      "shopByCategory": "Shop by category",
+      "_shopByCategory": "Heading above the category list in the desktop Collections drop-down.",
+      "mobileShopByCategory": "Shop by category",
+      "_mobileShopByCategory": "Heading of the category accordion in the mobile menu.",
+      "viewAllCollections": "View all collections",
+      "mobileAbout": "About us",
+      "_mobileAbout": "Mobile menu label for /about (the desktop menu uses 'atelier').",
+      "mobileContact": "Contact us",
+      "_mobileContact": "Mobile menu label for /contact (the desktop menu uses 'concierge').",
+      "account": "My account",
+      "orders": "My orders",
+      "trackOrder": "Track order",
+      "wishlist": "Wishlist",
+      "_account": "account, orders, trackOrder and wishlist are the quick links at the bottom of the mobile menu."
+    },
+    "footer": {
+      "_comment": "Footer text. The Shop column also lists the top 4 categories from the database automatically.",
+      "blurb": "Certified diamond engagement rings and fine jewelry, handmade in 18K recycled gold and platinum.",
+      "copyright": "All rights reserved.",
+      "columns": [
+        {
+          "heading": "Shop",
+          "links": [
+            {
+              "label": "All jewelry",
+              "href": "/collections"
+            }
+          ]
+        },
+        {
+          "heading": "Customer service",
+          "links": [
+            {
+              "label": "Contact us",
+              "href": "/contact"
+            },
+            {
+              "label": "Track your order",
+              "href": "/orders/track"
+            },
+            {
+              "label": "Shipping & returns",
+              "href": "/shipping-returns"
+            },
+            {
+              "label": "Ring size guide",
+              "href": "/ring-size-guide"
+            },
+            {
+              "label": "Jewelry care",
+              "href": "/care-guide"
+            },
+            {
+              "label": "FAQs",
+              "href": "/faq"
+            }
+          ]
+        },
+        {
+          "heading": "About",
+          "links": [
+            {
+              "label": "Our story",
+              "href": "/about"
+            },
+            {
+              "label": "Buying guides",
+              "href": "/guides"
+            },
+            {
+              "label": "Privacy policy",
+              "href": "/privacy"
+            },
+            {
+              "label": "Terms of service",
+              "href": "/terms"
+            }
+          ]
+        }
+      ],
+      "_columns": "Footer link columns. Category links are added to the first column automatically."
+    },
+    "layouts": {
+      "_comment": "Browser-tab titles for the account area. %s = the page title.",
+      "accountDefaultTitle": "My account",
+      "accountTitleTemplate": "%s | My account"
+    },
+    "accountNav": {
+      "_comment": "Tab labels in the signed-in account area (a sidebar on desktop, scrolling tabs on mobile). Links are fixed; only the labels change.",
+      "overview": "Overview",
+      "orders": "Orders",
+      "customizations": "Custom designs",
+      "addresses": "Addresses",
+      "wishlist": "Wishlist",
+      "settings": "Settings",
+      "adminStudio": "Admin",
+      "_adminStudio": "Button shown only to staff. It links to the admin panel."
+    },
+    "seoTemplates": {
+      "_comment": "FILE-ONLY. Automatic SEO wording for pages that don't have their own SEO text: products, categories, filtered category pages, guides, the Google Shopping feed, /llms.txt (a summary for AI search tools) and image alt text. Read straight from this file (src/lib/seo/templates.ts, metadata.ts, feeds.ts, images.ts, jsonld.ts and src/app/llms.txt/route.ts), so it is hidden in Admin > Page Content. To override the product and category templates without a redeploy, use Admin > SEO > Templates. Placeholders in {single braces} are filled in by the code; keep them. Titles are cut to 60 characters and descriptions to about 158.",
+      "homeTitle": "{brand} | Diamond Engagement Rings & Fine Jewelry",
+      "homeDescription": "Shop GIA certified diamond engagement rings, wedding bands and fine jewelry, handmade in recycled 18K gold and platinum. Free insured shipping.",
+      "_homeTitle": "Backup home page title. {brand} = store name. The home page normally uses Pages > Home > SEO.",
+      "productTitle": "{name} – {metal}, {carat}ct {cert} | {brand}",
+      "_productTitle": "Product page title when a product has no SEO title of its own, e.g. 'Oval Solitaire – 18K Gold, 1.5ct GIA Certified | Store'. {name} = product name, {metal} = metal, {carat} = total carat weight, {cert} = e.g. 'GIA Certified', {brand} = store name. Empty parts and leftover dashes/commas are removed automatically, so keep this dash-and-comma layout.",
+      "productDescription": "Shop the {name} in {metal} with a {carat}ct {cert} certified diamond ({price}). Free insured shipping and easy returns.",
+      "_productDescription": "Product description when the product has no SEO description. Also uses {price}. Used only when Admin > SEO > Templates is set; otherwise the product's own summary is used.",
+      "collectionTitle": "{collection} – Certified Diamond Jewelry | {brand}",
+      "_collectionTitle": "Category page title, e.g. 'Engagement Rings – Certified Diamond Jewelry | Store'. {collection} = category name. Long titles are shortened to 60 characters by dropping the part after the dash first.",
+      "collectionDescription": "Shop {count} {collection} in 18K gold and platinum ({priceRange}). Certified diamonds, free insured shipping and easy returns.",
+      "_collectionDescription": "Category page description. {count} = number of products, {priceRange} = lowest to highest price.",
+      "facetTitle": "{name} – {collection} | {brand}",
+      "_facetTitle": "Title for filtered category pages, e.g. 'Oval Engagement Rings'. {name} = the filter (e.g. Oval).",
+      "facetDescription": "Shop {count} {name} {collection} ({priceRange}). GIA and IGI certified diamonds, made to order by {brand}.",
+      "guideTitle": "{name} | {brand} Buying Guide",
+      "_guideTitle": "Buying guide title when the article has no SEO title. {name} = article title.",
+      "guideDescription": "{excerpt} Expert advice from {brand} on diamond certification, metals, ring sizing and jewelry care.",
+      "_guideDescription": "{excerpt} = the article summary.",
+      "pageTitle": "{name} | {brand}",
+      "pageDescription": "{excerpt} Helpful information from {brand}, sellers of certified diamond jewelry.",
+      "fallbacks": {
+        "_comment": "Words used when a product or category is missing a detail.",
+        "price": "price on request",
+        "priceRange": "prices on request",
+        "metal": "18K gold and platinum",
+        "cert": "GIA or IGI",
+        "certifiedLabel": "{lab} Certified",
+        "_certifiedLabel": "Used in product titles. {lab} = GIA or IGI.",
+        "certifiedLower": "{lab} certified",
+        "independentlyCertified": "Independently certified",
+        "productSpecsSuffix": "free insured shipping and {days}-day returns.",
+        "_productSpecsSuffix": "End of the automatic product description. {days} = return window from Admin > Settings.",
+        "legalName": "{brand} Fine Jewelry",
+        "_legalName": "Company name for Google when Admin > Settings has no legal name."
+      },
+      "imageLabels": {
+        "_comment": "Added to product photo alt text (read by screen readers and Google Images), e.g. 'Oval Solitaire Ring, worn on hand'.",
+        "front": "front view",
+        "side": "side view",
+        "detail": "close-up",
+        "onHand": "worn on hand",
+        "lifestyle": "styled photo",
+        "packaging": "gift box",
+        "certificate": "diamond grading certificate"
+      },
+      "feed": {
+        "_comment": "Google Shopping (Merchant Center) feed and the guides RSS feed.",
+        "insuredShipping": "Free insured shipping",
+        "standardShipping": "Standard shipping",
+        "channelDescription": "Certified diamond engagement rings and fine jewelry",
+        "_channelDescription": "Used when Admin > Settings has no tagline.",
+        "guidesTitle": "{brand} Diamond Buying Guides",
+        "guidesDescription": "Diamond buying guides, ring size help and jewelry care tips from {brand}."
+      },
+      "llms": {
+        "_comment": "/llms.txt: a plain summary of the store for AI search tools (ChatGPT, Perplexity, Google AI). Shown only when ENABLE_LLMS_TXT is on.",
+        "tagline": "Certified diamond engagement rings and fine jewelry, handmade in recycled 18K gold and platinum.",
+        "_tagline": "Used when Admin > Settings has no tagline.",
+        "collectionsHeading": "Jewelry Collections",
+        "collectionFallback": "{name} handmade in 18K gold and platinum.",
+        "_collectionFallback": "Used when a category has no description. {name} = category name.",
+        "specialtyHeading": "Popular Searches",
+        "guidesHeading": "Diamond Buying Guides",
+        "policiesHeading": "Customer Service and Policies",
+        "links": [
+          {
+            "label": "Shop All Jewelry",
+            "href": "/collections",
+            "text": "Browse all GIA and IGI certified jewelry, with filters."
+          },
+          {
+            "label": "Shipping and Returns",
+            "href": "/shipping-returns",
+            "text": "Free insured shipping, delivery signatures and how returns work."
+          },
+          {
+            "label": "Ring Size Guide",
+            "href": "/ring-size-guide",
+            "text": "Ring size chart with US, UK and EU sizes."
+          },
+          {
+            "label": "Jewelry Care Guide",
+            "href": "/care-guide",
+            "text": "How to clean a diamond ring, check prongs and store jewelry."
+          },
+          {
+            "label": "FAQ",
+            "href": "/faq",
+            "text": "Diamond certification, custom ring timing and resizing."
+          },
+          {
+            "label": "About Us",
+            "href": "/about",
+            "text": "How we make our jewelry and source our diamonds and metals."
+          },
+          {
+            "label": "Contact Us",
+            "href": "/contact",
+            "text": "Custom engagement ring consultations and diamond questions."
+          }
+        ]
+      }
+    }
+  },
+  "pages": {
+    "_comment": "One block per page. 'seo' is the browser-tab title and the Google search description (titles: about 35-45 characters, because ' | Store name' is added; descriptions: 140-160 characters). Other keys are the visible headings and text on that page.",
+    "home": {
+      "seo": {
+        "title": "Diamond Engagement Rings & Fine Jewelry | {{siteName}}",
+        "description": "Shop GIA certified diamond engagement rings, wedding bands, earrings and necklaces in 18K gold and platinum. Free insured shipping and easy returns."
+      },
+      "hero": {
+        "headline": "Diamond engagement rings, made to last",
+        "subtitle": "Certified diamonds, handmade in 18K recycled gold and platinum. Every ring comes with its GIA or IGI report.",
+        "primaryCta": {
+          "label": "Shop engagement rings",
+          "href": "/collections"
+        },
+        "secondaryCta": {
+          "label": "Book a free consultation",
+          "href": "/contact?type=BESPOKE"
+        }
+      },
+      "sections": {
+        "collections": {
+          "heading": "Shop by category",
+          "linkLabel": "See all"
+        },
+        "featured": {
+          "heading": "Best sellers",
+          "linkLabel": "Shop best sellers"
+        },
+        "newArrivals": {
+          "heading": "New arrivals",
+          "linkLabel": "Shop new arrivals"
+        },
+        "guides": {
+          "heading": "Diamond buying guides",
+          "linkLabel": "All guides",
+          "readLabel": "Read the guide"
+        }
+      },
+      "custom": {
+        "heading": "Design a custom engagement ring",
+        "text": "Choose your diamond, metal and setting, and our jewelers will make your ring by hand. An expert helps you at every step, free of charge.",
+        "primaryCta": {
+          "label": "Start your design",
+          "href": "/contact?type=BESPOKE"
+        },
+        "secondaryCta": {
+          "label": "Our story",
+          "href": "/about"
+        },
+        "steps": [
+          {
+            "title": "1. Pick your diamond",
+            "text": "Choose a certified natural or lab-grown diamond. We check every stone by hand."
+          },
+          {
+            "title": "2. We make your ring",
+            "text": "Handmade in 18K recycled gold or platinum, with secure prong settings."
+          },
+          {
+            "title": "3. Delivered with paperwork",
+            "text": "Your ring arrives with its GIA or IGI grading report and an appraisal for insurance."
+          }
+        ]
+      },
+      "guarantees": [
+        {
+          "title": "Certified diamonds",
+          "text": "Every diamond is graded by GIA or IGI and set in stamped 18K gold or platinum."
+        },
+        {
+          "title": "Free insured shipping",
+          "text": "Fully insured, tracked shipping. A signature is required on delivery."
+        },
+        {
+          "title": "{{returnWindowDays}}-day returns",
+          "text": "Free resizing, and free returns on unworn pieces."
+        }
+      ],
+      "_comment": "Home page (/). If an active banner exists in Admin > Banners, it replaces the hero text. Featured products, categories and articles come from the database."
+    },
+    "collections": {
+      "seo": {
+        "title": "Engagement Rings, Earrings & Fine Jewelry",
+        "description": "Shop certified diamond engagement rings, wedding bands, earrings, necklaces and tennis bracelets in 18K gold and platinum. Free insured shipping."
+      },
+      "heading": "Shop all jewelry",
+      "intro": "Certified diamond engagement rings, wedding bands, earrings, necklaces and bracelets, handmade in 18K gold and platinum.",
+      "_comment": "Collection pages (/collections and /collections/<category>). heading and intro show on the 'Shop all' page; category pages use the category's own name and description from the database.",
+      "emptyDescription": "Try changing your carat, metal or price filters, or shop all jewelry.",
+      "_emptyDescription": "Shown when the filters match no products.",
+      "aboutHeading": "About this collection",
+      "guidesHeading": "Buying guides",
+      "emptyTitle": "No products match your filters",
+      "emptyCategoryTitle": "Nothing in this collection yet",
+      "clearFiltersLabel": "Clear filters",
+      "shopAllLabel": "Shop all jewelry",
+      "gridSrHeading": "Products",
+      "_gridSrHeading": "Hidden heading above the product grid, read by screen readers.",
+      "allChipLabel": "All",
+      "_allChipLabel": "First filter chip on the Shop all page; the product count is added after it.",
+      "allChipTitle": "All jewelry",
+      "aboutTitle": "How to choose your {category}",
+      "aboutFallbackCategory": "fine jewelry",
+      "_aboutTitle": "Heading inside 'About this collection'. {category} = the category name in lowercase, or aboutFallbackCategory on the Shop all page.",
+      "aboutText": "Every piece at {storeName} is made in 18K recycled gold or 950 platinum and stamped for metal purity. Diamonds are independently graded by GIA or IGI where applicable. Orders ship fully insured with signature on delivery, and you can return unworn pieces within {days} days.",
+      "_aboutText": "Text inside 'About this collection'. {storeName} = store name, {days} = return window from Admin > Settings.",
+      "shareCountLabel": "{count} pieces",
+      "_shareCountLabel": "Shown on the image people see when a collection link is shared (WhatsApp, Facebook...). {count} = number of products."
+    },
+    "product": {
+      "seo": {
+        "title": "Certified Diamond Jewelry",
+        "description": "Shop GIA and IGI certified diamond jewelry in 18K gold and platinum. Free insured shipping, free resizing and easy returns."
+      },
+      "_comment": "Product page (/products/<slug>). Product names, prices, photos and descriptions come from the database. This block holds the fixed section titles and FAQ questions shown under every product.",
+      "_seo": "Backup SEO, used only when a product has no SEO title or description of its own (set per product in Admin > Products).",
+      "faqHeading": "Questions about this piece",
+      "faqVerifiedQuestion": "Is the diamond certified?",
+      "faqDeliveryQuestion": "How do shipping and returns work?",
+      "faqCustomizeQuestion": "Can I change the ring size or metal?",
+      "faqWarrantyQuestion": "What warranty and care do I get?",
+      "_faqWarrantyQuestion": "Only shown when the product has warranty text. The answers to all questions are built from the product's own details.",
+      "guidesHeading": "Buying guides",
+      "guidesEmptyText": "Read our diamond buying guides to compare the 4Cs (cut, color, clarity and carat) and choose the right metal.",
+      "_guidesEmptyText": "Shown when no guide is linked to this product's category.",
+      "relatedHeading": "You may also like"
+    },
+    "customize": {
+      "seo": {
+        "title": "Customize Your Ring",
+        "description": "Customize your {{siteName}} ring: choose the metal, diamond and ring size, and our jewelers will make it for you by hand."
+      },
+      "_comment": "Customize page (/products/<slug>/customize). The options come from the product's customization settings in admin.",
+      "unavailableHeading": "Customization isn't available",
+      "unavailableText": "You can't customize {{productName}} online right now. Chat with us and we'll help you make it your own.",
+      "_unavailableText": "Shown when customization is turned off for a product. {{productName}} is replaced with the product's name.",
+      "backLabel": "Back to product"
+    },
+    "search": {
+      "seo": {
+        "title": "Search Jewelry",
+        "description": "Search diamond rings, necklaces, earrings and bracelets by diamond shape, metal or product code."
+      },
+      "heading": "Search jewelry",
+      "_comment": "Search results page (/search): the heading, search box, suggested searches and the 'no results' message. {query} is replaced with what the customer typed.",
+      "breadcrumb": "Search",
+      "resultsHeading": "Results for “{query}”",
+      "_resultsHeading": "Heading shown after a search. Keep {query}.",
+      "inputLabel": "Search jewelry",
+      "_inputLabel": "Hidden label for screen readers on the search box.",
+      "placeholder": "Try oval ring, platinum or tennis bracelet",
+      "submitLabel": "Search",
+      "suggestionsLabel": "Shop by category:",
+      "resultsSrHeading": "Search results",
+      "_resultsSrHeading": "Hidden heading for screen readers above the results.",
+      "empty": {
+        "_comment": "Shown when no products match the search.",
+        "title": "No results found",
+        "withQuery": "We couldn't find anything for “{query}”. Check the spelling, try a broader word, or clear your filters.",
+        "withoutQuery": "Type what you're looking for above, or shop all jewelry.",
+        "clearLabel": "Clear filters",
+        "browseLabel": "Shop all jewelry"
+      }
+    },
+    "cart": {
+      "seo": {
+        "title": "Shopping Cart",
+        "description": "Review the items in your cart before you check out."
+      },
+      "_comment": "Shopping cart page (/cart): the breadcrumb label and the page heading. Items, totals and prices come from the cart itself.",
+      "breadcrumb": "Cart",
+      "heading": "Your cart"
+    },
+    "wishlist": {
+      "seo": {
+        "title": "Your Wishlist",
+        "description": "The jewelry you've saved. Compare your favorites and add them to your cart."
+      },
+      "heading": "Your wishlist",
+      "intro": "Items you save appear here. Sign in to see them on all your devices.",
+      "_comment": "Wishlist page (/wishlist): breadcrumb, heading and intro. The saved items come from the customer's wishlist.",
+      "breadcrumb": "Wishlist"
+    },
+    "checkout": {
+      "seo": {
+        "title": "Checkout",
+        "description": "Secure checkout with free insured shipping."
+      },
+      "heading": "Secure checkout",
+      "_comment": "Checkout page (/checkout): the breadcrumb trail and the page heading.",
+      "breadcrumbCart": "Cart",
+      "breadcrumb": "Checkout",
+      "retryHeading": "Complete your payment",
+      "_retryHeading": "Heading used instead of 'heading' when the customer returns to pay for an unpaid order."
+    },
+    "confirmation": {
+      "seo": {
+        "title": "Order Confirmation",
+        "description": "Your order confirmation and order status."
+      },
+      "_comment": "Order confirmation page (/orders/<number>/confirmation), shown after payment and from the confirmation email. Order details, prices and status come from the order.",
+      "orderLabel": "Order",
+      "_orderLabel": "Word shown before the order number in the heading and breadcrumb.",
+      "completePayment": "Complete payment",
+      "trackOrder": "Track order",
+      "keepShopping": "Continue shopping",
+      "itemsHeading": "Items in your order",
+      "historyHeading": "Order history",
+      "showLabel": "Show",
+      "hideLabel": "Hide",
+      "paymentHeading": "Payment",
+      "subtotalLabel": "Subtotal",
+      "taxLabel": "Tax",
+      "totalLabel": "Total",
+      "freeShippingLabel": "Free",
+      "_freeShippingLabel": "Shown instead of a price when shipping is free.",
+      "deliveryHeading": "Shipping address",
+      "signatureNote": "A signature is required on delivery.",
+      "unavailable": {
+        "_comment": "Shown when the order can't be opened (wrong account, signed out or a bad link). {email} is replaced with the signed-in email address.",
+        "loadError": "We couldn't load this order. Please refresh the page.",
+        "wrongAccountHeading": "We couldn't open this order",
+        "wrongAccountText": "This order isn't linked to the account you're signed in with ({email}). You can find all your orders under My orders.",
+        "signedOutHeading": "Sign in to see your order",
+        "signedOutText": "Sign in with the account you used at checkout, or open the link in your confirmation email.",
+        "viewOrders": "My orders",
+        "signIn": "Sign in",
+        "trackOrder": "Track an order",
+        "contact": "Contact us"
+      }
+    },
+    "track": {
+      "seo": {
+        "title": "Track Your Order",
+        "description": "Track your jewelry order. Enter your order number and email address to see its status and shipping updates."
+      },
+      "heading": "Track your order",
+      "intro": "Enter your order number and the email address you used at checkout.",
+      "_comment": "Order tracking page for guests (/orders/track): breadcrumb, heading and intro above the form.",
+      "breadcrumb": "Track order"
+    },
+    "contact": {
+      "seo": {
+        "title": "Contact Our Jewelry Experts",
+        "description": "Questions about engagement rings, custom designs, ring sizing or an order? Contact our jewelry experts. We reply within one business day."
+      },
+      "heading": "Contact us",
+      "intro": "Have a question about a custom ring, ring sizing or your order? Send us a message and our jewelers will reply within one business day.",
+      "emailLabel": "Email",
+      "phoneLabel": "Phone",
+      "hoursLabel": "Hours",
+      "formHeading": "Send us a message",
+      "_comment": "Contact page (/contact). The email, phone and hours come from Admin > Settings; only the labels are here."
+    },
+    "guides": {
+      "seo": {
+        "title": "Diamond & Engagement Ring Buying Guides",
+        "description": "Free diamond buying guides: the 4Cs, diamond shapes, gold vs. platinum, and how to find your ring size. Simple advice from our jewelers."
+      },
+      "heading": "Diamond and engagement ring buying guides",
+      "intro": "Simple, expert advice to help you choose a diamond, compare metals and find the right ring size.",
+      "_comment": "Buying guides list (/guides). The articles come from Admin > Articles.",
+      "emptyTitle": "Guides coming soon",
+      "emptyDescription": "Our jewelers are writing our first buying guides. Please check back soon.",
+      "readLabel": "Read the guide"
+    },
+    "guideArticle": {
+      "seo": {
+        "title": "Diamond Buying Guide",
+        "description": "Expert advice on choosing a diamond and fine jewelry, from the 4Cs (cut, color, clarity, carat) to metals and ring sizing."
+      },
+      "_comment": "A single buying guide (/guides/<slug>). The article text comes from Admin > Articles; this block holds the fixed headings around it.",
+      "_seo": "Backup SEO, used only when an article has no SEO title or description of its own.",
+      "tocHeading": "In this guide",
+      "faqHeading": "Common questions",
+      "ctaHeading": "Shop the pieces in this guide",
+      "ctaText": "Compare GIA and IGI certified jewelry in our collection, or ask one of our jewelers for advice.",
+      "ctaPrimaryLabel": "Shop jewelry",
+      "ctaSecondaryLabel": "Ask a jeweler",
+      "relatedHeading": "Pieces from this guide",
+      "relatedLinkLabel": "See all"
+    },
+    "newsletter": {
+      "seo": {
+        "title": "Email Preferences",
+        "description": "Manage your {{siteName}} newsletter: confirm your subscription, update your email preferences or unsubscribe from new arrival and offer emails."
+      },
+      "_comment": "The page customers land on from the newsletter confirm or unsubscribe email links (/newsletter). One heading and text for each outcome.",
+      "confirmed": {
+        "heading": "You're subscribed",
+        "text": "Thanks for confirming your email. We'll send you news about new arrivals, special collections and events from time to time."
+      },
+      "unsubscribed": {
+        "heading": "You've unsubscribed",
+        "text": "You won't get any more newsletter emails from us. You can sign up again at any time at the bottom of any page."
+      },
+      "invalid": {
+        "heading": "This link has expired",
+        "text": "This link was already used or is no longer valid. To get a new one, enter your email in the sign-up form at the bottom of the page."
+      },
+      "default": {
+        "heading": "Email preferences",
+        "text": "Use the link in our email to confirm your subscription or unsubscribe."
+      },
+      "_default": "Shown when the page is opened without a confirm or unsubscribe link.",
+      "primaryCta": "Shop jewelry",
+      "secondaryCta": "Go to the homepage"
+    },
+    "quote": {
+      "seo": {
+        "title": "Review Your Quote",
+        "description": "Check the details and price of your custom piece, then accept your quote."
+      },
+      "_comment": "Quote page opened from the link in the customer's email (/customize/accept/<token>). Hidden from Google."
+    },
+    "notFound": {
+      "heading": "Sorry, we can't find that page",
+      "text": "The page may have moved, or it no longer exists.",
+      "_comment": "The 404 page shown for any web address that doesn't exist.",
+      "primaryLabel": "Shop jewelry",
+      "secondaryLabel": "Search",
+      "tertiaryLabel": "Contact us"
+    },
+    "auth": {
+      "login": {
+        "seo": {
+          "title": "Sign In",
+          "description": "Sign in to see your orders, track shipping, and manage your wishlist and saved addresses."
+        },
+        "_comment": "/login page.",
+        "returnToStore": "Back to store",
+        "_returnToStore": "Link in the top bar of ALL sign-in pages. It goes back to the store.",
+        "card": {
+          "eyebrow": "Your account",
+          "title": "Welcome back",
+          "description": "Sign in to see your orders, wishlist and saved addresses."
+        }
+      },
+      "register": {
+        "seo": {
+          "title": "Create Account",
+          "description": "Create an account to save your favorites, check out faster and track your orders."
+        },
+        "_comment": "/register page.",
+        "card": {
+          "eyebrow": "New account",
+          "title": "Create an account",
+          "description": "Save your favorites, check out faster and track every order in one place."
+        },
+        "checkInbox": {
+          "eyebrow": "Almost done",
+          "title": "Check your inbox",
+          "description": "Confirm your email to activate your account."
+        },
+        "_checkInbox": "Shown after the form is sent. It asks the customer to confirm their email."
+      },
+      "forgotPassword": {
+        "seo": {
+          "title": "Forgot Password",
+          "description": "Forgot your password? Enter your email and we'll send you a link to reset it."
+        },
+        "_comment": "/forgot-password page.",
+        "card": {
+          "eyebrow": "Password help",
+          "title": "Forgot your password?",
+          "description": "Enter your email and we'll send you a link to reset it."
+        }
+      },
+      "resetPassword": {
+        "seo": {
+          "title": "Reset Password",
+          "description": "Choose a new password for your account."
+        },
+        "_comment": "/reset-password page, opened from the reset email link.",
+        "card": {
+          "eyebrow": "Password help",
+          "title": "Choose a new password",
+          "description": "Use at least 10 characters."
+        },
+        "invalidLink": {
+          "eyebrow": "Password help",
+          "title": "This link has expired",
+          "description": "Reset links work only once and expire after a short time."
+        },
+        "_invalidLink": "Shown when the reset link is missing its code or has expired."
+      },
+      "verifyEmail": {
+        "seo": {
+          "title": "Confirm Your Email",
+          "description": "Confirm your email address or request a new confirmation link."
+        },
+        "_comment": "/verify-email page, opened from the confirmation email link.",
+        "card": {
+          "eyebrow": "Email confirmation",
+          "title": "Confirm your email",
+          "description": "Confirming your email keeps your account secure and makes sure you get order updates.",
+          "verifiedTitle": "Email confirmed",
+          "verifiedDescription": "Thanks! Your email address is confirmed.",
+          "_verifiedTitle": "verifiedTitle and verifiedDescription replace the title and description once the email is confirmed."
+        }
+      },
+      "_comment": "Sign-in pages (/login, /register, /forgot-password, /reset-password, /verify-email). Each 'card' is the small label (eyebrow), heading and intro above the form. These pages are hidden from Google (noindex)."
+    },
+    "account": {
+      "overview": {
+        "seo": {
+          "title": "Account Overview",
+          "description": ""
+        },
+        "_comment": "/account dashboard: four count cards, recent orders, the default address and a security summary.",
+        "stats": {
+          "_comment": "The four count cards at the top. *Hint = the small line under each number (desktop only).",
+          "orders": "Orders",
+          "ordersHint": "Receipts and tracking",
+          "addresses": "Addresses",
+          "addressesHint": "Shipping and billing",
+          "customizations": "Custom designs",
+          "customizationsHint": "Designs and quotes",
+          "wishlist": "Wishlist",
+          "wishlistHint": "Saved for later"
+        },
+        "recentOrders": {
+          "heading": "Recent orders",
+          "linkLabel": "See all",
+          "emptyTitle": "No orders yet",
+          "emptyText": "When you place an order, you'll be able to track it here.",
+          "emptyAction": "Shop jewelry",
+          "_emptyTitle": "The empty* texts show when the customer has no orders yet."
+        },
+        "delivery": {
+          "heading": "Default shipping address",
+          "linkLabel": "Manage",
+          "empty": "No default address yet. Add one to check out faster."
+        },
+        "security": {
+          "heading": "Account security",
+          "linkLabel": "Settings",
+          "emailStatus": "Email",
+          "verified": "Confirmed",
+          "pending": "Not confirmed yet",
+          "phone": "Phone",
+          "phoneMissing": "Not provided",
+          "guestHint": "Checked out as a guest? Use Track order to find your order."
+        }
+      },
+      "orders": {
+        "seo": {
+          "title": "My Orders",
+          "description": ""
+        },
+        "_comment": "/account/orders list.",
+        "heading": "Your orders",
+        "countSingular": "order placed",
+        "countPlural": "orders placed",
+        "_countSingular": "Shown after the number of orders, for example '3 orders placed'.",
+        "columns": {
+          "order": "Order",
+          "date": "Date",
+          "pieces": "Items",
+          "status": "Status",
+          "total": "Total"
+        },
+        "_columns": "Table column headings (desktop).",
+        "viewDetails": "View order",
+        "emptyTitle": "No orders yet",
+        "emptyText": "Your orders, tracking details and receipts will appear here.",
+        "emptyAction": "Shop jewelry"
+      },
+      "orderDetail": {
+        "seo": {
+          "title": "Order Details",
+          "description": ""
+        },
+        "_comment": "/account/orders/<number> page. The order details come from the database.",
+        "backLabel": "Back to orders"
+      },
+      "addresses": {
+        "seo": {
+          "title": "Saved Addresses",
+          "description": ""
+        },
+        "_comment": "/account/addresses. The page text lives in the address manager screen (Interface text > Account)."
+      },
+      "settings": {
+        "seo": {
+          "title": "Account Settings",
+          "description": ""
+        },
+        "_comment": "/account/settings. The page text lives in the settings form (Interface text > Account)."
+      },
+      "customizations": {
+        "seo": {
+          "title": "Custom Designs",
+          "description": ""
+        },
+        "_comment": "/account/customizations: the customer's custom design requests.",
+        "heading": "Custom designs",
+        "intro": "See your custom design requests, quotes and messages from our jewelers."
+      },
+      "customizationDetail": {
+        "seo": {
+          "title": "Custom Design",
+          "description": ""
+        },
+        "_comment": "/account/customizations/<id>. The request details come from the database."
+      },
+      "_comment": "Signed-in account pages (/account/...). Tab labels are under Site-wide > Account nav. All account pages are hidden from Google (noindex)."
+    }
+  },
+  "editorial": {
+    "_comment": "Info and legal pages (/about, /faq, ...). 'body' is Markdown: ## Heading, ### Question (FAQ), **bold**, [link](/page). updatedAt shows as 'Last updated'.",
+    "about": {
+      "seo": {
+        "title": "About Us: Certified Diamond Jewelry",
+        "description": "Meet {{siteName}}: GIA and IGI certified diamond engagement rings and fine jewelry, handmade in recycled 18K gold and platinum to last a lifetime."
+      },
+      "eyebrow": "Our story",
+      "title": "About {{siteName}}",
+      "updatedAt": "November 2026",
+      "body": "{{siteName}} makes fine jewelry that is simple, built to last, and honest about what goes into it. Every engagement ring, wedding band, pendant and bracelet is designed so the diamond catches the light and the ring feels comfortable every day.\n\n## Designed with care, made to last\n\nWe take our time with every detail. Prongs, bezels and the setting under the stone are shaped for everyday comfort, and we add extra metal where rings wear the most.\n\n## Are your diamonds certified?\n\nYes. We offer natural, conflict-free diamonds and Type IIa lab-grown diamonds. Each one is graded by an independent lab: the **Gemological Institute of America (GIA)** or the **International Gemological Institute (IGI)**.\n\nYou won't see vague quality ranges. The page for every center stone lists its exact:\n\n- carat weight, color, clarity and cut\n- polish, symmetry and fluorescence\n- lab certificate number\n\n## Recycled 18K gold and platinum\n\nWe use only recycled precious metals: 18K yellow gold, 18K rose gold, 18K white gold and 950 platinum (95% pure platinum). We combine careful hand finishing with precise computer (CAD) design, so every setting is clean, strong and comfortable.\n\n## Expert help and lifetime care\n\nWhether you're buying a ready-to-ship ring or designing your own, our diamond experts are here to help. Email [{{contactEmail}}](mailto:{{contactEmail}}) for:\n\n- a one-on-one video call to see your diamond\n- help with ring sizing and resizing\n- a free yearly ultrasonic cleaning\n"
+    },
+    "faq": {
+      "seo": {
+        "title": "FAQ: Diamonds, Ring Sizing & Returns",
+        "description": "Answers about our certified diamonds, lab-grown vs. natural diamonds, ring resizing, insured shipping and {{returnWindowDays}}-day returns at {{siteName}}."
+      },
+      "eyebrow": "Help center",
+      "title": "Frequently asked questions",
+      "updatedAt": "November 2026",
+      "body": "Quick answers about our diamonds, ring sizing, shipping and returns. Can't find your answer? Email [{{contactEmail}}](mailto:{{contactEmail}}) and we'll get back to you.\n\n## Diamonds and certification\n\n### Are your diamonds certified?\n\nYes. Every center stone comes with a GIA or IGI grading report, both printed and digital. The report number matches the tiny laser inscription on the edge (girdle) of the diamond.\n\n### Do you sell lab-grown and natural diamonds?\n\nYes, we sell both. They pass the same quality checks: ideal or excellent cut, eye-clean clarity and no hazy fluorescence. Each product page clearly says whether the diamond is natural or lab-grown.\n\n## Ring sizing, custom designs and orders\n\n### Can I resize my engagement ring after delivery?\n\nMost solitaire and cathedral rings can be resized up or down by one to two US sizes, depending on how many small diamonds (pave) are set in the band. Full eternity bands can't be resized, so please check your size with our [ring size guide](/ring-size-guide) or [contact us](/contact) before you order.\n\n### How long does a custom or made-to-order ring take?\n\nReady-to-ship pieces ship within 1–2 business days. Made-to-order pieces take the time shown on the product page, usually 14–21 days.\n\n## Shipping and returns\n\n### Is my order insured during shipping?\n\nYes. Every order is fully insured until it's delivered. For your security, orders of {{signatureThreshold}} or more need an adult signature on delivery.\n\n### What is your return policy?\n\nYou can return or exchange unworn pieces within {{returnWindowDays}} days of delivery. They must be in their original condition, with the security tag attached and the lab certificate included. Engraved and custom-made pieces can't be returned.\n"
+    },
+    "care-guide": {
+      "seo": {
+        "title": "How to Clean a Diamond Ring at Home",
+        "description": "How to clean a diamond ring at home in 4 easy steps, care for 18K gold and platinum, and store fine jewelry safely so it keeps its sparkle."
+      },
+      "eyebrow": "Jewelry care",
+      "title": "How to clean and care for your jewelry",
+      "updatedAt": "November 2026",
+      "body": "The best way to clean a diamond ring at home is a 15-minute soak in warm, soapy water and a gentle brush. Diamonds pick up skin oils, lotion and soap over time, which dulls their sparkle. A few simple habits keep your jewelry looking its best, with no harsh cleaners needed.\n\n## Everyday habits\n\n- Put your jewelry on last, after perfume, hair products, sunscreen and hand lotion.\n- Take your rings off before working out, gardening, swimming in a pool or cleaning with bleach.\n- Store each piece separately in a soft, fabric-lined box so diamonds can't scratch your gold jewelry.\n\n## How do I clean my diamond ring at home?\n\n1. Fill a small bowl with warm (not hot) water and add two drops of mild, unscented dish soap.\n2. Soak your jewelry for 15 minutes to loosen dirt behind and under the stones.\n3. Gently brush around the prongs and setting with a soft baby toothbrush.\n4. Rinse under warm running water (close the drain first!), then pat dry with a lint-free microfiber cloth.\n\n## How often should I have my ring checked?\n\nHave the prongs on your rings checked once a year, especially an engagement ring you wear every day. We inspect and ultrasonically clean your jewelry for free. Email [{{contactEmail}}](mailto:{{contactEmail}}) to drop it off or ask for an insured shipping kit.\n"
+    },
+    "ring-size-guide": {
+      "seo": {
+        "title": "Ring Size Chart: How to Find Your Size",
+        "description": "Find your ring size at home in minutes. Measure a ring you already own and use our ring size chart to convert US, UK, AU and EU sizes."
+      },
+      "eyebrow": "Find your fit",
+      "title": "Ring size guide: how to find your ring size",
+      "updatedAt": "November 2026",
+      "body": "The easiest way to find your ring size at home is to measure the inside of a ring that already fits, then match it to the chart below. A ring that fits well slides over your knuckle with a little resistance and doesn't spin once it's on.\n\n## Tips for an accurate measurement\n\nYour finger size changes a little with temperature and time of day, so:\n\n- Measure at the end of the day, when your fingers are warm.\n- Don't measure right after exercise or when you're cold.\n- Wide bands (4 mm or wider) feel tighter than thin ones. For a wide band, go up a quarter to half a size.\n\n## How do I measure a ring I already own?\n\nTake a ring that fits the same finger well. Lay it on a ruler and measure the **inside diameter**, from inside edge to inside edge (don't include the metal). Then find your size in the ring size chart.\n\n| Inside diameter | Circumference | US / CA size | UK / AU size | EU size |\n| --------------- | ------------- | ------------ | ------------ | ------- |\n| 14.9 mm         | 46.8 mm       | 4            | H            | 47      |\n| 15.7 mm         | 49.3 mm       | 5            | J 1/2        | 49      |\n| 16.5 mm         | 51.9 mm       | 6            | L 1/2        | 52      |\n| 17.3 mm         | 54.4 mm       | 7            | N 1/2        | 54      |\n| 18.1 mm         | 57.0 mm       | 8            | P 1/2        | 57      |\n| 19.0 mm         | 59.5 mm       | 9            | R 1/2        | 59      |\n\n## Not sure of your size?\n\nEmail us at [{{contactEmail}}](mailto:{{contactEmail}}) and we'll help you choose the closest half or quarter size before your ring is made.\n"
+    },
+    "shipping-returns": {
+      "seo": {
+        "title": "Shipping & Returns: Free Insured Shipping",
+        "description": "Free insured shipping on orders over {{freeShippingThreshold}}, discreet packaging and easy {{returnWindowDays}}-day returns on unworn jewelry from {{siteName}}."
+      },
+      "eyebrow": "Shipping and returns",
+      "title": "Shipping & returns",
+      "updatedAt": "November 2026",
+      "body": "Every order is fully insured and sent by express shipping in plain, unbranded packaging. If something isn't right, you have {{returnWindowDays}} days to return it.\n\n## Insured shipping\n\n- **Free shipping:** orders over {{freeShippingThreshold}} get free insured express shipping within the country.\n- **Signature required:** orders of {{signatureThreshold}} or more need an adult signature. The carrier can't leave them at your door or in a package locker.\n- **When it ships:** in-stock pieces ship within 1–2 business days. Made-to-order pieces show how long they take on the product page.\n\n## International shipping\n\nWe ship insured packages to the United States, Canada, the United Kingdom, Australia and India. You'll see shipping options and estimated delivery times at checkout, before you pay.\n\n## {{returnWindowDays}}-day returns\n\nChanged your mind? You can return unworn pieces within **{{returnWindowDays}} days** of delivery. Please include:\n\n- the original gift box\n- the security tag, still attached\n- the original GIA or IGI lab report\n\n**How to return:** email [{{contactEmail}}](mailto:{{contactEmail}}) with your order number. We'll send you an insured return label and packing instructions.\n\n**What can't be returned:** custom-made pieces, rings made in non-standard sizes and engraved bands.\n"
+    },
+    "privacy": {
+      "seo": {
+        "title": "Privacy Policy",
+        "description": "How {{siteName}} collects, uses and protects your personal information for orders, inquiries and account security, and how to see or delete it."
+      },
+      "eyebrow": "Your privacy",
+      "title": "Privacy policy",
+      "updatedAt": "November 2026",
+      "body": "This policy explains what personal information {{siteName}} collects and why. We only use the information we need to deliver your orders safely, keep accurate records of your stones, protect your account and answer your questions.\n\n## Information we collect\n\n- **Account and order details:** your name, email address, shipping and billing addresses, phone number, and the items in your wishlist or cart.\n- **Security information:** encrypted session IDs and security timestamps. We use these only to prevent unauthorized access and fraud.\n- **Payments:** card and UPI payments are handled directly by our PCI-compliant payment providers, Stripe and Razorpay. Your full card number is never sent to or stored on {{siteName}} servers.\n\n## Cookies and analytics\n\nEssential cookies keep your cart, wishlist and account working securely. Optional analytics cookies only load if you accept them in our cookie banner.\n\n## Your rights\n\n- **See your data:** view your profile and orders at any time in your account.\n- **Delete your data:** ask us to permanently delete your account and anonymize your data.\n- **Tax records:** we must keep order totals for tax purposes, but your personal details are removed from them when you delete your account.\n\nQuestions? Email [{{contactEmail}}](mailto:{{contactEmail}}).\n"
+    },
+    "terms": {
+      "seo": {
+        "title": "Terms of Service",
+        "description": "The terms for buying from {{siteName}}: pricing, custom orders, diamond descriptions, insured shipping, delivery signatures and returns."
+      },
+      "eyebrow": "Legal",
+      "title": "Terms of service",
+      "updatedAt": "November 2026",
+      "body": "These terms apply to every purchase from {{siteName}}. Please read them before you order.\n\n## Prices, stock and accepting your order\n\n- Prices are confirmed by our system at checkout.\n- When you start to pay, we hold the item for you while your payment provider approves the payment.\n- If an order is affected by an obvious pricing or typing error, we may cancel or refund it before it ships.\n\n## Diamond and metal descriptions\n\nTotal carat weights and metal weights are accurate within standard industry tolerances. Natural inclusions and small characteristics shown on the GIA or IGI certificate are part of what makes each stone unique.\n\n## Delivery and signatures\n\nEvery shipment is insured by {{siteName}} until it's delivered and signed for at the address you gave us. Orders of {{signatureThreshold}} or more must be signed for by an adult.\n\n## Returns and care\n\nYou can return eligible unworn pieces within {{returnWindowDays}} days, as explained in our [shipping and returns policy](/shipping-returns). Our free care service doesn't cover damage from knocks or impacts, changes made by other jewelers, or prongs that haven't been maintained.\n\nQuestions about these terms? Email [{{contactEmail}}](mailto:{{contactEmail}}).\n"
+    }
+  },
+  "ui": {
+    "_comment": "Interface text used inside interactive screens (forms, buttons, messages, cart, checkout, account screens, order statuses). Client components read it with useUiText() from src/components/providers/UiTextProvider.tsx. Single-brace placeholders like {count} or {name} are filled in by the code — keep them.",
+    "common": {
+      "_comment": "Small labels reused across the whole storefront.",
+      "home": "Home",
+      "_home": "First link of every breadcrumb trail.",
+      "skipToContent": "Skip to main content",
+      "_skipToContent": "Hidden link for keyboard/screen-reader users, appears on Tab.",
+      "breadcrumbLabel": "Breadcrumb",
+      "_breadcrumbLabel": "Screen-reader name of the breadcrumb trail.",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "paginationLabel": "Pagination",
+      "_paginationLabel": "Screen-reader labels for page-number navigation on collections, search and order lists.",
+      "exploreInstead": "Or explore:",
+      "_exploreInstead": "Shown before suggestion links in empty states (no results, empty cart).",
+      "priceOnRequest": "Price on request",
+      "_priceOnRequest": "Shown instead of a price for pieces with no listed price.",
+      "decreaseQuantity": "Decrease quantity",
+      "increaseQuantity": "Increase quantity",
+      "quantity": "Quantity",
+      "closeDialog": "Close",
+      "closePanel": "Close",
+      "backToTop": "Back to top",
+      "_backToTop": "Floating button that scrolls back to the top on long pages.",
+      "customBadge": "Custom",
+      "customSpecifications": "Your custom details",
+      "_customSpecifications": "Badge on cart/order lines that were made to custom specifications.",
+      "onThisPage": "On this page",
+      "_onThisPage": "Heading of the table of contents beside long info pages (FAQ, guides).",
+      "noMatchingOptions": "No matching options",
+      "_noMatchingOptions": "Shown when a search inside a filter list finds nothing."
+    },
+    "orders": {
+      "_comment": "Order status names and explanations shown on order confirmation, order detail, account order lists, tracking results and the admin order screens.",
+      "statuses": {
+        "_comment": "One entry per order status. 'label' is the short badge text; 'description' is the sentence under it on order detail/tracking.",
+        "PENDING_PAYMENT": {
+          "label": "Awaiting payment",
+          "description": "We're holding your pieces while your payment goes through."
+        },
+        "PAYMENT_FAILED": {
+          "label": "Payment didn't go through",
+          "description": "You haven't been charged. Try paying again before your hold ends."
+        },
+        "PAID": {
+          "label": "Order confirmed",
+          "description": "Payment received. Your order is now being prepared."
+        },
+        "PROCESSING": {
+          "label": "Being prepared",
+          "description": "Our jewelers are polishing, inspecting and checking certificates."
+        },
+        "PACKED": {
+          "label": "Packed",
+          "description": "Packed in tamper-proof packaging with your certificates, ready to ship."
+        },
+        "SHIPPED": {
+          "label": "Shipped",
+          "description": "On its way with insured shipping. Someone will need to sign for it."
+        },
+        "DELIVERED": {
+          "label": "Delivered",
+          "description": "Delivered and signed for."
+        },
+        "CANCELLED": {
+          "label": "Canceled",
+          "description": "This order was canceled. You haven't been charged, or any payment has been refunded."
+        },
+        "REFUNDED": {
+          "label": "Refunded",
+          "description": "Your refund has been sent to your original payment method."
+        }
+      },
+      "printReceipt": "Print receipt",
+      "_printReceipt": "Button on the order confirmation page.",
+      "copied": "Copied",
+      "copy": "Copy",
+      "copiedToast": "Copied {orderNumber}",
+      "copyFailed": "Couldn't copy. Please select the order number and copy it yourself.",
+      "copyAriaLabel": "Copy order number {orderNumber}",
+      "_copiedToast": "{orderNumber} is replaced with the order number.",
+      "reorder": "Buy again",
+      "reordering": "Adding…",
+      "reorderDone": "Items from this order have been added to your cart.",
+      "reorderPartial": "Added {count} {pieces} to your cart. No longer available: {items}.",
+      "_reorderPartial": "{count} = number added, {pieces} = 'piece'/'pieces', {items} = unavailable item names.",
+      "piece": "piece",
+      "pieces": "pieces",
+      "detail": {
+        "_comment": "Order detail view: shown on /account/orders/<number> and on /orders/track after a successful lookup.",
+        "milestones": {
+          "_comment": "The 4-step progress bar.",
+          "placed": "Placed",
+          "confirmed": "Confirmed",
+          "shipped": "Shipped",
+          "delivered": "Delivered"
+        },
+        "paymentMethods": {
+          "_comment": "How the payment method is described.",
+          "stripe": "Card or digital wallet",
+          "razorpay": "UPI or card",
+          "other": "Card"
+        },
+        "paymentStatuses": {
+          "_comment": "Payment badge text.",
+          "paid": "Paid",
+          "authorized": "Authorized",
+          "pending": "Pending",
+          "failed": "Failed",
+          "refunded": "Refunded",
+          "awaiting": "Awaiting payment"
+        },
+        "paymentBadge": "Payment: {status}",
+        "orderHeading": "Order {orderNumber}",
+        "placedLine": "Placed {date} · {description}",
+        "_placedLine": "{description} = the order status explanation.",
+        "completePayment": "Complete payment",
+        "invoice": "Invoice",
+        "getHelp": "Get help",
+        "milestonesAria": "Order progress",
+        "progress": "Progress",
+        "inProgress": "In progress",
+        "pending": "Pending",
+        "shipping": "Shipping",
+        "defaultCarrier": "Insured shipping",
+        "trackShipment": "Track delivery",
+        "items": "Items",
+        "sku": "SKU {sku}",
+        "giftNote": "Gift message: ",
+        "history": "Order history",
+        "show": "Show",
+        "hide": "Hide",
+        "payment": "Payment",
+        "subtotal": "Subtotal",
+        "discount": "Discount",
+        "complimentary": "Free",
+        "tax": "Tax",
+        "total": "Total ({currency})",
+        "rateSnapshot": "Exchange rate: 1 {base} = {rate} {currency} · Total in {base}: {baseTotal}",
+        "chargedInBase": "Amount charged: {amount}",
+        "refunded": "Refunded",
+        "deliveryAndBilling": "Delivery and billing",
+        "deliveryAddress": "Delivery address",
+        "signatureRequired": "A signature is needed on delivery.",
+        "billingAddress": "Billing address"
+      }
+    },
+    "layout": {
+      "_comment": "Header, menus, footer bar, theme and currency switchers, announcement bar and image viewer. Mostly screen-reader labels for icon buttons.",
+      "search": "Search",
+      "wishlistEmpty": "Wishlist (empty)",
+      "account": "Account",
+      "bagEmpty": "Shopping cart (empty)",
+      "_bagEmpty": "Header icon labels shown before the live counts load.",
+      "openMenu": "Open menu",
+      "megaMenuLabel": "Shop by category",
+      "dismissAnnouncement": "Close announcement",
+      "footerPrivacy": "Privacy",
+      "footerTerms": "Terms",
+      "_footerPrivacy": "Small links in the footer's bottom bar.",
+      "themeLabel": "Choose color theme",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "themeSystem": "Match device",
+      "themeAuto": "Auto",
+      "_themeAuto": "Short name for 'System' in the compact header theme toggle.",
+      "currencyLabel": "Choose currency",
+      "currencySearchPlaceholder": "Search, e.g. EUR or GBP",
+      "currencySearchLabel": "Search currency",
+      "currencyClearSearch": "Clear currency search",
+      "currencyListLabel": "Available currencies",
+      "imagePreview": "Image viewer",
+      "imageZoomIn": "Zoom in",
+      "imageResetZoom": "Reset zoom",
+      "imageClose": "Close image viewer",
+      "imagePrevious": "Previous image",
+      "imageNext": "Next image",
+      "_imagePreview": "Full-screen image viewer (e.g. customization reference photos).",
+      "socialLinks": "Follow us on social media",
+      "themeTooltip": "Theme",
+      "currencyNoMatches": "No matching currencies",
+      "_socialLinks": "Screen-reader name of the social icons in the footer."
+    },
+    "cookies": {
+      "_comment": "Cookie consent banner shown at the bottom of the screen on first visit.",
+      "bannerLabel": "Cookie preferences",
+      "message": "We use essential cookies to keep your cart and sign-in working. With your OK, we also use analytics to improve the site.",
+      "manage": "Manage cookies",
+      "hideChoices": "Hide options",
+      "privacy": "Privacy policy",
+      "necessaryTitle": "Essential",
+      "necessaryText": "Keep your sign-in, cart, wishlist and display settings working.",
+      "alwaysActive": "Always active",
+      "analyticsTitle": "Analytics",
+      "analyticsText": "Show us which pages and pieces people like. No advertising.",
+      "analyticsToggle": "Allow analytics cookies",
+      "essentialOnly": "Essential only",
+      "saveChoices": "Save my choices",
+      "acceptAll": "Accept all"
+    },
+    "newsletterForm": {
+      "_comment": "Newsletter sign-up box in the footer.",
+      "heading": "Join our newsletter",
+      "text": "Be first to see new collections, offers and jewelry guides.",
+      "emailLabel": "Email address for newsletter",
+      "placeholder": "you@example.com",
+      "submit": "Subscribe",
+      "sending": "Sending…",
+      "subscribed": "You're subscribed",
+      "alreadyStatus": "You're already on our list. Thank you!",
+      "alreadyToast": "You're already subscribed.",
+      "successStatus": "Almost done: check your inbox and click the link to confirm.",
+      "successToast": "Check your inbox to confirm your subscription.",
+      "_successStatus": "Text under the form after signing up; Toast = the pop-up message."
+    },
+    "errors": {
+      "_comment": "Page shown when something unexpected fails while loading a page. (The rare full-app crash screen, global-error, can't read this file and stays in code.)",
+      "heading": "Something went wrong",
+      "text": "This page didn't load properly. Your cart and account are safe. Please try again.",
+      "retry": "Try again"
+    },
+    "auth": {
+      "_comment": "Text inside the sign-in, register, password-reset and email-verification forms (/login, /register, /forgot-password, /reset-password, /verify-email). Card headings are in pages.auth.",
+      "login": {
+        "_comment": "Sign-in form on /login, including the two-step (authenticator) code step.",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "name@example.com",
+        "passwordLabel": "Password",
+        "passwordPlaceholder": "Enter your password",
+        "forgotPassword": "Forgot password?",
+        "submit": "Sign in",
+        "or": "or",
+        "google": "Continue with Google",
+        "newClient": "New to {{siteName}}?",
+        "createAccount": "Create an account",
+        "signedInToast": "Signed in",
+        "_signedInToast": "Pop-up message after a successful sign-in.",
+        "verifyFirstError": "Please confirm your email address before signing in. Check your inbox for the link.",
+        "resendVerification": "Send a new confirmation link",
+        "invalidCredentialsError": "That email and password don't match. Check them and try again.",
+        "_invalidCredentialsError": "Shown only when the server gives no specific reason.",
+        "googleError": "We couldn't sign you in with Google. Please try again.",
+        "totpIntro": "Enter the 6-digit code from your authenticator app.",
+        "totpLabel": "6-digit code",
+        "totpPlaceholder": "123456",
+        "totpRequiredError": "Enter the 6-digit code from your authenticator app.",
+        "backupCodeIntro": "Enter one of your backup codes. Each code works once.",
+        "backupCodeLabel": "Backup code",
+        "backupCodePlaceholder": "xxxxx-xxxxx",
+        "backupCodeRequiredError": "Enter a valid backup code.",
+        "useBackupCode": "Use a backup code",
+        "useTotp": "Use authenticator app instead",
+        "backToPassword": "Back to password",
+        "verifySubmit": "Verify and sign in",
+        "invalidCodeError": "That code didn't work. Check it and try again."
+      },
+      "register": {
+        "_comment": "Create-account form on /register and the 'check your inbox' message shown after signing up.",
+        "nameLabel": "Full name",
+        "namePlaceholder": "e.g. Sarah Johnson",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "name@example.com",
+        "phoneLabel": "Phone number (optional)",
+        "phoneHint": "We only use this to arrange your delivery.",
+        "phonePlaceholder": "+1 212 555 0140",
+        "passwordLabel": "Password",
+        "passwordHint": "At least 10 characters",
+        "passwordPlaceholder": "",
+        "confirmLabel": "Confirm password",
+        "confirmPlaceholder": "",
+        "termsPrefix": "I agree to the",
+        "termsLink": "Terms of Service",
+        "termsAnd": "and",
+        "privacyLink": "Privacy Policy",
+        "termsSuffix": ".",
+        "_termsPrefix": "The terms checkbox reads: termsPrefix + termsLink + termsAnd + privacyLink + termsSuffix. The two links go to /terms and /privacy.",
+        "submit": "Create account",
+        "or": "or",
+        "google": "Continue with Google",
+        "alreadyRegistered": "Already have an account?",
+        "signIn": "Sign in",
+        "createError": "We couldn't create your account. Please try again.",
+        "createdToast": "Account created",
+        "googleError": "We couldn't sign you up with Google. Please try again.",
+        "sentBefore": "If",
+        "sentAfter": "is new to us, we've sent a confirmation link to it. Open the link to activate your account, then sign in. Your cart and wishlist are saved on this device.",
+        "_sentBefore": "Message after sign-up reads: sentBefore + the customer's email (bold) + sentAfter.",
+        "didntGetIt": "No email? Check your spam folder or",
+        "resendLink": "send it again"
+      },
+      "forgotPassword": {
+        "_comment": "Form on /forgot-password.",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "name@example.com",
+        "submit": "Send reset link",
+        "returnToSignIn": "Back to sign in",
+        "sentTitle": "Check your email",
+        "sentText": "If there's an account for that email, we've sent a link to reset your password. It may take a few minutes to arrive.",
+        "rateLimitError": "Too many attempts. Please wait a few minutes and try again."
+      },
+      "resetPassword": {
+        "_comment": "Form on /reset-password (opened from the reset email).",
+        "newPasswordLabel": "New password",
+        "passwordHint": "At least 10 characters",
+        "confirmLabel": "Confirm new password",
+        "submit": "Save new password",
+        "returnToSignIn": "Back to sign in",
+        "signIn": "Sign in",
+        "updatedToast": "Password updated",
+        "doneText": "Your password has been changed. You can now sign in with your new password.",
+        "resetError": "This reset link didn't work. Please request a new one.",
+        "invalidText": "Request a new reset link and we'll email it to you.",
+        "_invalidText": "Shown when the link has no token.",
+        "requestNewLink": "Get a new reset link"
+      },
+      "verifyEmail": {
+        "_comment": "/verify-email: checks the link from the verification email, or lets the customer request a new one.",
+        "verifying": "Confirming your email…",
+        "verifiedText": "Thanks — your email is confirmed and your account is ready.",
+        "continueToAccount": "Go to my account",
+        "goToAccount": "Go to my account",
+        "invalidLinkError": "This link has expired or isn't valid. Request a new one below.",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "name@example.com",
+        "submit": "Send new link",
+        "sendError": "We couldn't send the email. Please try again.",
+        "sentToast": "If that account exists, we've sent a new link",
+        "resentText": "Check your inbox for a new confirmation link."
+      },
+      "signOut": {
+        "_comment": "Sign-out button (account area).",
+        "label": "Sign out",
+        "toast": "Signed out"
+      }
+    },
+    "product": {
+      "sizeHeading": "Size and details",
+      "optionHeading": "Choose an option",
+      "ringSizeGuide": "Ring size guide",
+      "optionsAria": "Product options",
+      "outOfStock": "Out of stock",
+      "inStock": "In stock",
+      "inStockShips": "In stock · ships in 1–2 days",
+      "quantity": "Quantity",
+      "addingToBag": "Adding…",
+      "added": "Added to cart ✓",
+      "addToBag": "Add to cart",
+      "preparing": "Preparing…",
+      "buyNow": "Buy now",
+      "requestPrice": "Request a price",
+      "orderMadeToOrder": "Order now (made to order)",
+      "customize": "Customize this piece",
+      "askExpert": "Ask an expert",
+      "detailsHeading": "Details and specifications",
+      "specsHeading": "Specifications",
+      "craftedNote": "Handmade in small batches. Every piece is stamped for metal purity.",
+      "certificationHeading": "Certification",
+      "viewLabReport": "View certificate",
+      "shippingHeading": "Delivery and returns",
+      "adding": "Adding…",
+      "enquire": "Ask about this piece",
+      "specs": {
+        "metal": "Metal",
+        "metalWeight": "Metal weight (approx.)",
+        "stoneOrigin": "Stone origin",
+        "cutShape": "Shape",
+        "caratTotal": "Total carat weight",
+        "caratCenter": "Center stone carat",
+        "colourGrade": "Color grade",
+        "clarityGrade": "Clarity grade",
+        "cutGrade": "Cut grade",
+        "polishSymmetry": "Polish and symmetry",
+        "fluorescence": "Fluorescence",
+        "labCertification": "Certificate",
+        "_comment": "Row labels of the Specifications table on a product page."
+      },
+      "gallery": {
+        "swipeHint": "Swipe for more · tap to zoom",
+        "tapHint": "Tap to zoom",
+        "clickToZoom": "Click to zoom",
+        "openViewer": "Open full-size image viewer",
+        "previous": "Previous image",
+        "next": "Next image",
+        "lightboxPrevious": "Previous",
+        "lightboxNext": "Next",
+        "viewImage": "View image {number}: {alt}",
+        "_comment": "Product image gallery and full-screen viewer (button labels and screen-reader text)."
+      },
+      "recentlyViewed": "Recently viewed",
+      "enquiry": {
+        "conciergeTitle": "Ask our jewelry experts",
+        "consultationTitle": "Book a consultation",
+        "bespokeTitle": "Request a custom design",
+        "conciergeText": "Ask our diamond experts about certificates, metal choices or sizing. We reply within 1 business day.",
+        "bespokeText": "Tell us what you have in mind. We'll send stone options, images and pricing from our design team.",
+        "_comment": "Title and intro of the 'Inquire' / 'Ask an expert' pop-up on a product."
+      },
+      "onlyLeft": "Only {count} left",
+      "_onlyLeft": "Low-stock warning. {count} = units left.",
+      "madeToOrder": "Out of stock, but we can make it for you{leadTime}.",
+      "_madeToOrder": "{leadTime} is replaced by the leadTimeSuffix text when the product has a lead time, otherwise removed.",
+      "leadTimeSuffix": " in about {days} days",
+      "addedToast": "{name} ({variant}) added to your cart.",
+      "_addedToast": "Pop-up message after Add to Cart. {name} = product, {variant} = chosen option.",
+      "certifiedText": "Comes with its official {lab} grading certificate{certificate}, a metal purity stamp{purity} and a tiny laser inscription on the diamond so you can check it's the real one.",
+      "_certifiedText": "Certification section when the product has a lab certificate. {lab} = lab name; {certificate} = ' (#number)'; {purity} = ' (18K)' or empty.",
+      "hallmarkedText": "Made in recycled {metal}{purity}, stamped for metal purity and checked by our experts under 10× magnification.",
+      "_hallmarkedText": "Certification section for products without a lab certificate.",
+      "defaultMetal": "precious metal",
+      "freeShippingText": "Free insured delivery on orders over {amount}. ",
+      "signatureText": "Orders over {amount} are sent insured and need a signature on delivery.",
+      "returnsText": "Free resizing and free returns on unworn pieces within {days} days of delivery.",
+      "sizeGuide": {
+        "title": "Ring size guide",
+        "description": "Measure the inside of a ring that fits you, edge to edge, or wrap a strip of paper around your finger. Measure at room temperature for the best fit.",
+        "diameter": "Diameter",
+        "usCa": "US / CA",
+        "ukAu": "UK / AU",
+        "eu": "EU",
+        "fullGuide": "See the full sizing guide",
+        "_comment": "'Ring Size Guide' drawer opened from the product option picker."
+      },
+      "_comment": "Product detail page (/products/...): option picker, stock messages, Add to Cart / Buy Now buttons, Details/Certification/Shipping sections, image gallery, size-guide drawer and inquiry pop-up. Placeholders in {braces} are filled by the code."
+    },
+    "productCard": {
+      "enquire": "Ask us",
+      "soldOut": "Sold out",
+      "customize": "Customize",
+      "options": "Options",
+      "chooseOptions": "Choose options",
+      "addToBag": "Add to cart",
+      "add": "Add",
+      "added": "Added ✓",
+      "savedInWishlist": "Saved to wishlist",
+      "saveToWishlist": "Save to wishlist",
+      "customizeAria": "Customize {name}",
+      "chooseOptionsAria": "Choose options for {name}",
+      "addAria": "Add {name} to cart",
+      "addedToast": "{name} added to your cart.",
+      "badgeOnRequest": "Price on request",
+      "badgeNew": "New",
+      "badgeSignature": "Signature",
+      "_badgeOnRequest": "Small badges on product photos in listings.",
+      "savedToast": "{name} saved to your wishlist.",
+      "removedToast": "{name} removed from your wishlist.",
+      "removeWishlistAria": "Remove {name} from wishlist",
+      "saveWishlistAria": "Save {name} to wishlist",
+      "quickSelect": {
+        "viewDetails": "View full details",
+        "closeAria": "Close options dialog",
+        "metal": "Metal",
+        "caratStone": "Carat and stone",
+        "caratAria": "Choose carat or stone",
+        "size": "Size",
+        "sizeGuide": "Size guide",
+        "sizeAria": "Choose size",
+        "availability": "Availability",
+        "selectOption": "Choose an option",
+        "enquireConcierge": "Ask our experts",
+        "soldOut": "Sold out",
+        "conciergeEnquiry": "Ask our experts",
+        "adding": "Adding…",
+        "added": "Added",
+        "addToBag": "Add to cart",
+        "preparing": "Preparing…",
+        "buyNow": "Buy now",
+        "customizeLink": "Want something unique? Customize this piece →",
+        "_comment": "Quick 'Choose Options' pop-up opened from a product card in listings.",
+        "soldOutStock": "Sold out",
+        "leftStock": "{count} left",
+        "inStock": "In stock",
+        "_leftStock": "Shown when 5 or fewer are left. {count} = units left.",
+        "dialogDescription": "Choose your options and quantity for {name}.",
+        "_dialogDescription": "Screen-reader description of the pop-up.",
+        "sizeAriaLabel": "Size {size}",
+        "sizeSoldOutAria": "Size {size} — Sold out",
+        "addedToast": "{name} ({variant}) added to your cart.",
+        "metalAria": "Choose metal",
+        "optionsAria": "Available options",
+        "quantity": "Quantity",
+        "maxReached": "That's all we have in stock",
+        "total": "Total"
+      },
+      "_comment": "Product tiles in listings (collections, search, home, related): badges, Add / Choose Options / Customize buttons and the wishlist heart. {name} = product name.",
+      "alternateViewAlt": "{name} alternate view",
+      "_alternateViewAlt": "Image description for the second (hover) photo."
+    },
+    "track": {
+      "_comment": "The order lookup form on /orders/track (guest order tracking).",
+      "orderNumberLabel": "Order number",
+      "orderNumberHint": "You'll find it in your confirmation email, e.g. ORD-2026-10001.",
+      "orderNumberPlaceholder": "ORD-2026-10001",
+      "emailLabel": "Email address",
+      "emailHint": "The email you used at checkout.",
+      "emailPlaceholder": "name@example.com",
+      "submit": "Track order",
+      "haveAccount": "Have an account?",
+      "viewOrders": "See all your orders",
+      "printableReceipt": "Print receipt",
+      "_printableReceipt": "Link shown under a found order."
+    },
+    "wishlist": {
+      "_comment": "Saved pieces page (/wishlist) and the heart/cart counters in the header.",
+      "addedLive": "{name} added to cart.",
+      "_addedLive": "Read out to screen readers. {name} = product name.",
+      "removedToast": "Removed from your wishlist",
+      "addedToBagToast": "{name} added to your cart.",
+      "emptyTitle": "Your wishlist is empty",
+      "emptyDescription": "Tap the heart on any ring, necklace, earring or bracelet to save it here and compare later.",
+      "emptyAction": "Shop jewelry",
+      "removeAria": "Remove {name} from wishlist",
+      "enquire": "Ask us",
+      "soldOut": "Sold out",
+      "chooseOptionsAria": "Choose options for {name}",
+      "optionsShort": "Options",
+      "chooseOptions": "Choose options",
+      "addAria": "Add {name} to cart",
+      "added": "Added ✓",
+      "addShort": "Add",
+      "addToBag": "Add to cart",
+      "headerAria": "Wishlist ({count} saved)",
+      "headerTooltip": "Wishlist",
+      "_headerAria": "Screen-reader label of the header heart icon. {count} = number saved."
+    },
+    "cart": {
+      "headerAria": "Shopping cart ({count})",
+      "headerTooltip": "Shopping cart",
+      "_headerAria": "Screen-reader label of the header cart icon. {count} = items in cart.",
+      "_comment": "Shopping cart: the slide-out cart drawer (opens from the header cart icon) and the full /cart page. {name} = product name, {count} = number, {items} = 'item'/'items', {amount}/{subtotal} = price.",
+      "item": "item",
+      "items": "items",
+      "drawer": {
+        "_comment": "Slide-out shopping cart drawer.",
+        "title": "Your cart ({count})",
+        "subtitle": "Free insured delivery on every order.",
+        "liveEmpty": "Your cart is empty.",
+        "liveSummary": "Your cart has {count} {items}, subtotal {subtotal}.",
+        "liveUpdated": "Cart updated: {count} {items}, subtotal {subtotal}.",
+        "_liveSummary": "live* texts are read aloud to screen-reader users only.",
+        "removedToast": "{name} removed from cart.",
+        "liveRemovedEmpty": "{name} removed. Your cart is now empty.",
+        "liveRemoved": "{name} removed. {count} {items} remaining, subtotal {subtotal}.",
+        "freeShippingRemaining": "Spend {amount} more for free insured delivery",
+        "freeShippingUnlocked": "You've got free insured delivery",
+        "freeShippingProgressAria": "Progress towards free insured delivery",
+        "emptyTitle": "Your cart is empty",
+        "emptyText": "Find something you love — from diamond engagement rings to everyday gold jewelry.",
+        "emptyAction": "Shop jewelry",
+        "removeAria": "Remove {name} from cart",
+        "each": "{amount} each",
+        "soldOut": "Sold out",
+        "onlyLeft": "Only {count} left",
+        "inStock": "{count} in stock",
+        "customQty": "Made for you · Qty 1",
+        "quantityLabel": "Quantity for {name}",
+        "subtotal": "Subtotal",
+        "taxNote": "Taxes and delivery are worked out at checkout.",
+        "checkout": "Go to checkout",
+        "continueShopping": "Continue shopping"
+      },
+      "page": {
+        "_comment": "The full shopping cart page (/cart).",
+        "removedToast": "{name} removed from your cart.",
+        "savedToast": "{name} moved to your wishlist.",
+        "emptyTitle": "Your cart is empty",
+        "emptyDescription": "Browse our certified diamond rings, earrings, necklaces and more — every piece ships insured.",
+        "emptyAction": "Shop jewelry",
+        "pricesUpdated": "Some prices in your cart have changed since you added them.",
+        "stockChanged": "Some items in your cart are no longer available in the quantity you chose. Please update them to continue.",
+        "sku": "SKU {sku}",
+        "soldOut": "Sold out — please remove it to continue",
+        "onlyLeft": "Only {count} left — please lower the quantity",
+        "customQty": "Made for you · Qty 1",
+        "saveForLater": "Save for later",
+        "remove": "Remove",
+        "summaryHeading": "Order summary",
+        "freeShippingQualified": "You've got free insured delivery",
+        "freeShippingAddBefore": "Spend",
+        "freeShippingAddAfter": "more for free insured delivery",
+        "_freeShippingAddBefore": "Shown as: [Add] [amount] [more for ...].",
+        "estimateDestination": "Delivering to",
+        "itemsLabel": "Items ({count})",
+        "deliveryLabel": "Insured delivery",
+        "calculating": "Calculating…",
+        "complimentary": "Free",
+        "calculatedAtCheckout": "Calculated at checkout",
+        "taxIncluded": " (included)",
+        "estimatedTotal": "Estimated total",
+        "signatureNote": "For your security, an adult signature is needed on delivery.",
+        "resolveStock": "Update your cart to continue",
+        "proceed": "Go to checkout",
+        "continueExploring": "Continue shopping",
+        "needHelp": "Need help choosing?",
+        "contactUs": "Talk to an expert"
+      }
+    },
+    "checkout": {
+      "sessionExpired": "This payment session has expired. You haven't been charged — refresh the page to try again.",
+      "paymentFailed": "Your payment didn't go through. Please check your details or try another card.",
+      "authorizing": "Processing payment…",
+      "authorize": "Pay {amount}",
+      "_authorize": "Card payment button. {amount} = order total.",
+      "_comment": "Checkout page (/checkout): steps, contact, delivery address, shipping method, notes, reserve button, payment panel and order summary. {amount} = money, {orderNumber} = order number.",
+      "steps": {
+        "_comment": "The 4-step progress bar at the top of checkout.",
+        "contact": "Contact",
+        "shipping": "Address",
+        "delivery": "Delivery",
+        "payment": "Payment",
+        "ariaLabel": "Checkout steps",
+        "stepOf": "Step {number} of 4: {label}",
+        "complete": "{done} of 4 done"
+      },
+      "toasts": {
+        "_comment": "Pop-up messages during checkout.",
+        "orderReserved": "Order {orderNumber} created — your pieces are on hold.",
+        "newSession": "Ready to try payment again.",
+        "paymentSettled": "Payment received for {orderNumber}.",
+        "declined": "Your card was declined. Please try another card.",
+        "razorpayLoadFailed": "We couldn't load the payment window. Check your connection and try again.",
+        "razorpayClosed": "Payment window closed. Your items are still on hold — you can pay whenever you're ready.",
+        "razorpayVerifying": "Payment received. Confirming your order…",
+        "razorpayVerifyDelayed": "Your payment went through, but confirmation is taking a little longer. Your order page will update shortly.",
+        "razorpayFailed": "Payment failed. Please try again or use a different payment method."
+      },
+      "retryNotice": "Your last payment didn't go through and you haven't been charged. Your pieces are still on hold for 30 minutes — try again below.",
+      "_retryNotice": "Shown when the customer comes back to pay for an order whose payment failed.",
+      "sandboxDeclined": "Test card declined. Your pieces are still on hold for 30 minutes — try again below.",
+      "emptyTitle": "Your cart is empty",
+      "emptyDescription": "Add a piece to your cart to check out.",
+      "emptyAction": "Shop jewelry",
+      "summary": {
+        "_comment": "Order summary box (sidebar on desktop, collapsible on mobile).",
+        "heading": "Order summary",
+        "mobileToggle": "Show order summary ({count})",
+        "qty": "{variant} · Qty {quantity}",
+        "subtotal": "Subtotal",
+        "shippingFallback": "Insured delivery",
+        "calculating": "Calculating…",
+        "selectCountry": "Select country",
+        "complimentary": "Free",
+        "taxIncluded": " (included)",
+        "total": "Total",
+        "pricesShownIn": "Prices shown in {currency}",
+        "rateSuffix": " (1 {base} = {rate} {currency})",
+        "_rateSuffix": "Added after 'Prices shown in …' when paying in a different currency.",
+        "baseChargeBefore": "Payments are processed in {base}. You'll be charged",
+        "baseChargeAfter": "; the {currency} amounts are approximate.",
+        "_baseChargeBefore": "Shown as: [before] [charged amount] [after].",
+        "signatureNote": "Fully insured delivery in tamper-proof packaging. A signature is needed on delivery."
+      },
+      "address": {
+        "_comment": "Delivery and billing address form fields.",
+        "fullName": "Full name",
+        "country": "Country",
+        "phone": "Phone number",
+        "phoneHint": "Only for delivery updates",
+        "street": "Street address",
+        "apartment": "Apartment, suite, etc. (optional)",
+        "state": "State or province",
+        "city": "City",
+        "postal": "ZIP or postal code",
+        "billingPostal": "ZIP or postal code",
+        "postalHint": "e.g. {example}"
+      },
+      "contact": {
+        "_comment": "Step 1: contact email.",
+        "heading": "Contact details",
+        "haveAccount": "Already have an account?",
+        "signIn": "Sign in",
+        "emailLabel": "Email address",
+        "emailHint": "We'll email your receipt and tracking details here.",
+        "emailPlaceholder": "name@example.com"
+      },
+      "delivery": {
+        "_comment": "Step 2: delivery and billing address.",
+        "heading": "Delivery address",
+        "savedAddresses": "Saved addresses",
+        "savedAria": "Saved shipping addresses",
+        "savedFallback": "Saved",
+        "defaultBadge": "Default",
+        "addNew": "Add new address",
+        "edit": "Edit this address",
+        "sheetTitle": "New delivery address",
+        "sheetDescription": "Where should we deliver your order?",
+        "useAddress": "Use this address",
+        "saveForNext": "Save this address for next time",
+        "billingSame": "Billing address is the same as delivery",
+        "billingHeading": "Billing address"
+      },
+      "shippingMethod": {
+        "_comment": "Step 3: choose a shipping option and add optional notes.",
+        "heading": "Delivery method",
+        "ariaLabel": "Delivery method",
+        "insured": "Insured",
+        "dispatchWindow": "Ships in {min}–{max} business days",
+        "complimentary": "Free",
+        "showNotes": "+ Add a gift message or delivery note",
+        "hideNotes": "− Hide notes",
+        "giftNote": "Gift message",
+        "giftNotePlaceholder": "We'll handwrite it on a card inside the gift box",
+        "instructions": "Delivery note",
+        "instructionsPlaceholder": "e.g. best time to deliver, or leave with the front desk"
+      },
+      "reserve": {
+        "_comment": "Step 4: the button that reserves stock and moves to payment.",
+        "heading": "Review and pay",
+        "holdNote": "We'll hold your pieces for 30 minutes while you pay.",
+        "placing": "Placing order…",
+        "button": "Continue to payment ({amount})",
+        "mobileButton": "Continue to payment"
+      },
+      "payment": {
+        "_comment": "Payment panel shown after the order is reserved.",
+        "orderHeading": "Order {orderNumber}",
+        "holdBadge": "Pieces on hold",
+        "heldFor": "We're holding your pieces for",
+        "heldForAfter": ". Please pay before the timer runs out.",
+        "_heldFor": "Shown as: [heldFor] [countdown][heldForAfter].",
+        "expiredTitle": "Your reservation has ended",
+        "expiredText": "The 30-minute hold on order {orderNumber} has ended and the pieces have been released. You haven't been charged.",
+        "continueShopping": "Continue shopping",
+        "initializing": "Setting up secure payment…",
+        "razorpaySandbox": "Razorpay test mode",
+        "stripeSandbox": "Stripe test mode",
+        "sandboxText": "Test mode ({intentId}). Choose an outcome to test the payment, the stock update and the confirmation email.",
+        "_sandboxText": "Only visible in test mode (no live payment keys).",
+        "preparingRetry": "Getting ready…",
+        "retry": "Try payment again",
+        "authorizing": "Processing…",
+        "authorizeComplete": "Pay {amount} and place order",
+        "simulateDecline": "Simulate a declined card",
+        "razorpayText": "Pay {amount} securely with Razorpay.",
+        "razorpayButton": "Pay {amount} with Razorpay",
+        "keysMissing": "Payments aren't set up yet. Please contact us to complete your order.",
+        "razorpayDescription": "Order {orderNumber}",
+        "_razorpayDescription": "Shown in the Razorpay payment window. {orderNumber} = the order number."
+      },
+      "addressPickers": {
+        "_comment": "Country, state and phone pickers inside address forms (checkout and Account > Addresses).",
+        "selectCountry": "Select country",
+        "searchCountry": "Search countries…",
+        "stateFreeText": "State, province, or region",
+        "selectState": "Select state / region",
+        "searchState": "Search states or regions…",
+        "dialCodeAria": "Country dial code",
+        "phonePlaceholder": "212 555 0140"
+      }
+    },
+    "account": {
+      "_comment": "Text inside the interactive account screens (/account/settings, /account/addresses, /account/customizations). Page headings are in pages.account. Single-brace placeholders like {email} or {number} are filled in by the code.",
+      "settings": {
+        "_comment": "/account/settings: profile, password, data export and account closure.",
+        "profileHeading": "Personal details",
+        "profileIntro": "Used on your receipts and when we contact you about orders.",
+        "emailLabel": "Email address",
+        "nameLabel": "Full name",
+        "phoneLabel": "Phone number",
+        "phoneHint": "We only use this to arrange insured delivery.",
+        "phonePlaceholder": "+1 555 234 5678",
+        "saveProfile": "Save changes",
+        "profileSavedToast": "Details saved",
+        "passwordHeading": "Password and security",
+        "currentPasswordLabel": "Current password",
+        "newPasswordLabel": "New password",
+        "passwordHint": "At least 10 characters.",
+        "confirmPasswordLabel": "Confirm new password",
+        "updatePassword": "Change password",
+        "passwordSavedToast": "Password updated",
+        "ssoText": "You sign in with Google, so your password is managed by your Google account.",
+        "_ssoText": "Shown instead of the password form for Google sign-in accounts.",
+        "exportHeading": "Download your data",
+        "exportIntro": "Get a copy of your profile, saved addresses, orders, wishlist and inquiries as a JSON file.",
+        "exportButton": "Download my data",
+        "exportDoneToast": "Your data has been downloaded",
+        "exportError": "We couldn't prepare your data. Please try again.",
+        "downloadError": "We couldn't download your data. Please try again.",
+        "closeHeading": "Delete account",
+        "closeIntro": "Deleting your account removes your saved addresses, wishlist and personal details. We keep anonymized order records because the law requires it.",
+        "closeConfirmLabel": "Type \"{email}\" to confirm",
+        "_closeConfirmLabel": "{email} = the customer's email address.",
+        "closeButton": "Delete my account",
+        "adminCannotClose": "Admin accounts can't be deleted here. Add another admin first.",
+        "closeDialogTitle": "Delete your account?",
+        "closeDialogText": "Your profile, saved addresses and wishlist will be permanently removed and you'll be signed out. This can't be undone.",
+        "closeDialogConfirm": "Yes, delete my account",
+        "closedToast": "Your account has been deleted",
+        "closeError": "We couldn't delete your account. Please try again."
+      },
+      "twoFactor": {
+        "_comment": "Two-factor authentication (authenticator app) panel on /account/settings.",
+        "heading": "Two-step verification",
+        "intro": "Add a second layer of security: after your password, enter a code from an authenticator app.",
+        "enabledBadge": "On",
+        "notEnabledBadge": "Off",
+        "requiredTitle": "Turn on two-step verification to use the admin area",
+        "requiredText": "All admin and staff accounts need two-step verification. Set it up below, then go back to",
+        "adminStudio": "the admin area",
+        "_requiredText": "Shown to staff only; followed by a link to the admin panel (adminStudio).",
+        "noPasswordText": "Two-step verification needs a password. Set a password for your account first.",
+        "confirmPasswordLabel": "Current password",
+        "confirmPasswordHint": "We'll check your password before setting this up.",
+        "beginSetup": "Set up two-step verification",
+        "qrAlt": "QR code to scan with your authenticator app",
+        "preparingQr": "Preparing QR code…",
+        "manualKey": "Can't scan? Enter this key",
+        "copyKeyLabel": "Copy authenticator key",
+        "copiedToast": "Key copied",
+        "scanInstructions": "Scan the QR code with an authenticator app (such as Google Authenticator, 1Password or Bitwarden), then enter the 6-digit code it shows.",
+        "codeLabel": "6-digit code",
+        "codePlaceholder": "123456",
+        "verifyEnable": "Verify and turn on",
+        "cancel": "Cancel",
+        "activeText": "When you sign in, we'll ask for a code from your authenticator app or a backup code.",
+        "backupHeading": "Backup codes",
+        "regenPasswordLabel": "Password",
+        "regenButton": "Get new backup codes",
+        "disableHeading": "Turn off two-step verification",
+        "disablePasswordLabel": "Password",
+        "disableButton": "Turn off",
+        "saveCodesHeading": "Save your backup codes",
+        "saveCodesText": "If you lose your phone, use one of these to sign in. Each code works once. Keep them somewhere safe.",
+        "downloadTxt": "Download .txt",
+        "fileHeading": "Two-step verification backup codes",
+        "fileGenerated": "Generated:",
+        "_fileHeading": "First lines of the downloaded backup-codes .txt file.",
+        "passwordRequiredSetup": "Enter your current password to continue.",
+        "setupError": "We couldn't start setup. Please try again.",
+        "uriError": "We couldn't create the QR code. Please try again.",
+        "scanToast": "Scan the QR code, then enter the 6-digit code to finish.",
+        "codeRequired": "Enter the 6-digit code from your authenticator app.",
+        "codeInvalid": "That code didn't work. Codes change every 30 seconds — try the latest one.",
+        "enabledToast": "Two-step verification is on",
+        "passwordRequiredRegen": "Enter your password to get new backup codes.",
+        "regenError": "We couldn't create new backup codes. Please try again.",
+        "regenToast": "New backup codes created. Your old codes no longer work.",
+        "passwordRequiredDisable": "Enter your password to turn off two-step verification.",
+        "disableError": "We couldn't turn off two-step verification. Please try again.",
+        "disabledToast": "Two-step verification is off"
+      },
+      "addresses": {
+        "_comment": "/account/addresses: saved address cards and the add/edit address dialog. The Home / Work / Other label buttons are stored values and stay in code.",
+        "addButton": "Add address",
+        "limitReached": "Limit reached ({max})",
+        "limitError": "You can save up to {max} addresses.",
+        "_limitReached": "{max} = the maximum number of saved addresses.",
+        "emptyTitle": "No saved addresses yet",
+        "emptyText": "Save an address and it'll be filled in for you at checkout.",
+        "emptyAction": "Add an address",
+        "untitledLabel": "Saved address",
+        "_untitledLabel": "Card title when an address has no label.",
+        "defaultBadge": "Default",
+        "defaultBillingBadge": "Default billing",
+        "edit": "Edit",
+        "setDefault": "Make default",
+        "setDefaultBilling": "Make default billing",
+        "deleteAria": "Delete address {name}",
+        "addTitle": "Add a delivery address",
+        "editTitle": "Edit address",
+        "dialogText": "Use the recipient's full name and phone number. Our delivery partner needs them for insured delivery.",
+        "presetAria": "Address label preset",
+        "customLabel": "Label (optional)",
+        "customLabelPlaceholder": "e.g. Mom's house, Office",
+        "fullNameLabel": "Full name",
+        "countryLabel": "Country",
+        "phoneLabel": "Phone number",
+        "streetLabel": "Street address",
+        "line2Label": "Apartment, suite, etc. (optional)",
+        "cityLabel": "City",
+        "stateLabel": "State or province",
+        "_stateLabel": "Used when the selected country has no specific name for this field (e.g. County, Province).",
+        "postalLabel": "ZIP or postal code",
+        "postalHint": "e.g. {example}",
+        "useDefaultShipping": "Use as default shipping address",
+        "useDefaultBilling": "Use as default billing address",
+        "cancel": "Cancel",
+        "save": "Save address",
+        "fullNameRequired": "Enter the recipient's full name.",
+        "streetRequired": "Enter a street address.",
+        "cityRequired": "Enter a city.",
+        "stateRequired": "Enter a {field}.",
+        "fixFieldsError": "Please check the highlighted fields.",
+        "addedToast": "Address added",
+        "updatedToast": "Address updated",
+        "removedToast": "Address removed",
+        "defaultShippingToast": "Default shipping address updated",
+        "defaultBillingToast": "Default billing address updated",
+        "deleteTitle": "Delete this address?",
+        "deleteText": "\"{name}\" will be removed from your address book. Past orders won't change.",
+        "deleteConfirm": "Delete address",
+        "heading": "Saved addresses",
+        "labelHeading": "Address label"
+      },
+      "customizationStatus": {
+        "_comment": "Status names for custom-design requests, used in the request list and the progress bar on the request page.",
+        "SUBMITTED": "Submitted",
+        "IN_REVIEW": "In review",
+        "ACCEPTED": "Quote ready",
+        "ORDERED": "Ordered",
+        "REJECTED": "Declined",
+        "CANCELLED": "Canceled",
+        "EXPIRED": "Expired"
+      },
+      "customizations": {
+        "_comment": "Custom-design request list on /account/customizations.",
+        "emptyTitle": "No custom requests yet",
+        "emptyText": "Want a different metal, stone or engraving? Tap Customize on any eligible piece and we'll send you a quote.",
+        "emptyAction": "Browse jewelry",
+        "quotedPrice": "Your quote",
+        "estimatedRange": "Estimate",
+        "view": "View",
+        "columns": {
+          "_comment": "Table column headings (desktop).",
+          "request": "Request",
+          "piece": "Piece",
+          "submitted": "Submitted",
+          "status": "Status",
+          "estimate": "Estimate / quote",
+          "action": "Action"
+        }
+      },
+      "customizationDetail": {
+        "_comment": "Single custom-design request page /account/customizations/[id]: status, quote, specifications, images, history and chat.",
+        "back": "Back to custom requests",
+        "viewOrder": "View order",
+        "submitted": "Submitted",
+        "sku": "SKU",
+        "acceptedBadge": "Quote ready",
+        "expiredBadge": "Quote expired",
+        "_acceptedBadge": "Status badge text on this page (the list uses customizationStatus).",
+        "acceptQuote": "Accept quote and check out",
+        "edit": "Edit request",
+        "duplicate": "Request again",
+        "cancel": "Cancel request",
+        "cancelConfirmText": "Cancel this request? You can request the same design again later.",
+        "keep": "Keep request",
+        "cancelling": "Canceling…",
+        "confirmCancel": "Yes, cancel it",
+        "acceptedToast": "Quote accepted and added to your cart. Taking you to checkout…",
+        "cancelledToast": "Request canceled",
+        "duplicatedToast": "New request {number} created",
+        "rejectionHeading": "Our response",
+        "expiredHeading": "This quote has expired",
+        "expiredText": "Gold and diamond prices change, so quotes are only valid for a limited time. Tap “Request again” for an updated quote.",
+        "quoteHeading": "Your quote",
+        "lockedQuote": "Confirmed price",
+        "baseAmount": "Amount in base currency:",
+        "validUntil": "Valid until {date}",
+        "deliveryEstimate": "Made and delivered in about {days} days",
+        "indicativeRange": "Estimated price range",
+        "indicativeText": "Our jewelers review every detail before confirming your final price.",
+        "specsHeading": "Your design",
+        "imagesHeading": "Reference images ({count})",
+        "inspectAria": "View {name}",
+        "imageName": "image {n}",
+        "thumbAlt": "Reference {n}",
+        "imageAlt": "Reference image {n}",
+        "historyHeading": "Activity",
+        "chatHeading": "Messages about this request",
+        "chatPlaceholder": "Ask a question about {number}…",
+        "chatSuggestions": [
+          "Can I adjust my ring size before setting?",
+          "Which diamond clarity grades are available?"
+        ],
+        "_chatSuggestions": "Quick-reply buttons shown in the chat box.",
+        "chatStartText": "Have a question? Message our jewelers about request {number}.",
+        "chatStarting": "Starting…",
+        "chatOpen": "Message our jewelers",
+        "chatError": "We couldn't start the conversation. Please try again.",
+        "editTitle": "Edit request {number}",
+        "editText": "You can change your choices and reference images until we start reviewing."
+      },
+      "navAria": "Account menu",
+      "_navAria": "Screen-reader name of the account section tabs."
+    },
+    "collections": {
+      "filters": {
+        "availability": "Availability",
+        "inStockOnly": "In stock only",
+        "priceRangeAria": "Price range",
+        "carat": "Carat",
+        "minCaratAria": "Minimum carat",
+        "maxCaratAria": "Maximum carat",
+        "caratRangeAria": "Carat weight range",
+        "sidebarAria": "Filter jewelry",
+        "heading": "Filters",
+        "clearAll": "Clear all",
+        "sortBy": "Sort by",
+        "mobileDescription": "Narrow down by availability, price, carat, metal and certificate.",
+        "clear": "Clear",
+        "show": "Show results",
+        "sortDescription": "Choose how pieces are ordered.",
+        "sort": "Sort",
+        "_comment": "Filter sidebar (desktop) and Filters sheet (mobile) on /collections.",
+        "groupLabels": {
+          "metal": "Metal",
+          "certification": "Certification",
+          "shape": "Diamond shape",
+          "origin": "Diamond origin",
+          "color": "Color grade",
+          "clarity": "Clarity"
+        },
+        "_groupLabels": "Titles of the filter groups. Keys are fixed; the order here is the order of the active-filter chips.",
+        "inStockChip": "In stock",
+        "piece": "piece",
+        "pieces": "pieces",
+        "_pieces": "Result count word: '12 pieces' / '1 piece'.",
+        "showingStatus": "Showing {count} {noun}",
+        "_showingStatus": "Screen-reader announcement after filters change. {noun} = piece/pieces.",
+        "minPriceAria": "Minimum price in {currency}",
+        "maxPriceAria": "Maximum price in {currency}",
+        "result": "result",
+        "results": "results",
+        "adjustedHint": "We swapped the values so the minimum is lower than the maximum.",
+        "_adjustedHint": "Shown under a price/carat range when typed values were swapped or clamped.",
+        "filterGroupLabel": "Search {label}",
+        "filterGroupPlaceholder": "Search {label}…",
+        "_filterGroupPlaceholder": "Search box inside long filter lists; {label} = the group name (lowercased in the placeholder).",
+        "showLess": "Show less",
+        "showMore": "Show more ({count})",
+        "category": "Category"
+      },
+      "finder": {
+        "formAria": "Search jewelry",
+        "placeholder": "Try “solitaire ring” or “18K gold”",
+        "clearAria": "Clear search query",
+        "submit": "Search",
+        "suggestionsAria": "Search suggestions",
+        "popularHeading": "Shop by category",
+        "searchAll": "See all results",
+        "collectionsHeading": "Collections",
+        "piecesHeading": "Pieces",
+        "_comment": "Search box with suggestions on the home page.",
+        "searching": "Searching…",
+        "shortcutsAria": "Quick category shortcuts",
+        "shortcuts": [
+          {
+            "label": "All jewelry",
+            "href": "/collections"
+          },
+          {
+            "label": "Featured",
+            "href": "/collections?featured=1"
+          },
+          {
+            "label": "New arrivals",
+            "href": "/collections?new=1"
+          },
+          {
+            "label": "Ready to ship",
+            "href": "/collections?inStock=1"
+          }
+        ],
+        "_shortcuts": "Quick links row under the home search box.",
+        "noMatches": "No quick matches for “{query}”. Try fewer words, or see all results.",
+        "_noMatches": "Shown when nothing matches; {query} is what the visitor typed.",
+        "loadError": "We couldn't load suggestions. Check your connection and try again.",
+        "retry": "Try again",
+        "_loadError": "Shown if suggestions fail to load (offline or too many searches).",
+        "inputLabel": "Search jewelry by diamond shape, metal or SKU",
+        "askUs": "Ask us",
+        "_askUs": "Shown instead of a price on suggestions for pieces with no listed price.",
+        "_popularHeading": "Heading above your real categories (from Admin > Categories). Hidden when there are no categories.",
+        "typeToSearch": "Type at least 2 letters to search."
+      },
+      "_comment": "Interactive parts of collection/shop pages: filter sidebar, mobile filter & sort sheets, sort menu, and the home-page product finder search box.",
+      "sort": {
+        "_comment": "Sort menu options on /collections. Keys are fixed sort codes; change only the labels.",
+        "featured": "Featured",
+        "newest": "Newest",
+        "price-asc": "Price: low to high",
+        "price-desc": "Price: high to low",
+        "carat-desc": "Carat: high to low"
+      }
+    },
+    "search": {
+      "openAria": "Search",
+      "dialogDescription": "Search rings, earrings, necklaces, collections and guides.",
+      "inputLabel": "Search jewelry",
+      "placeholder": "Search rings, diamonds, gold…",
+      "clearAria": "Clear search query",
+      "submit": "Search",
+      "hint": "Search by piece, diamond shape, metal or certificate number. Press Enter to see all results.",
+      "recentHeading": "Recent searches",
+      "clearRecent": "Clear",
+      "popularHeading": "Shop by category",
+      "searching": "Searching…",
+      "searchAll": "See all results",
+      "productsAria": "Matching pieces",
+      "productsHeading": "Pieces",
+      "priceOnRequest": "Price on request",
+      "collectionsAria": "Matching collections",
+      "collectionsHeading": "Collections",
+      "guidesAria": "Matching guides",
+      "guidesHeading": "Guides",
+      "_comment": "Search pop-up opened from the magnifier icon in the header (and its button).",
+      "dialogTitle": "Search {{siteName}}",
+      "_dialogTitle": "Screen-reader title of the search pop-up.",
+      "noMatches": "No pieces match “{query}”. Try a different word or browse all jewelry.",
+      "viewAll": "See all results for “{query}”",
+      "loadError": "We couldn't load suggestions. Check your connection and try again.",
+      "retry": "Try again",
+      "_loadError": "Shown in the search popup if suggestions fail to load.",
+      "pieceCount": "{count} piece",
+      "piecesCount": "{count} pieces",
+      "_pieceCount": "Product count next to a collection in search results; {count} is the number.",
+      "tooltip": "Search",
+      "_tooltip": "Hover tooltip on the header search icon (desktop).",
+      "_popularHeading": "Heading above your real categories (from Admin > Categories), shown before the visitor types. Hidden when there are no categories."
+    },
+    "contactForm": {
+      "successTitle": "Thank you, we've got your message",
+      "sendAnother": "Send another message",
+      "topicLabel": "What's it about?",
+      "nameLabel": "Full name",
+      "namePlaceholder": "e.g. Sarah Johnson",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "you@example.com",
+      "phoneLabel": "Phone (optional)",
+      "phoneHint": "Add it if you'd like a call or WhatsApp consultation.",
+      "messageLabel": "How can we help?",
+      "messagePlaceholder": "Tell us your ring size, stone preferences or timeline…",
+      "submitting": "Sending…",
+      "submit": "Send message",
+      "successToast": "Thanks! We've received your message.",
+      "_comment": "Inquiry form on /contact and in the product 'Inquire' pop-up.",
+      "topics": {
+        "BESPOKE": "Custom design or engagement ring",
+        "PRODUCT": "Questions about a piece or an appointment",
+        "GENERAL": "Resizing, care or general help"
+      },
+      "_topics": "Options in the 'Inquiry Topic' dropdown. Keys are fixed codes.",
+      "productMessage": "I'd like more details about {product}.",
+      "_productMessage": "Pre-filled message when the form is opened from a product.",
+      "regarding": "About this piece:",
+      "successText": "One of our jewelry experts will reply within one business day. Your reference number is {reference}."
+    },
+    "customize": {
+      "quote": {
+        "loginTitle": "Sign in to see your quote",
+        "loginButton": "Sign in to continue",
+        "expiredTitle": "This quote has expired",
+        "requestFresh": "Request a new quote",
+        "viewOriginal": "View original request",
+        "claimedTitle": "This quote has already been used",
+        "goToBag": "Go to cart",
+        "viewRequest": "View request",
+        "unavailableTitle": "This quote link isn't available",
+        "browse": "Browse jewelry",
+        "imagePlaceholder": "Custom",
+        "noteHeading": "Note from our designers",
+        "specsHeading": "Your approved design",
+        "lockedNote": "Your quoted price is fixed when you add it to your cart.",
+        "accepting": "Adding to cart…",
+        "acceptedToast": "Your custom piece is in your cart.",
+        "_comment": "Page a customer reaches from the 'accept your quote' email link.",
+        "loginText": "To keep it secure, quote {number} is linked to your {{siteName}} account.",
+        "expiredText": "Quote {number} has expired because stone and metal prices change. Send a new request and we'll prepare an updated quote.",
+        "expiredNumberFallback": "validity",
+        "claimedText": "Quote {number} has already been accepted. Check your cart or your custom requests to continue.",
+        "unavailableText": "This quote link is no longer valid. Please contact us and we'll be happy to help.",
+        "accept": "Accept quote and add to cart",
+        "approvedLabel": "Approved quote · {number}",
+        "validUntil": "Valid until {date}",
+        "preparedFor": "Prepared for {name} ({email})",
+        "lockedPrice": "Your price:",
+        "craftingTime": "Made in about {days} days after you order.",
+        "_loginText": "{number} = quote number (shown in bold)."
+      },
+      "sheet": {
+        "discardTitle": "Discard your changes?",
+        "discardText": "Your choices haven't been sent yet. If you leave now, they'll be lost.",
+        "unavailable": "Custom options aren't available for this piece right now.",
+        "loadFailed": "We couldn't load the options. Please try again.",
+        "titleFallback": "Customize this piece",
+        "description": "Choose your options and send a request. We'll reply with a personal quote.",
+        "loading": "Loading options…",
+        "closeAria": "Close customization",
+        "close": "Close",
+        "_comment": "Customize drawer opened from a product page.",
+        "titleNamed": "Customize {name}",
+        "loadError": "We couldn't load the options. Please try again."
+      },
+      "_comment": "Customization: the product 'Customize' drawer/page steps, and the quote-acceptance page (/customize/accept/...).",
+      "details": {
+        "heading": "Your details",
+        "requiredNote": "So we can send your quote",
+        "sendingAs": "Sending as",
+        "change": "Change",
+        "contactLegend": "How should we contact you?",
+        "useAccount": "Use my account details",
+        "nameLabel": "Full name",
+        "namePlaceholder": "e.g. Emily Carter",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "you@example.com",
+        "emailVerified": "Email verified. You can track your quote in your account.",
+        "verifyPrompt": "Verify your email to get your quote faster",
+        "resendCode": "Resend code",
+        "sendCode": "Send code",
+        "codePlaceholder": "6-digit code",
+        "codeAria": "Email verification code",
+        "verify": "Verify",
+        "preferredContact": "How should we contact you?",
+        "phoneLabel": "Phone number",
+        "moreDetails": "Add more details (optional)",
+        "occasionLabel": "Occasion or deadline",
+        "occasionPlaceholder": "e.g. Proposal in December",
+        "targetDate": "When do you need it?",
+        "notesLabel": "Notes for our designers",
+        "notesPlaceholder": "Tell us about diamond preferences, inspiration or sizing…",
+        "_comment": "Step 2: the customer's contact details.",
+        "contactChoices": {
+          "EMAIL": "Email",
+          "PHONE": "Phone",
+          "CHAT": "Chat"
+        },
+        "_contactChoices": "Preferred-contact buttons. Keys are fixed codes.",
+        "codeSentTo": "Code sent to {email}"
+      },
+      "form": {
+        "uploadFailed": "We couldn't upload that image. Please try again.",
+        "emailFirst": "Enter your email address first.",
+        "enterCode": "Enter the 6-digit code we emailed you.",
+        "emailVerifiedToast": "Email verified. You can now send your request.",
+        "nameRequired": "Please enter your full name.",
+        "emailRequired": "Please enter a valid email address.",
+        "phoneRequired": "Please enter your phone number so we can call you.",
+        "waitUploads": "Please wait until your images finish uploading.",
+        "reviewFields": "Please check the highlighted options.",
+        "updatedToast": "Your request has been updated.",
+        "_comment": "Validation and pop-up messages of the customize form.",
+        "referenceImageAlt": "Reference image {number}",
+        "maxImages": "You can add up to {count} images.",
+        "codeSentToast": "We sent a code to {email}.",
+        "groupRequired": "Please choose {label}.",
+        "selectAtLeastOne": "Choose at least one option for {label}.",
+        "selectAtLeast": "Choose at least {count} options.",
+        "selectAtMost": "Choose up to {count} options.",
+        "invalidNumber": "{label} must be a number.",
+        "minimum": "Minimum {value}.",
+        "maximum": "Maximum {value}.",
+        "attachImage": "Please add at least one image for {label}.",
+        "submittedToast": "Request {number} sent. We'll be in touch soon.",
+        "reviewCount": "Please check {count} required fields:"
+      },
+      "header": {
+        "subtitle": "Choose your options and we'll send your personal quote within 24 hours.",
+        "openFullPage": "Open full page",
+        "title": "Customize",
+        "_comment": "Top of the customize drawer / page.",
+        "editTitle": "Edit {number}",
+        "productTitle": "Customize {name}",
+        "fromPrice": "From {price}",
+        "_fromPrice": "Starting price under the title. {price} = formatted price."
+      },
+      "progress": {
+        "aria": "Customization steps",
+        "_comment": "Step indicator (Options → Details → Review).",
+        "steps": {
+          "options": "Options",
+          "details": "Details",
+          "review": "Review"
+        },
+        "stepStatus": "Step {step} of 3: {label}",
+        "stepCompact": "Step {step} of 3 ·",
+        "_stepCompact": "Short label on narrow phones; the step name follows in bold."
+      },
+      "success": {
+        "title": "Request sent!",
+        "copied": "Request number copied",
+        "copy": "Copy request number",
+        "emailNote": "We'll email your quote within 24 hours",
+        "viewRequests": "View my requests",
+        "chat": "Chat with us",
+        "continue": "Continue shopping",
+        "_comment": "Confirmation shown after a customization request is sent."
+      },
+      "options": {
+        "clearSearch": "Clear search",
+        "clearSelection": "Clear selection",
+        "done": "Done",
+        "maxUploaded": "Image limit reached",
+        "addMore": "Add more",
+        "chooseFiles": "Choose files",
+        "uploading": "Uploading",
+        "retry": "Try again",
+        "dismissUpload": "Remove failed upload",
+        "required": "Required",
+        "optional": "Optional",
+        "_comment": "Option pickers inside step 1 (cards, dropdowns, number steppers, text, image upload).",
+        "choosePlaceholder": "Choose {label}",
+        "selectedSummary": "{count} selected ({first}…)",
+        "searchPlaceholder": "Search {label}…",
+        "searchAria": "Search {label}",
+        "noMatches": "No options match “{query}”.",
+        "decreaseAria": "Decrease {label}",
+        "increaseAria": "Increase {label}",
+        "rangeHint": "Enter a value from {min} to {max}{unit}. We'll adjust it if it's out of range.",
+        "preview": "Preview: {text}",
+        "uploadHeading": "Add reference images ({count}/{max})",
+        "uploadHelp": "JPG, PNG or WebP · up to {max} files · 5 MB each",
+        "uploadAria": "Upload reference images for {label}",
+        "uploadingStatus": "Uploading {count} reference {noun}.",
+        "image": "image",
+        "images": "images",
+        "viewImageAria": "View {name}",
+        "removeImageAria": "Remove {name}",
+        "referenceImageName": "reference image {number}"
+      },
+      "actions": {
+        "saving": "Saving…",
+        "save": "Save changes",
+        "sending": "Sending…",
+        "send": "Send request",
+        "estimatedPrice": "Estimated price",
+        "back": "Back",
+        "next": "Next",
+        "_comment": "Buttons in the sticky bar and summary of the customize flow."
+      },
+      "summary": {
+        "aria": "Specification summary",
+        "heading": "Your choices",
+        "review": "Review",
+        "actionNeeded": "Action needed",
+        "empty": "Your choices will appear here.",
+        "edit": "Edit",
+        "contact": "Contact",
+        "priceInfoAria": "About the estimated price: your final price is confirmed in your quote.",
+        "priceInfo": "Your final price is confirmed in your quote.",
+        "readyIn": "Usually ready in 3–4 weeks",
+        "cancel": "Cancel",
+        "_comment": "Summary / Review panel of the customize flow.",
+        "imageCount": "{count} {noun}",
+        "phoneWith": "Phone · {phone}",
+        "phone": "Phone",
+        "chatWith": "Chat · {email}",
+        "email": "Email"
+      }
+    },
+    "chat": {
+      "launcherAria": "Chat with us",
+      "contextError": "We couldn't open this chat. Please try again.",
+      "startError": "We couldn't start the chat. Please try again.",
+      "startFailed": "We couldn't start the chat. Please try again.",
+      "shareError": "We couldn't share that piece. Please try again.",
+      "emailSaveError": "We couldn't save your email. Please try again.",
+      "emailSaved": "Thanks! We'll email you when we reply.",
+      "emailInvalid": "Please enter a valid email address.",
+      "panelAria": "Chat with our jewelry experts",
+      "viewAllAria": "View all conversations",
+      "title": "Chat with our experts",
+      "offline": "We'll reply by email",
+      "newConversation": "New conversation",
+      "closeAria": "Close chat",
+      "noConversations": "No conversations yet.",
+      "conversationOpened": "Conversation opened",
+      "composerPlaceholder": "Type your message…",
+      "emailPlaceholder": "Your email, so we can reply (optional)",
+      "emailAria": "Email for reply notifications",
+      "saveEmail": "Save",
+      "dismissEmailAria": "Close email prompt",
+      "sending": "Sending…",
+      "emptyTitle": "How can we help?",
+      "emptyText": "Ask our experts about sizing, diamonds, custom designs or your order.",
+      "attachAria": "Attach images",
+      "photo": "Photo",
+      "shareAria": "Share product or reference",
+      "sharePiece": "Share a piece",
+      "sharedImage": "Shared reference image",
+      "uploadAria": "Upload chat image attachments",
+      "moreActionsAria": "More attachment actions",
+      "messageAria": "Message our jewelry experts",
+      "sendAria": "Send message",
+      "_comment": "Floating chat (bubble in the bottom corner of the storefront) and the 'Chat with our experts' buttons.",
+      "online": "Online",
+      "justNow": "now",
+      "_justNow": "Time label for messages under a minute old (older ones show 5m, 2h, or a date).",
+      "you": "You",
+      "_you": "Sender name on your own message while it is being sent.",
+      "quickTopics": [
+        "Help me choose a diamond",
+        "Metal and engraving options",
+        "How long does a custom ring take?"
+      ],
+      "_quickTopics": "One-tap starter questions shown in an empty chat.",
+      "openButton": "Chat with our experts",
+      "_openButton": "Default label of 'chat' buttons on product/order pages.",
+      "thread": {
+        "_comment": "Conversation view inside the chat (also used by staff in admin).",
+        "teamName": "Our team",
+        "_teamName": "Sender name shown on staff replies before the real name loads.",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "offlineNotice": "We're offline right now. Leave a message and we'll email you when we reply.",
+        "dismissNoticeAria": "Close this notice",
+        "emptyText": "Ask about sizing, diamonds, metals or custom designs.",
+        "maxImages": "You can add up to 5 images per message.",
+        "waitUploads": "Please wait for your images to finish uploading.",
+        "failedUploads": "Some images didn't upload. Remove them or try again before sending.",
+        "cannedTitle": "Insert a saved reply",
+        "cannedCloseAria": "Close saved replies",
+        "cannedAria": "Saved replies",
+        "uploadPreviewAlt": "Image preview",
+        "retryUploadAria": "Retry image upload",
+        "retry": "Retry",
+        "removeImageAria": "Remove image",
+        "messageAria": "Chat message",
+        "_messageAria": "Screen-reader name of the message box (automated tests look for this exact text)."
+      },
+      "picker": {
+        "_comment": "'Share a piece' panel in the chat, for sharing a product, custom request or order.",
+        "backdropAria": "Close share panel",
+        "title": "Share a piece",
+        "closeAria": "Close",
+        "searchPlaceholder": "Search by name or SKU…",
+        "searchAria": "Search pieces to share",
+        "noResultsTitle": "No pieces found",
+        "noResultsText": "Try another stone, metal or SKU.",
+        "tabPieces": "Pieces",
+        "tabRequests": "Custom requests",
+        "tabOrders": "Orders",
+        "share": "Share",
+        "sharingProduct": "Sharing {name}",
+        "regardingRequest": "About custom request {number}",
+        "regardingOrder": "About order {number}",
+        "_sharingProduct": "Message text sent with a shared item. {name} = product, {number} = request or order number."
+      }
+    }
+  }
+}

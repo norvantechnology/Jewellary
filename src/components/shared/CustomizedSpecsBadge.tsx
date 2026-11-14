@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useUiText } from "@/components/providers/UiTextProvider";
 import { Sparkles } from "lucide-react";
 
 interface CustomizedSpecsBadgeProps {
@@ -17,6 +20,7 @@ export function CustomizedSpecsBadge({
   hrefBase = "/account/customizations",
   compact = false,
 }: CustomizedSpecsBadgeProps) {
+  const ui = useUiText();
   if (!requestId && summaryLines.length === 0) {
     return null;
   }
@@ -29,7 +33,7 @@ export function CustomizedSpecsBadge({
     return (
       <p className="mt-1 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
         <Sparkles className="size-3.5 shrink-0 text-accent-text" aria-hidden="true" />
-        <span className="shrink-0 font-medium text-foreground">Custom</span>
+        <span className="shrink-0 font-medium text-foreground">{ui.common.customBadge}</span>
         {preview ? <span className="truncate">· {preview}</span> : null}
       </p>
     );
@@ -39,7 +43,7 @@ export function CustomizedSpecsBadge({
     <div className="mt-2 rounded-md border border-border bg-muted/50 px-2.5 py-2 text-xs">
       <div className="flex flex-wrap items-center gap-1.5 font-medium text-foreground">
         <Sparkles className="size-3.5 shrink-0 text-accent-text" aria-hidden="true" />
-        <span>Custom specifications</span>
+        <span>{ui.common.customSpecifications}</span>
         {requestId && requestNumber ? (
           <Link
             href={`${hrefBase}/${encodeURIComponent(requestId)}`}

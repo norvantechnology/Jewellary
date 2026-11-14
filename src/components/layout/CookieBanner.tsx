@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -53,6 +55,7 @@ function writeConsentCookie(state: ConsentState) {
 }
 
 export function CookieBanner({ initialForceOpen = false }: { initialForceOpen?: boolean } = {}) {
+  const t = useUiText().cookies;
   const pathname = usePathname();
   const missingCookie = React.useSyncExternalStore(
     subscribeConsent,
@@ -103,7 +106,7 @@ export function CookieBanner({ initialForceOpen = false }: { initialForceOpen?: 
       {visible && (
         <m.aside
           key="cookie-banner"
-          aria-label="Cookie preferences"
+          aria-label={t.bannerLabel}
           data-print-hidden="true"
           variants={reducedMotion ? fadeInVariants : undefined}
           initial={reducedMotion ? false : { opacity: 1, y: 12 }}
@@ -114,20 +117,20 @@ export function CookieBanner({ initialForceOpen = false }: { initialForceOpen?: 
         >
           <div className="flex flex-col gap-2.5">
             <p className="text-sm text-text-2">
-              We use cookies to keep your bag and sign-in working, plus optional analytics.{" "}
+              {t.message}{" "}
               <button
                 type="button"
                 onClick={() => setShowPreferences((prev) => !prev)}
                 className="inline-flex min-h-6 items-center font-medium text-text underline underline-offset-4 hover:text-accent-text"
               >
-                {showPreferences ? "Hide choices" : "Manage"}
+                {showPreferences ? t.hideChoices : t.manage}
               </button>
               {" · "}
               <Link
                 href="/privacy"
                 className="text-text underline underline-offset-4 hover:text-accent-text"
               >
-                Privacy
+                {t.privacy}
               </Link>
             </p>
 
@@ -135,20 +138,18 @@ export function CookieBanner({ initialForceOpen = false }: { initialForceOpen?: 
               <div className="space-y-2.5 rounded-md border border-border bg-surface-2 p-3 text-xs">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="font-medium text-text">Strictly Necessary</p>
-                    <p className="text-text-muted">Session, cart, wishlist, and theme state.</p>
+                    <p className="font-medium text-text">{t.necessaryTitle}</p>
+                    <p className="text-text-muted">{t.necessaryText}</p>
                   </div>
-                  <span className="font-medium text-accent-text">Always active</span>
+                  <span className="font-medium text-accent-text">{t.alwaysActive}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4 border-t border-border pt-2.5">
                   <div>
-                    <p className="font-medium text-text">Analytics</p>
-                    <p className="text-text-muted">
-                      Helps measure collection interest without ads.
-                    </p>
+                    <p className="font-medium text-text">{t.analyticsTitle}</p>
+                    <p className="text-text-muted">{t.analyticsText}</p>
                   </div>
                   <Switch
-                    aria-label="Enable analytics cookies"
+                    aria-label={t.analyticsToggle}
                     checked={analyticsEnabled}
                     onCheckedChange={setAnalyticsEnabled}
                   />
@@ -163,7 +164,7 @@ export function CookieBanner({ initialForceOpen = false }: { initialForceOpen?: 
                 className="min-h-11"
                 onClick={() => saveConsent(false)}
               >
-                Essential only
+                {t.essentialOnly}
               </Button>
               {showPreferences ? (
                 <Button
@@ -171,11 +172,11 @@ export function CookieBanner({ initialForceOpen = false }: { initialForceOpen?: 
                   className="min-h-11"
                   onClick={() => saveConsent(analyticsEnabled)}
                 >
-                  Save choices
+                  {t.saveChoices}
                 </Button>
               ) : (
                 <Button type="button" className="min-h-11" onClick={() => saveConsent(true)}>
-                  Accept all
+                  {t.acceptAll}
                 </Button>
               )}
             </div>

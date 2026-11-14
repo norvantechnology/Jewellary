@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "npm ci",
+  "buildCommand": "prisma migrate deploy && next build",
+  "crons": [
+    { "path": "/api/cron/release-reservations", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/publish-scheduled", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/customization-reminders", "schedule": "0 5 * * *" }
+  ]
+}

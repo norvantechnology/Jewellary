@@ -21,7 +21,7 @@ import type {
 import { inferGoogleProductCategory } from "@/lib/seo/feeds";
 import { isDecorativePlaceholderUrl } from "@/lib/seo/images";
 import { DEFAULT_LEGAL_NAME, getSiteUrl, toAbsoluteUrl } from "@/lib/seo/site";
-import { stripMarkup } from "@/lib/seo/templates";
+import { SEO_TEMPLATE_TEXT, fillSeoText, stripMarkup } from "@/lib/seo/templates";
 import type { PublicProductDetailDTO } from "@/modules/catalog/catalog.public";
 import type { PublicStoreSettings, ShippingZoneDTO } from "@/modules/settings/settings.service";
 
@@ -134,7 +134,7 @@ export function buildOrganizationJsonLd(
     name: settings.storeName,
     legalName:
       settings.legalName?.trim() ||
-      `${settings.storeName} Fine Jewellery Ltd.` ||
+      fillSeoText(SEO_TEMPLATE_TEXT.fallbacks.legalName, { brand: settings.storeName }) ||
       DEFAULT_LEGAL_NAME,
     url: siteUrl,
     logo: {
@@ -169,7 +169,6 @@ export function buildWebSiteJsonLd(settings: PublicStoreSettings): WithContext<W
   const alternateName = Array.from(
     new Set(
       [
-        `${settings.storeName} Atelier`,
         settings.legalName?.trim(),
         settings.storeName === "Maison Aurelia" ? "MAISON AURELIA" : null,
       ].filter((v): v is string => Boolean(v) && v !== settings.storeName),
@@ -525,7 +524,7 @@ export function buildArticleJsonLd(input: {
   const coverUrl =
     input.article.coverImageUrl && !isDecorativePlaceholderUrl(input.article.coverImageUrl)
       ? toAbsoluteUrl(input.article.coverImageUrl)
-      : toAbsoluteUrl(`/guides/${input.article.slug}/opengraph-image`);
+      : toAbsoluteUrl(`/api/og/guide/${encodeURIComponent(input.article.slug)}`);
 
   const author: Person = {
     "@type": "Person",

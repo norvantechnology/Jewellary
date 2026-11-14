@@ -30,33 +30,33 @@ export function EnquiryNotificationEmail({
       siteName={siteName}
       previewText={
         isAck
-          ? `We received your enquiry — ${siteName}`
-          : `New ${enquiryType} enquiry from ${customerName}`
+          ? `We received your message — ${siteName}`
+          : `New ${enquiryType} inquiry from ${customerName}`
       }
-      heading={isAck ? "Private Concierge Received Your Note" : `New ${enquiryType} Enquiry`}
+      heading={isAck ? "Thanks, we received your message" : `New ${enquiryType} inquiry`}
       contactEmail={contactEmail}
     >
       {isAck ? (
         <>
-          <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {customerName},</Text>
+          <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {customerName},</Text>
           <Text style={EMAIL_PARAGRAPH_STYLE}>
-            Thank you for reaching out to our gemology &amp; bespoke concierge. A specialist will
-            respond to you within one business day.
+            Thank you for contacting us. One of our jewelry experts will reply within one business
+            day.
           </Text>
           {productName && (
             <Text style={EMAIL_PARAGRAPH_STYLE}>
-              <strong>Piece referenced:</strong> {productName}
+              <strong>Item:</strong> {productName}
             </Text>
           )}
         </>
       ) : (
         <>
           <Text style={EMAIL_PARAGRAPH_STYLE}>
-            <strong>Client:</strong> {customerName} ({customerEmail})
+            <strong>Customer:</strong> {customerName} ({customerEmail})
           </Text>
           <Text style={EMAIL_PARAGRAPH_STYLE}>
             <strong>Type:</strong> {enquiryType}
-            {productName ? ` — Piece: ${productName}` : ""}
+            {productName ? ` — Item: ${productName}` : ""}
           </Text>
           <Text style={EMAIL_PARAGRAPH_STYLE}>{message}</Text>
         </>

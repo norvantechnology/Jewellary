@@ -24,6 +24,7 @@ import {
 import { calculateCheckoutQuote, type CheckoutQuoteDTO } from "@/modules/orders/checkout-quote";
 import type {
   CheckoutAddressInput,
+  ConfirmRazorpayPaymentInput,
   ConfirmSandboxPaymentInput,
   CreateCheckoutOrderInput,
   RetryOrderPaymentInput,
@@ -38,7 +39,10 @@ import type {
   CreatePaymentIntentResult,
   VerifiedWebhookEvent,
 } from "@/modules/payments/payment.types";
-import { buildSignedSandboxRazorpayWebhook } from "@/modules/payments/razorpay.adapter";
+import {
+  RazorpayPaymentAdapter,
+  buildSignedSandboxRazorpayWebhook,
+} from "@/modules/payments/razorpay.adapter";
 import { buildSignedSandboxStripeWebhook } from "@/modules/payments/stripe.adapter";
 import {
   getAllShippingZones,
@@ -763,7 +767,7 @@ async function createOrderAndPaymentOnce(
   }
 
   if (!owner.cartOwner) {
-    throw new ValidationError("Your shopping bag is empty.");
+    throw new ValidationError("Your cart is empty.");
   }
 
   const resolvedCurrCtx = input.currency
@@ -800,7 +804,7 @@ async function createOrderAndPaymentOnce(
       });
 
       if (!cart || cart.items.length === 0) {
-        throw new ValidationError("Your shopping bag is empty.");
+        throw new ValidationError("Your cart is empty.");
       }
 
       const { settings, zones } = await loadSettingsAndZonesInTx(tx);
@@ -923,7 +927,7 @@ async function createOrderAndPaymentOnce(
           const custReq = lockedCustomRows[0];
           if (!custReq || custReq.status !== "ACCEPTED" || custReq.quotedPriceBase === null) {
             throw new ConflictError(
-              `Bespoke quotation for ${variant.productName} is no longer active or already ordered.`,
+              `The quote for ${variant.productName} has expired or was already ordered.`,
             );
           }
           if (custReq.quoteExpiresAt && custReq.quoteExpiresAt < new Date()) {
@@ -932,7 +936,7 @@ async function createOrderAndPaymentOnce(
             );
           }
           if (custReq.userId && owner.userId !== custReq.userId) {
-            throw new ForbiddenError("You are not authorized to purchase this bespoke quotation.");
+            throw new ForbiddenError("This quote belongs to a different account.");
           }
           isCustomized = true;
           customizationRequestId = custReq.id;
@@ -943,7 +947,7 @@ async function createOrderAndPaymentOnce(
         } else {
           if (variant.priceMode !== "FIXED") {
             throw new ValidationError(
-              `${variant.productName} is Price Upon Request and must be ordered via Private Concierge.`,
+              `${variant.productName} is priced on request. Please contact us to order it.`,
             );
           }
 
@@ -971,9 +975,7 @@ async function createOrderAndPaymentOnce(
           productId: variant.productId,
           skuSnapshot: variant.sku,
           titleSnapshot: variant.productName,
-          variantTitleSnapshot: isCustomized
-            ? `${variant.title} (Bespoke Custom Specification)`
-            : variant.title,
+          variantTitleSnapshot: isCustomized ? `${variant.title} (Custom design)` : variant.title,
           imageUrlSnapshot: imageByProductId.get(variant.productId) ?? null,
           quantity: effectiveQty,
           baseUnitPrice: baseUnitPrice.toFixed(2),
@@ -1631,7 +1633,7 @@ export async function processVerifiedWebhookEvent(event: VerifiedWebhookEvent): 
                     fromStatus: reqRow.status,
                     toStatus: "ORDERED",
                     eventType: "ORDER_PLACED",
-                    message: `Commission confirmed on Order ${lockedOrder.orderNumber}`,
+                    message: `Custom order confirmed: ${lockedOrder.orderNumber}`,
                     actorId: lockedOrder.userId,
                     actorRole: "CUSTOMER",
                   },
@@ -2002,6 +2004,62 @@ export async function confirmSandboxOrderPayment(
     select: { status: true, orderNumber: true },
   });
 
+  return {
+    orderNumber: updated.orderNumber,
+    status: updated.status,
+    productIds: Array.from(new Set(order.items.map((i) => i.productId))),
+  };
+}
+
+/**
+ * Called right after the Razorpay popup reports success. Verifies the payment with Razorpay and
+ * settles the order through the same idempotent path as webhooks (amount + currency checked).
+ */
+export async function confirmRazorpayCheckoutPayment(
+  input: ConfirmRazorpayPaymentInput,
+  currentUserId: string | null,
+) {
+  const order = await db.order.findUnique({
+    where: { orderNumber: input.orderNumber },
+    include: {
+      items: { select: { productId: true } },
+      payments: { orderBy: { createdAt: "desc" }, take: 1 },
+    },
+  });
+  if (!order) {
+    throw new NotFoundError("Order could not be found.");
+  }
+  const authorized =
+    (currentUserId && order.userId === currentUserId) ||
+    hasValidGuestOrderAccess(order.orderNumber, input.guestToken, order.guestLookupTokenHash);
+  if (!authorized) {
+    throw new ForbiddenError("You are not authorized to confirm this order.");
+  }
+  const latestPayment = order.payments[0];
+  if (
+    !latestPayment ||
+    latestPayment.provider !== "RAZORPAY" ||
+    latestPayment.providerIntentId !== input.razorpayOrderId
+  ) {
+    throw new ConflictError("This payment does not match the order's current payment attempt.");
+  }
+
+  const adapter = new RazorpayPaymentAdapter();
+  const verified = await adapter.verifyCheckoutPayment({
+    razorpayOrderId: input.razorpayOrderId,
+    razorpayPaymentId: input.razorpayPaymentId,
+    razorpaySignature: input.razorpaySignature,
+    expectedAmountMinor: toMinorUnits(latestPayment.amount.toString(), latestPayment.currency),
+    expectedCurrency: latestPayment.currency,
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+  });
+  await processVerifiedWebhookEvent(verified);
+
+  const updated = await db.order.findUniqueOrThrow({
+    where: { id: order.id },
+    select: { status: true, orderNumber: true },
+  });
   return {
     orderNumber: updated.orderNumber,
     status: updated.status,

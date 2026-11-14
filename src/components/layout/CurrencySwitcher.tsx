@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import { Check, ChevronDown, Globe, Search, X } from "lucide-react";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
@@ -27,6 +29,7 @@ export function CurrencySwitcher({
   tone = "default",
   className,
 }: CurrencySwitcherProps) {
+  const ui = useUiText();
   const { currencies, currency, setCurrency } = useCurrency();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -114,8 +117,8 @@ export function CurrencySwitcher({
             setQuery(e.target.value);
             setActiveIndex(0);
           }}
-          placeholder="Search currency (e.g. EUR, GBP, JPY)"
-          aria-label="Search currency"
+          placeholder={ui.layout.currencySearchPlaceholder}
+          aria-label={ui.layout.currencySearchLabel}
           aria-controls={listId}
           aria-activedescendant={
             safeActiveIndex >= 0 && filtered[safeActiveIndex]
@@ -132,7 +135,7 @@ export function CurrencySwitcher({
               setActiveIndex(0);
               searchInputRef.current?.focus();
             }}
-            aria-label="Clear currency search"
+            aria-label={ui.layout.currencyClearSearch}
             className="-mr-1.5 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-text-muted hover:bg-surface-3 hover:text-text"
           >
             <X className="size-4" strokeWidth={1.5} aria-hidden="true" />
@@ -143,11 +146,13 @@ export function CurrencySwitcher({
       <ul
         id={listId}
         role="listbox"
-        aria-label="Available currencies"
+        aria-label={ui.layout.currencyListLabel}
         className="max-h-60 overflow-y-auto p-1.5"
       >
         {filtered.length === 0 ? (
-          <li className="py-5 text-center text-sm text-text-muted">No matching currencies</li>
+          <li className="py-5 text-center text-sm text-text-muted">
+            {ui.layout.currencyNoMatches}
+          </li>
         ) : (
           filtered.map((item, idx) => {
             const isSelected = item.code === currency.code;
@@ -273,7 +278,7 @@ export function CurrencySwitcher({
       <PopoverContent
         align={align}
         role="dialog"
-        aria-label="Select display currency"
+        aria-label={ui.layout.currencyLabel}
         className="z-[var(--z-modal)] w-[min(18rem,calc(100vw-2rem))] overflow-hidden p-0"
       >
         {listboxPanel}

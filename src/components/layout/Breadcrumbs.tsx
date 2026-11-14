@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useUiText } from "@/components/providers/UiTextProvider";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +17,16 @@ interface BreadcrumbsProps {
   compactOnMobile?: boolean;
 }
 
-export function Breadcrumbs({ items, className, compactOnMobile = false }: BreadcrumbsProps) {
+export function Breadcrumbs({
+  items: rawItems,
+  className,
+  compactOnMobile = false,
+}: BreadcrumbsProps) {
+  const ui = useUiText();
+  // The home crumb's label comes from site-content.json → ui.common.home.
+  const items = rawItems.map((item) =>
+    item.href === "/" ? { ...item, label: ui.common.home } : item,
+  );
   if (items.length === 0) return null;
   const parent = compactOnMobile
     ? [...items.slice(0, -1)].reverse().find((item) => item.href)
@@ -35,7 +47,7 @@ export function Breadcrumbs({ items, className, compactOnMobile = false }: Bread
         </Link>
       )}
       <nav
-        aria-label="Breadcrumb"
+        aria-label={ui.common.breadcrumbLabel}
         className={cn(
           "py-1 text-xs text-muted-foreground sm:py-3 sm:text-sm",
           parent?.href && "hidden sm:block",

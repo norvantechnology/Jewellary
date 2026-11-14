@@ -5,18 +5,20 @@ import { redirect } from "next/navigation";
 import { AccountShell } from "@/components/storefront/AccountShell";
 import { StorefrontShell } from "@/components/storefront/StorefrontShell";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getSiteContent } from "@/modules/site-content/site-content.service";
 import { getOptionalSession } from "@/server/dal";
 
-export const metadata: Metadata = {
-  title: {
-    default: "My Account",
-    template: "%s | Client Account",
-  },
-  robots: { index: false, follow: false },
-};
+// Tab titles: data/frontend/site-content.json → site.layouts
+export async function generateMetadata(): Promise<Metadata> {
+  const { layouts } = (await getSiteContent()).site;
+  return {
+    title: { default: layouts.accountDefaultTitle, template: layouts.accountTitleTemplate },
+    robots: { index: false, follow: false },
+  };
+}
 
 async function AccountSessionGate({ children }: { children: React.ReactNode }) {
-  const session = await getOptionalSession();
+  const [session, content] = await Promise.all([getOptionalSession(), getSiteContent()]);
   if (!session) {
     redirect(`/login?next=${encodeURIComponent(await getRequestReturnTo("/account"))}`);
   }
@@ -28,6 +30,7 @@ async function AccountSessionGate({ children }: { children: React.ReactNode }) {
         email: session.user.email,
         role: session.user.role,
       }}
+      labels={content.site.accountNav}
     >
       {children}
     </AccountShell>

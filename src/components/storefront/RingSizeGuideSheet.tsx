@@ -1,4 +1,5 @@
 "use client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ interface RingSizeGuideSheetProps {
 }
 
 export function RingSizeGuideSheet({ open, onOpenChange, onNavigate }: RingSizeGuideSheetProps) {
+  const ui = useUiText();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -34,20 +36,17 @@ export function RingSizeGuideSheet({ open, onOpenChange, onNavigate }: RingSizeG
         className="safe-area-pb max-h-[85dvh] overflow-y-auto px-4 pt-2 pb-6 sm:mx-auto sm:max-w-xl sm:px-6"
       >
         <SheetHeader className="text-left">
-          <SheetTitle>Ring Size Guide</SheetTitle>
-          <SheetDescription>
-            Measure an existing ring&apos;s internal diameter edge-to-edge or finger circumference
-            at room temperature.
-          </SheetDescription>
+          <SheetTitle>{ui.product.sizeGuide.title}</SheetTitle>
+          <SheetDescription>{ui.product.sizeGuide.description}</SheetDescription>
         </SheetHeader>
         <div className="mt-4 overflow-x-auto rounded-xl border border-border">
           <table className="w-full min-w-[320px] border-collapse text-left text-xs sm:text-sm">
             <thead className="border-b border-border bg-surface-2 text-text-2">
               <tr>
-                <th className="px-3 py-2.5 font-semibold">Diameter</th>
-                <th className="px-3 py-2.5 font-semibold">US / CA</th>
-                <th className="px-3 py-2.5 font-semibold">UK / AU</th>
-                <th className="px-3 py-2.5 font-semibold">EU</th>
+                <th className="px-3 py-2.5 font-semibold">{ui.product.sizeGuide.diameter}</th>
+                <th className="px-3 py-2.5 font-semibold">{ui.product.sizeGuide.usCa}</th>
+                <th className="px-3 py-2.5 font-semibold">{ui.product.sizeGuide.ukAu}</th>
+                <th className="px-3 py-2.5 font-semibold">{ui.product.sizeGuide.eu}</th>
               </tr>
             </thead>
             <tbody className="tabular-nums-price divide-y divide-border">
@@ -71,7 +70,7 @@ export function RingSizeGuideSheet({ open, onOpenChange, onNavigate }: RingSizeG
                 onNavigate?.();
               }}
             >
-              Full measuring guide
+              {ui.product.sizeGuide.fullGuide}
             </Link>
           </Button>
         </div>

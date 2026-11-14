@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
@@ -72,6 +73,7 @@ export function CustomizeForm({
   onOpenFullPage,
   onDirtyChange,
 }: CustomizeFormProps) {
+  const ui = useUiText();
   const router = useRouter();
   const baseUid = React.useId();
   const reducedMotion = useReducedMotionSafe();
@@ -236,17 +238,17 @@ export function CustomizeForm({
 
   const unsavedGuard = useUnsavedChangesGuard({
     isDirty: variant === "page" && isDirty,
-    title: "Discard customization?",
-    description: "You have unsaved customization selections. Leaving now will discard them.",
+    title: ui.customize.sheet.discardTitle,
+    description: ui.customize.sheet.discardText,
   });
 
   const lightboxImages: LightboxImageItem[] = React.useMemo(
     () =>
       images.map((img, idx) => ({
         url: img.url,
-        alt: img.originalName ?? `Reference image ${idx + 1}`,
+        alt: img.originalName ?? fill(ui.customize.form.referenceImageAlt, { number: idx + 1 }),
       })),
-    [images],
+    [images, ui],
   );
 
   function clearFieldError(key: string) {
@@ -376,7 +378,7 @@ export function CustomizeForm({
       setUploadError(null);
       reconnectRealtimeSocket();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not upload reference image.";
+      const message = err instanceof Error ? err.message : ui.customize.form.uploadFailed;
       setPendingUploads((prev) =>
         prev.map((item) =>
           item.localId === localId ? { ...item, status: "error", error: message } : item,
@@ -393,7 +395,7 @@ export function CustomizeForm({
 
     const remaining = Math.max(0, cap - (images.length + activeUploadingCount));
     if (remaining <= 0) {
-      const msg = `Maximum ${cap} reference images allowed.`;
+      const msg = fill(ui.customize.form.maxImages, { count: cap });
       setUploadError(msg);
       notifyError(msg);
       return;
@@ -451,7 +453,7 @@ export function CustomizeForm({
     if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       setFieldErrors((prev) => ({
         ...prev,
-        customerEmail: "Enter a valid email address first.",
+        customerEmail: ui.customize.form.emailFirst,
       }));
       return;
     }
@@ -463,13 +465,13 @@ export function CustomizeForm({
       return;
     }
     setOtpSentTo(res.data.maskedEmail);
-    notifySuccess(`Verification code sent to ${res.data.maskedEmail}.`);
+    notifySuccess(fill(ui.customize.form.codeSentToast, { email: res.data.maskedEmail }));
   }
 
   async function handleVerifyOtp() {
     const cleanEmail = customerEmail.trim().toLowerCase();
     if (!/^\d{6}$/.test(otpCode.trim())) {
-      notifyError("Enter the 6-digit verification code sent to your email.");
+      notifyError(ui.customize.form.enterCode);
       return;
     }
     setVerifyingOtp(true);
@@ -484,7 +486,7 @@ export function CustomizeForm({
     }
     setOtpVerifiedEmail(cleanEmail);
     reconnectRealtimeSocket();
-    notifySuccess("Email verified. You can now submit your bespoke request.");
+    notifySuccess(ui.customize.form.emailVerifiedToast);
   }
 
   function validateClientSide(): Record<string, string> {
@@ -493,56 +495,60 @@ export function CustomizeForm({
       const inp = inputs[group.code];
       if (group.type === "SELECT" || group.type === "SWATCH") {
         if (group.required && !inp?.value?.trim()) {
-          errs[group.code] = `${group.label} is required.`;
+          errs[group.code] = fill(ui.customize.form.groupRequired, { label: group.label });
         }
       } else if (group.type === "MULTI_SELECT") {
         const len = inp?.values?.length ?? 0;
         if (group.required && len === 0) {
-          errs[group.code] = `Select at least one option for ${group.label}.`;
+          errs[group.code] = fill(ui.customize.form.selectAtLeastOne, { label: group.label });
         } else if (group.minValue && len > 0 && len < Number(group.minValue)) {
-          errs[group.code] = `Select at least ${group.minValue} options.`;
+          errs[group.code] = fill(ui.customize.form.selectAtLeast, { count: group.minValue ?? 0 });
         } else if (group.maxValue && len > Number(group.maxValue)) {
-          errs[group.code] = `Select at most ${group.maxValue} options.`;
+          errs[group.code] = fill(ui.customize.form.selectAtMost, { count: group.maxValue ?? 0 });
         }
       } else if (group.type === "NUMBER_RANGE") {
         const raw = inp?.numberValue ?? inp?.value ?? "";
         const str = String(raw).trim();
         if (group.required && !str) {
-          errs[group.code] = `${group.label} is required.`;
+          errs[group.code] = fill(ui.customize.form.groupRequired, { label: group.label });
         } else if (str) {
           const n = Number(str);
           if (!Number.isFinite(n)) {
-            errs[group.code] = `${group.label} must be a valid number.`;
+            errs[group.code] = fill(ui.customize.form.invalidNumber, { label: group.label });
           } else if (group.minValue !== null && n < Number(group.minValue)) {
-            errs[group.code] = `Minimum ${group.minValue}${group.unit ? ` ${group.unit}` : ""}.`;
+            errs[group.code] = fill(ui.customize.form.minimum, {
+              value: `${group.minValue}${group.unit ? ` ${group.unit}` : ""}`,
+            });
           } else if (group.maxValue !== null && n > Number(group.maxValue)) {
-            errs[group.code] = `Maximum ${group.maxValue}${group.unit ? ` ${group.unit}` : ""}.`;
+            errs[group.code] = fill(ui.customize.form.maximum, {
+              value: `${group.maxValue}${group.unit ? ` ${group.unit}` : ""}`,
+            });
           }
         }
       } else if (group.type === "TEXT" || group.type === "TEXTAREA") {
         const txt = (inp?.textValue ?? inp?.value ?? "").trim();
         if (group.required && !txt) {
-          errs[group.code] = `${group.label} is required.`;
+          errs[group.code] = fill(ui.customize.form.groupRequired, { label: group.label });
         }
       } else if (group.type === "IMAGE_UPLOAD") {
         if (group.required && images.length === 0) {
-          errs[group.code] = `Please attach at least one reference image for ${group.label}.`;
+          errs[group.code] = fill(ui.customize.form.attachImage, { label: group.label });
         }
       }
     }
 
     if (mode === "create") {
       if (customerName.trim().length < 2) {
-        errs.customerName = "Full name is required.";
+        errs.customerName = ui.customize.form.nameRequired;
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())) {
-        errs.customerEmail = "Valid email address is required.";
+        errs.customerEmail = ui.customize.form.emailRequired;
       }
       if (contactUiChoice === "PHONE" && customerPhone.trim().length < 6) {
-        errs.customerPhone = "Please enter your phone number for phone contact.";
+        errs.customerPhone = ui.customize.form.phoneRequired;
       }
     } else if (contactUiChoice === "PHONE" && customerPhone.trim().length < 6) {
-      errs.customerPhone = "Please enter your phone number for phone contact.";
+      errs.customerPhone = ui.customize.form.phoneRequired;
     }
 
     return errs;
@@ -551,7 +557,7 @@ export function CustomizeForm({
   async function submitCustomization() {
     if (submitting) return;
     if (activeUploadingCount > 0) {
-      notifyError("Please wait for reference images to finish uploading.");
+      notifyError(ui.customize.form.waitUploads);
       return;
     }
 
@@ -560,7 +566,7 @@ export function CustomizeForm({
     const errKeys = Object.keys(errs);
     if (errKeys.length > 0) {
       setFieldErrors(errs);
-      notifyError("Please review the highlighted customization fields.");
+      notifyError(ui.customize.form.reviewFields);
       const firstKey = errKeys[0]!;
       jumpToField(firstKey);
       return;
@@ -604,7 +610,7 @@ export function CustomizeForm({
         return;
       }
       unsavedGuard.markClean();
-      notifySuccess("Customization request updated.");
+      notifySuccess(ui.customize.form.updatedToast);
       onSuccess?.(res.data);
       return;
     }
@@ -642,7 +648,7 @@ export function CustomizeForm({
 
     unsavedGuard.markClean();
     reconnectRealtimeSocket();
-    notifySuccess(`Bespoke request ${res.data.requestNumber} submitted.`);
+    notifySuccess(fill(ui.customize.form.submittedToast, { number: res.data.requestNumber }));
     setSubmittedDetail(res.data);
     onSuccess?.(res.data);
   }
@@ -668,15 +674,15 @@ export function CustomizeForm({
 
   const errorEntries = React.useMemo(() => {
     const labelByKey = new Map<string, string>(visibleGroups.map((g) => [g.code, g.label]));
-    labelByKey.set("customerName", "Full name");
-    labelByKey.set("customerEmail", "Email address");
-    labelByKey.set("customerPhone", "Phone number");
+    labelByKey.set("customerName", ui.customize.details.nameLabel);
+    labelByKey.set("customerEmail", ui.customize.details.emailLabel);
+    labelByKey.set("customerPhone", ui.customize.details.phoneLabel);
     return Object.entries(fieldErrors).map(([key, msg]) => ({
       key,
       label: labelByKey.get(key) ?? key,
       message: msg,
     }));
-  }, [fieldErrors, visibleGroups]);
+  }, [fieldErrors, visibleGroups, ui]);
 
   const showTopErrorSummary = errorEntries.length > 2 || Boolean(submitError);
 
@@ -696,7 +702,9 @@ export function CustomizeForm({
 
       {errorEntries.length > 2 ? (
         <div className={cn(submitError && "mt-2.5 border-t border-destructive/20 pt-2.5")}>
-          <p className="font-medium">Please review {errorEntries.length} required fields:</p>
+          <p className="font-medium">
+            {fill(ui.customize.form.reviewCount, { count: errorEntries.length })}
+          </p>
           <ul className="mt-1.5 list-disc space-y-1 pl-5 text-xs">
             {errorEntries.map((item) => (
               <li key={item.key}>
@@ -878,7 +886,7 @@ export function CustomizeForm({
             {errorBanner}
             <div className={step === 1 ? "block" : "hidden"}>
               <p className="mb-5 hidden text-[13px] leading-relaxed text-muted-foreground sm:block [@media(max-height:500px)]:hidden">
-                Choose your options and we&apos;ll send a quote within 24 hours.
+                {ui.customize.header.subtitle}
               </p>
               {optionsContent}
             </div>

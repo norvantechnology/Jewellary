@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { Search } from "lucide-react";
@@ -55,6 +56,7 @@ export function RangeFilterControl({
   onSliderChange,
   onCommit,
 }: RangeFilterControlProps) {
+  const ui = useUiText();
   const [validationHint, setValidationHint] = React.useState<string | null>(null);
   const dirtyRef = React.useRef(false);
 
@@ -99,7 +101,7 @@ export function RangeFilterControl({
     const nextMinStr = fmt(nextMinNum, minBound);
     const nextMaxStr = fmt(nextMaxNum, maxBound);
 
-    setValidationHint(adjusted ? "Adjusted to valid min ≤ max bounds" : null);
+    setValidationHint(adjusted ? ui.collections.filters.adjustedHint : null);
     onInputChange([nextMinStr, nextMaxStr]);
     onCommit(nextMinStr, nextMaxStr);
   };
@@ -223,18 +225,21 @@ interface FacetSearchBoxProps {
 }
 
 function FacetSearchBox({ id, label, value, onChange }: FacetSearchBoxProps) {
+  const ui = useUiText();
   return (
     <div className="mb-2.5 flex h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface px-2.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent-tint">
       <Search className="size-3.5 shrink-0 text-text-muted" strokeWidth={1.5} aria-hidden="true" />
       <label htmlFor={id} className="sr-only">
-        Filter {label}
+        {fill(ui.collections.filters.filterGroupLabel, { label })}
       </label>
       <input
         id={id}
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={`Filter ${label.toLowerCase()}…`}
+        placeholder={fill(ui.collections.filters.filterGroupPlaceholder, {
+          label: label.toLowerCase(),
+        })}
         className="h-full w-full min-w-0 border-0 bg-transparent text-base text-text outline-none placeholder:text-text-muted focus:ring-0 focus:outline-none lg:text-sm"
       />
     </div>
@@ -258,6 +263,7 @@ export function FacetCheckboxList({
   selectedValues,
   onToggle,
 }: FacetCheckboxListProps) {
+  const ui = useUiText();
   const [expanded, setExpanded] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
 
@@ -286,7 +292,7 @@ export function FacetCheckboxList({
       )}
 
       {visible.length === 0 ? (
-        <p className="py-2 text-xs text-text-muted">No matching options</p>
+        <p className="py-2 text-xs text-text-muted">{ui.common.noMatchingOptions}</p>
       ) : (
         <div className="space-y-0.5">
           {visible.map((bucket) => {
@@ -327,7 +333,9 @@ export function FacetCheckboxList({
           onClick={() => setExpanded((prev) => !prev)}
           className="mt-1.5 inline-flex min-h-8 cursor-pointer items-center px-1.5 text-xs font-medium text-accent-text hover:text-accent-hover hover:underline"
         >
-          {expanded ? "Show less" : `Show more (${hiddenCount})`}
+          {expanded
+            ? ui.collections.filters.showLess
+            : fill(ui.collections.filters.showMore, { count: hiddenCount })}
         </button>
       )}
     </div>
@@ -342,6 +350,7 @@ export function FacetChipList({
   selectedValues,
   onToggle,
 }: FacetCheckboxListProps) {
+  const ui = useUiText();
   const [searchQuery, setSearchQuery] = React.useState("");
   const hasSearch = buckets.length > 8;
 
@@ -365,7 +374,7 @@ export function FacetChipList({
       )}
 
       {filtered.length === 0 ? (
-        <p className="py-2 text-xs text-text-muted">No matching options</p>
+        <p className="py-2 text-xs text-text-muted">{ui.common.noMatchingOptions}</p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {filtered.map((bucket) => {

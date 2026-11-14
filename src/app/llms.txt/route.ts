@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { toAbsoluteUrl } from "@/lib/seo/metadata";
+import { SEO_TEMPLATE_TEXT, fillSeoText } from "@/lib/seo/templates";
 import { getPublishedArticles } from "@/modules/articles/article.service";
 import { getAllActiveCategoriesTree } from "@/modules/catalog/catalog.public";
 import { listSitemapLandingFacets } from "@/modules/seo/seo.service";
@@ -22,25 +23,27 @@ export async function GET() {
     getPublishedArticles(),
   ]);
 
+  // Wording: data/frontend/site-content.json → site.seoTemplates.llms
+  const text = SEO_TEMPLATE_TEXT.llms;
   const lines: string[] = [
     `# ${settings.storeName}`,
     "",
-    `> ${settings.tagline ?? "Certified fine diamond jewellery crafted in recycled 18K gold and 950 platinum."}`,
+    `> ${settings.tagline ?? text.tagline}`,
     "",
     `Website: ${toAbsoluteUrl("/")}`,
     `Full Context Digest: ${toAbsoluteUrl("/llms-full.txt")}`,
     `Contact: ${settings.contactEmail}`,
-    `Currency: ${settings.currency} · Insured Returns: ${settings.returnWindowDays} days`,
+    `Currency: ${settings.currency} · Returns: ${settings.returnWindowDays} days`,
     "",
-    "## Fine Jewellery Collections",
+    `## ${text.collectionsHeading}`,
     ...categories.map(
       (cat) =>
-        `- [${cat.name}](${toAbsoluteUrl(`/collections/${cat.path}`)}): ${cat.description ?? `${cat.name} crafted in 18K gold and platinum.`}`,
+        `- [${cat.name}](${toAbsoluteUrl(`/collections/${cat.path}`)}): ${cat.description ?? fillSeoText(text.collectionFallback, { name: cat.name })}`,
     ),
     ...(facets.length > 0
       ? [
           "",
-          "## Curated Specialty Pages",
+          `## ${text.specialtyHeading}`,
           ...facets.map(
             (facet) =>
               `- [${facet.facetSlug.replace(/-/g, " ")}](${toAbsoluteUrl(`/collections/${facet.categoryPath}/${facet.facetSlug}`)})`,
@@ -48,7 +51,7 @@ export async function GET() {
         ]
       : []),
     "",
-    "## Gemological Buying Guides",
+    `## ${text.guidesHeading}`,
     ...articles
       .filter((a) => !a.noindex)
       .map(
@@ -56,14 +59,8 @@ export async function GET() {
           `- [${article.title}](${toAbsoluteUrl(`/guides/${article.slug}`)}): ${article.excerpt}`,
       ),
     "",
-    "## Client Care & Policies",
-    `- [All Jewellery Catalogue](${toAbsoluteUrl("/collections")}): Browse all filterable GIA and IGI certified pieces.`,
-    `- [Shipping & Returns Policy](${toAbsoluteUrl("/shipping-returns")}): Insured courier delivery thresholds, adult signature requirements, and return eligibility.`,
-    `- [Ring Size Guide](${toAbsoluteUrl("/ring-size-guide")}): US/UK/EU diameter and circumference sizing conversions.`,
-    `- [Care Guide](${toAbsoluteUrl("/care-guide")}): Ultrasonic cleaning, prong inspection, and travel storage guidance.`,
-    `- [Frequently Asked Questions](${toAbsoluteUrl("/faq")}): Diamond certification, custom lead times, and resizing answers.`,
-    `- [About the Atelier](${toAbsoluteUrl("/about")}): Craft standards, provenance, and sourcing philosophy.`,
-    `- [Private Concierge](${toAbsoluteUrl("/contact")}): Bespoke design consultation and stone sourcing enquiries.`,
+    `## ${text.policiesHeading}`,
+    ...text.links.map((link) => `- [${link.label}](${toAbsoluteUrl(link.href)}): ${link.text}`),
   ];
 
   return new NextResponse(lines.join("\n"), {

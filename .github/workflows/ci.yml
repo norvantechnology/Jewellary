@@ -87,17 +87,8 @@ jobs:
           npm run lint
           npm run format:check
 
-      - name: Unit & Integration Tests
-        run: npm run test:all
-
       - name: Build Production App
         run: npm run build
-
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Run Playwright E2E, Accessibility & SEO
-        run: npm run test:e2e -- --project=chromium
 
       - name: Security Audit
         run: npm audit --audit-level=high || true

@@ -578,7 +578,7 @@ export async function listBulkSeoItems(): Promise<BulkSeoItemDTO[]> {
     );
     const resolvedDescription = finalizeSeoDescription(
       p.seoDescription?.trim() || p.subtitle || p.description || p.name,
-      `${p.certificationLab ?? "GIA / IGI"} certified fine jewellery from ${settings.storeName}.`,
+      `${p.certificationLab ?? "GIA / IGI"} certified fine jewelry from ${settings.storeName}.`,
     );
     const scoreRes = computeProductSeoScore({
       name: p.name,
@@ -752,7 +752,7 @@ export async function runAndSaveSeoAudit(
     );
     const resolvedDescription = finalizeSeoDescription(
       p.seoDescription?.trim() || p.subtitle || p.description || p.name,
-      `${p.certificationLab ?? "GIA / IGI"} certified fine jewellery crafted by ${settings.storeName}.`,
+      `${p.certificationLab ?? "GIA / IGI"} certified fine jewelry made by ${settings.storeName}.`,
     );
 
     const prevTitleUrl = seenTitles.get(resolvedTitle.toLowerCase());

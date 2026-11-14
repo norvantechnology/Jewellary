@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { NOINDEX_NOFOLLOW_ROBOTS } from "@/lib/seo/metadata";
+import { buildPageMetadata } from "@/modules/site-content/site-content.service";
 import { notFound } from "next/navigation";
 import { AccountCustomizationDetailClient } from "@/components/storefront/AccountCustomizationDetailClient";
 import {
@@ -7,9 +9,12 @@ import {
 } from "@/modules/customization/customization.service";
 import { requirePageUser } from "@/server/dal";
 
-export const metadata: Metadata = {
-  title: "Customization Request Detail",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildPageMetadata((c) => c.pages.account.customizationDetail.seo, {
+    pathname: "/account/customizations",
+    robots: NOINDEX_NOFOLLOW_ROBOTS,
+  });
+}
 
 // Signed-in page rendered per request; a blocking navigation is intended.
 export const instant = false;

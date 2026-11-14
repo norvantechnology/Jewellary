@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
@@ -22,6 +23,7 @@ import type { ProductCustomizationSchemaDTO } from "@/modules/customization/cust
  * - <768px: full-screen 100dvh sheet with sticky header & sticky footer
  */
 export function CustomizationSheet() {
+  const ui = useUiText();
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [slug, setSlug] = React.useState<string | null>(null);
@@ -33,8 +35,8 @@ export function CustomizationSheet() {
 
   const guard = useUnsavedChangesGuard({
     isDirty: open && isDirty,
-    title: "Discard customization?",
-    description: "You have unsaved customization selections. Leaving now will discard them.",
+    title: ui.customize.sheet.discardTitle,
+    description: ui.customize.sheet.discardText,
   });
 
   React.useEffect(() => {
@@ -106,21 +108,21 @@ export function CustomizationSheet() {
       .then(async (res) => {
         const json = await res.json().catch(() => null);
         if (!res.ok) {
-          throw new Error(json?.error?.message ?? "Unable to load customization options.");
+          throw new Error(json?.error?.message ?? ui.customize.sheet.loadError);
         }
         return json as ProductCustomizationSchemaDTO;
       })
       .then((data) => {
         if (!active) return;
         if (!data.enabled) {
-          setErrorMsg("Bespoke customization is currently unavailable for this piece.");
+          setErrorMsg(ui.customize.sheet.unavailable);
           return;
         }
         setSchema(data);
       })
       .catch((err: unknown) => {
         if (!active) return;
-        setErrorMsg(err instanceof Error ? err.message : "Failed to load options.");
+        setErrorMsg(err instanceof Error ? err.message : ui.customize.sheet.loadFailed);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -129,7 +131,7 @@ export function CustomizationSheet() {
     return () => {
       active = false;
     };
-  }, [open, slug]);
+  }, [open, slug, ui]);
 
   function closeImmediately() {
     setIsDirty(false);
@@ -176,25 +178,25 @@ export function CustomizationSheet() {
           }
         >
           <SheetTitle className="sr-only">
-            {schema ? `Customize ${schema.productName}` : "Customize piece"}
+            {schema
+              ? fill(ui.customize.sheet.titleNamed, { name: schema.productName })
+              : ui.customize.sheet.titleFallback}
           </SheetTitle>
-          <SheetDescription className="sr-only">
-            Choose bespoke options and send a customization request for an official quote.
-          </SheetDescription>
+          <SheetDescription className="sr-only">{ui.customize.sheet.description}</SheetDescription>
 
           {loading ? (
             <div className="flex h-full flex-col">
               <div className="safe-area-pt flex items-center justify-between border-b border-border px-5 py-3 sm:px-6">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin text-accent-text" aria-hidden="true" />
-                  <span>Loading customization options...</span>
+                  <span>{ui.customize.sheet.loading}</span>
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   onClick={closeImmediately}
-                  aria-label="Close customization drawer"
+                  aria-label={ui.customize.sheet.closeAria}
                 >
                   <X className="size-5" aria-hidden="true" />
                 </Button>
@@ -213,7 +215,7 @@ export function CustomizationSheet() {
                   variant="ghost"
                   size="icon"
                   onClick={closeImmediately}
-                  aria-label="Close customization drawer"
+                  aria-label={ui.customize.sheet.closeAria}
                 >
                   <X className="size-5" aria-hidden="true" />
                 </Button>
@@ -222,7 +224,7 @@ export function CustomizationSheet() {
                 <Sparkles className="size-8 stroke-[1.5] text-accent-text" aria-hidden="true" />
                 <p className="mt-3 max-w-sm text-sm text-muted-foreground">{errorMsg}</p>
                 <Button type="button" variant="outline" onClick={closeImmediately} className="mt-5">
-                  Close
+                  {ui.customize.sheet.close}
                 </Button>
               </div>
             </div>

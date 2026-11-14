@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { NOINDEX_NOFOLLOW_ROBOTS } from "@/lib/seo/metadata";
+import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
 import { BackLink } from "@/components/shared/BackLink";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -7,9 +9,12 @@ import { getCustomerOrderDetail } from "@/modules/account/account.service";
 import { requirePageUser } from "@/server/dal";
 import { NotFoundError } from "@/server/errors";
 
-export const metadata: Metadata = {
-  title: "Order Details",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildPageMetadata((c) => c.pages.account.orderDetail.seo, {
+    pathname: "/account/orders",
+    robots: NOINDEX_NOFOLLOW_ROBOTS,
+  });
+}
 
 // Signed-in page rendered per request; a blocking navigation is intended.
 export const instant = false;
@@ -41,11 +46,11 @@ export default async function AccountOrderDetailPage({
           className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground/45"
         >
           <ArrowLeft className="size-5 stroke-[1.5]" aria-hidden="true" />
-          <span>Back to Orders</span>
+          <span>{(await getSiteContent()).pages.account.orderDetail.backLabel}</span>
         </BackLink>
       </div>
 
-      <OrderDetailView order={order} />
+      <OrderDetailView order={order} text={(await getSiteContent()).ui.orders} />
     </div>
   );
 }

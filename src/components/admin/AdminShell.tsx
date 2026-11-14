@@ -8,6 +8,7 @@ import {
   Coins,
   ExternalLink,
   FileText,
+  LayoutTemplate,
   FolderTree,
   Gem,
   Image as ImageIcon,
@@ -124,6 +125,12 @@ const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
     heading: "Content & Editorial",
     items: [
+      {
+        label: "Page Content",
+        href: "/admin/content",
+        icon: LayoutTemplate,
+        permission: "content:manage",
+      },
       { label: "Banners", href: "/admin/banners", icon: ImageIcon, permission: "content:manage" },
       {
         label: "Articles & Guides",

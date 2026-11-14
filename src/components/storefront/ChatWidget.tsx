@@ -1,8 +1,10 @@
 "use client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
+import { isTouchTextInputFocused, useModalHistory } from "@/hooks/use-modal-history";
 import { MessageSquare } from "lucide-react";
 import {
   ATELIER_CHAT_EVENT,
@@ -17,26 +19,29 @@ const loadChatWidgetPanel = () =>
 
 const LazyChatWidgetPanel = dynamic(loadChatWidgetPanel, {
   ssr: false,
-  loading: () => (
-    <div
-      role="dialog"
-      aria-label="Chat with us"
-      aria-busy="true"
-      className="fixed inset-x-0 bottom-0 z-[var(--z-modal)] flex h-[100dvh] flex-col overflow-hidden bg-surface md:inset-x-auto md:right-6 md:bottom-6 md:h-[min(600px,calc(100dvh-112px))] md:w-[380px] md:rounded-2xl md:border md:border-border md:shadow-md"
-    >
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-3">
-        <div className="flex items-center gap-2">
-          <div className="size-8 rounded-full bg-surface-2" />
-          <div className="space-y-1">
-            <div className="h-3.5 w-28 rounded bg-surface-2" />
-            <div className="h-2.5 w-16 rounded bg-surface-2" />
+  loading: function ChatPanelLoading() {
+    const ui = useUiText();
+    return (
+      <div
+        role="dialog"
+        aria-label={ui.chat.launcherAria}
+        aria-busy="true"
+        className="fixed inset-x-0 bottom-0 z-[var(--z-modal)] flex h-[100dvh] flex-col overflow-hidden bg-surface md:inset-x-auto md:right-6 md:bottom-6 md:h-[min(600px,calc(100dvh-112px))] md:w-[380px] md:rounded-2xl md:border md:border-border md:shadow-md"
+      >
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-3">
+          <div className="flex items-center gap-2">
+            <div className="size-8 rounded-full bg-surface-2" />
+            <div className="space-y-1">
+              <div className="h-3.5 w-28 rounded bg-surface-2" />
+              <div className="h-2.5 w-16 rounded bg-surface-2" />
+            </div>
           </div>
         </div>
+        <div className="flex-1 p-4" />
+        <div className="h-14 border-t border-border p-3" />
       </div>
-      <div className="flex-1 p-4" />
-      <div className="h-14 border-t border-border p-3" />
-    </div>
-  ),
+    );
+  },
 });
 
 function prefetchPanelAndProducts() {
@@ -139,12 +144,15 @@ export function ChatWidget() {
     };
   }, []);
 
+  // Phone Back closes the chat (and only hides the keyboard first if it is open).
+  useModalHistory(open, () => setOpen(false));
+
   // Ensure Escape closes immediately even while the lazy panel chunk is still hydrating
   React.useEffect(() => {
     if (!open) return;
     void loadChatWidgetPanel().then(() => setChunkLoaded(true));
     const onEscapeWhileLoading = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+      if (e.key !== "Escape" || isTouchTextInputFocused()) return;
       if (document.querySelector('[role="dialog"][aria-busy="true"]')) {
         e.preventDefault();
         setOpen(false);

@@ -1,5 +1,7 @@
 "use client";
 
+import type { SiteContent } from "@/modules/site-content/site-content.shared";
+
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -11,12 +13,16 @@ import { Input } from "@/components/ui/input";
 import { AuthCard, AuthHelpLink } from "@/modules/auth/AuthCard";
 import { resetPasswordSchema, type ResetPasswordInput } from "@/modules/auth/auth.schemas";
 import { authClient } from "@/server/auth-client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 interface ResetPasswordFormProps {
   token: string | null;
+  /** Card text from site-content.json → pages.auth.resetPassword. */
+  copy: Pick<SiteContent["pages"]["auth"]["resetPassword"], "card" | "invalidLink">;
 }
 
-export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
+export function ResetPasswordForm({ token, copy }: ResetPasswordFormProps) {
+  const t = useUiText().auth.resetPassword;
   const [done, setDone] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
 
@@ -32,15 +38,13 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   if (!token) {
     return (
       <AuthCard
-        eyebrow="Account Recovery"
-        title="Reset Link Invalid"
-        description="This password reset link is missing or has expired."
+        eyebrow={copy.invalidLink.eyebrow}
+        title={copy.invalidLink.title}
+        description={copy.invalidLink.description}
       >
-        <p className="text-sm text-muted-foreground">
-          Please request a fresh password reset email to continue.
-        </p>
+        <p className="text-sm text-muted-foreground">{t.invalidText}</p>
         <Button asChild className="w-full">
-          <Link href="/forgot-password">Request New Reset Link</Link>
+          <Link href="/forgot-password">{t.requestNewLink}</Link>
         </Button>
       </AuthCard>
     );
@@ -54,20 +58,20 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
     });
 
     if (res.error) {
-      setServerError(res.error.message ?? "Unable to reset password. Request a fresh link.");
+      setServerError(res.error.message ?? t.resetError);
       return;
     }
 
-    toast.success("Your password has been updated");
+    toast.success(t.updatedToast);
     setDone(true);
   });
 
   return (
     <AuthCard
-      eyebrow="Account Recovery"
-      title="Choose New Password"
-      description="Create a strong new password of at least 10 characters."
-      footer={<AuthHelpLink href="/login">Return to sign in</AuthHelpLink>}
+      eyebrow={copy.card.eyebrow}
+      title={copy.card.title}
+      description={copy.card.description}
+      footer={<AuthHelpLink href="/login">{t.returnToSignIn}</AuthHelpLink>}
     >
       {serverError && (
         <div
@@ -80,12 +84,9 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
       {done ? (
         <div className="space-y-4">
-          <p className="text-sm text-foreground">
-            Your password has been updated successfully. You may now sign in with your new
-            credentials.
-          </p>
+          <p className="text-sm text-foreground">{t.doneText}</p>
           <Button asChild className="w-full">
-            <Link href="/login">Sign In</Link>
+            <Link href="/login">{t.signIn}</Link>
           </Button>
         </div>
       ) : (
@@ -94,9 +95,9 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
           <FormField
             id="reset-new-password"
-            label="New Password"
+            label={t.newPasswordLabel}
             required
-            hint="Minimum 10 characters"
+            hint={t.passwordHint}
             error={form.formState.errors.newPassword?.message}
           >
             {(aria) => (
@@ -111,7 +112,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
           <FormField
             id="reset-confirm-password"
-            label="Confirm New Password"
+            label={t.confirmLabel}
             required
             error={form.formState.errors.confirmPassword?.message}
           >
@@ -126,7 +127,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
           </FormField>
 
           <Button type="submit" className="w-full" size="lg" loading={form.formState.isSubmitting}>
-            Update Password
+            {t.submit}
           </Button>
         </form>
       )}

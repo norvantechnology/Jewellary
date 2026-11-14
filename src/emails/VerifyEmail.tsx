@@ -19,21 +19,21 @@ export function VerifyEmail({
     <EmailLayout
       siteName={siteName}
       previewText={`Confirm your ${siteName} account email address`}
-      heading="Verify Your Email Address"
+      heading="Confirm your email address"
       contactEmail={contactEmail}
     >
-      <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {recipientName},</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {recipientName},</Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
         Thank you for creating an account with {siteName}. Please confirm your email address so you
-        can manage your wishlist, saved jewellery dossiers, and insured deliveries.
+        can save favorites, track orders and manage your account.
       </Text>
       <Section style={{ margin: "24px 0" }}>
         <Button href={verifyUrl} style={EMAIL_BUTTON_STYLE}>
-          Verify Email
+          Confirm email
         </Button>
       </Section>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        If you did not request an account, you may safely ignore this message.
+        If you didn’t create an account, you can ignore this email.
       </Text>
     </EmailLayout>
   );

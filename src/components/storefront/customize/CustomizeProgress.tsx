@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { Check } from "lucide-react";
@@ -6,10 +7,10 @@ import { cn } from "@/lib/utils";
 import { useHeaderOffset } from "@/components/storefront/customize/useHeaderOffset";
 import type { CustomizeStep } from "@/components/storefront/customize/types";
 
-const STEPS: Array<{ step: CustomizeStep; label: string }> = [
-  { step: 1, label: "Options" },
-  { step: 2, label: "Details" },
-  { step: 3, label: "Review" },
+const STEPS: Array<{ step: CustomizeStep; key: "options" | "details" | "review" }> = [
+  { step: 1, key: "options" },
+  { step: 2, key: "details" },
+  { step: 3, key: "review" },
 ];
 
 interface CustomizeProgressProps {
@@ -19,12 +20,15 @@ interface CustomizeProgressProps {
 }
 
 export function CustomizeProgress({ step, onSelectStep, variant }: CustomizeProgressProps) {
+  const ui = useUiText();
   const { mobileStickyTop } = useHeaderOffset(variant === "page");
-  const currentStepLabel = STEPS.find((item) => item.step === step)?.label ?? "Options";
+  const stepLabels = ui.customize.progress.steps;
+  const currentStepKey = STEPS.find((item) => item.step === step)?.key ?? "options";
+  const currentStepLabel = stepLabels[currentStepKey];
 
   return (
     <nav
-      aria-label="Customization steps"
+      aria-label={ui.customize.progress.aria}
       style={variant === "page" ? { top: `${mobileStickyTop}px` } : undefined}
       className={cn(
         "border-b border-border py-2.5 [@media(max-height:500px)]:py-1.5",
@@ -34,7 +38,7 @@ export function CustomizeProgress({ step, onSelectStep, variant }: CustomizeProg
       )}
     >
       <span className="sr-only" aria-live="polite">
-        Step {step} of 3: {currentStepLabel}
+        {fill(ui.customize.progress.stepStatus, { step, label: currentStepLabel })}
       </span>
 
       <div className="grid grid-cols-3 gap-2" aria-hidden="true">
@@ -51,7 +55,8 @@ export function CustomizeProgress({ step, onSelectStep, variant }: CustomizeProg
 
       {/* Narrow phones (<400px): single-line compact progress label */}
       <p className="mt-2 truncate text-[13px] font-medium text-muted-foreground min-[400px]:hidden">
-        Step {step} of 3 · <span className="font-semibold text-foreground">{currentStepLabel}</span>
+        {fill(ui.customize.progress.stepCompact, { step })}{" "}
+        <span className="font-semibold text-foreground">{currentStepLabel}</span>
       </p>
 
       {/* >=400px: single non-wrapping row aligned below segments */}
@@ -89,7 +94,7 @@ export function CustomizeProgress({ step, onSelectStep, variant }: CustomizeProg
                   {isCompleted ? (
                     <Check className="size-3.5 shrink-0 stroke-[2.5]" aria-hidden="true" />
                   ) : null}
-                  <span>{item.label}</span>
+                  <span>{stepLabels[item.key]}</span>
                 </button>
               </li>
             </React.Fragment>

@@ -39,9 +39,6 @@ function getState(): CacheState {
 }
 
 function getRedisTarget(): string | { host: string; port: number } | null {
-  if (process.env.VITEST === "true" && process.env.FORCE_REDIS_IN_TEST !== "true") {
-    return null;
-  }
   if (env.REDIS_URL) return env.REDIS_URL;
   if (env.REDIS_HOST) return { host: env.REDIS_HOST, port: env.REDIS_PORT };
   if (process.env.REDIS_PORT) return { host: "127.0.0.1", port: Number(process.env.REDIS_PORT) };

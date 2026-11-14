@@ -592,7 +592,7 @@ export async function updateAdminOrderStatus(
             input.customerNote ??
             (isStatusChange
               ? `Status updated to ${ORDER_STATUS_META[input.toStatus].label}.`
-              : "Tracking or concierge update recorded."),
+              : "Tracking update saved."),
           actorId: actor.user.id,
         },
       });

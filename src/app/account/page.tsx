@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { NOINDEX_NOFOLLOW_ROBOTS } from "@/lib/seo/metadata";
+import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Gem, Heart, MapPin, Package, ShieldCheck, Sparkles } from "lucide-react";
@@ -11,19 +13,22 @@ import { formatDate } from "@/lib/dates";
 import { formatMoneyExact } from "@/lib/money";
 import { getAccountOverviewData } from "@/modules/account/account.service";
 import { listCustomerCustomizationRequests } from "@/modules/customization/customization.service";
-import { ORDER_STATUS_META } from "@/modules/orders/state-machine";
+import { getOrderStatusMeta, type OrderStatusTexts } from "@/modules/orders/state-machine";
 import { requirePageUser } from "@/server/dal";
 
-export const metadata: Metadata = {
-  title: "Account Overview",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildPageMetadata((c) => c.pages.account.overview.seo, {
+    pathname: "/account",
+    robots: NOINDEX_NOFOLLOW_ROBOTS,
+  });
+}
 
 // Signed-in page rendered per request; a blocking navigation is intended.
 export const instant = false;
 
 export default async function AccountOverviewPage() {
   const { user } = await requirePageUser("/account");
-  const [overview, customizations] = await Promise.all([
+  const [overview, customizations, content] = await Promise.all([
     getAccountOverviewData(user.id),
     listCustomerCustomizationRequests({
       userId: user.id,
@@ -35,7 +40,11 @@ export default async function AccountOverviewPage() {
       primaryOwnerKey: `user:${user.id}`,
       allOwnerKeys: [`user:${user.id}`],
     }).catch(() => []),
+    getSiteContent(),
   ]);
+  // Visible text: site-content.json → pages.account.overview
+  const ORDER_STATUS_META = getOrderStatusMeta(content.ui.orders.statuses as OrderStatusTexts);
+  const t = content.pages.account.overview;
 
   return (
     <div className="space-y-8">
@@ -45,15 +54,13 @@ export default async function AccountOverviewPage() {
           className="ma-card-elevate rounded-xl border border-border bg-card p-3.5 focus-visible:outline-2 focus-visible:outline-foreground/45 md:p-5"
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">Orders</span>
+            <span className="text-sm font-medium text-muted-foreground">{t.stats.orders}</span>
             <Package className="size-5 stroke-[1.5] text-accent-text" aria-hidden="true" />
           </div>
           <p className="tabular-nums-price mt-1.5 text-2xl font-semibold text-foreground sm:mt-2.5 sm:text-3xl">
             {overview.orderCount}
           </p>
-          <p className="mt-1 hidden text-xs text-muted-foreground sm:block">
-            Receipts &amp; tracking
-          </p>
+          <p className="mt-1 hidden text-xs text-muted-foreground sm:block">{t.stats.ordersHint}</p>
         </Link>
 
         <Link
@@ -61,14 +68,14 @@ export default async function AccountOverviewPage() {
           className="ma-card-elevate rounded-xl border border-border bg-card p-3.5 focus-visible:outline-2 focus-visible:outline-foreground/45 md:p-5"
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">Addresses</span>
+            <span className="text-sm font-medium text-muted-foreground">{t.stats.addresses}</span>
             <MapPin className="size-5 stroke-[1.5] text-accent-text" aria-hidden="true" />
           </div>
           <p className="tabular-nums-price mt-1.5 text-2xl font-semibold text-foreground sm:mt-2.5 sm:text-3xl">
             {overview.addressCount}
           </p>
           <p className="mt-1 hidden text-xs text-muted-foreground sm:block">
-            Shipping &amp; billing
+            {t.stats.addressesHint}
           </p>
         </Link>
 
@@ -77,14 +84,16 @@ export default async function AccountOverviewPage() {
           className="ma-card-elevate rounded-xl border border-border bg-card p-3.5 focus-visible:outline-2 focus-visible:outline-foreground/45 md:p-5"
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">Custom Requests</span>
+            <span className="text-sm font-medium text-muted-foreground">
+              {t.stats.customizations}
+            </span>
             <Sparkles className="size-5 stroke-[1.5] text-accent-text" aria-hidden="true" />
           </div>
           <p className="tabular-nums-price mt-1.5 text-2xl font-semibold text-foreground sm:mt-2.5 sm:text-3xl">
             {customizations.length}
           </p>
           <p className="mt-1 hidden text-xs text-muted-foreground sm:block">
-            Requests &amp; quotes
+            {t.stats.customizationsHint}
           </p>
         </Link>
 
@@ -93,25 +102,27 @@ export default async function AccountOverviewPage() {
           className="ma-card-elevate rounded-xl border border-border bg-card p-3.5 focus-visible:outline-2 focus-visible:outline-foreground/45 md:p-5"
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">Wishlist</span>
+            <span className="text-sm font-medium text-muted-foreground">{t.stats.wishlist}</span>
             <Heart className="size-5 stroke-[1.5] text-accent-text" aria-hidden="true" />
           </div>
           <p className="tabular-nums-price mt-1.5 text-2xl font-semibold text-foreground sm:mt-2.5 sm:text-3xl">
             {overview.wishlistCount}
           </p>
-          <p className="mt-1 hidden text-xs text-muted-foreground sm:block">Saved for later</p>
+          <p className="mt-1 hidden text-xs text-muted-foreground sm:block">
+            {t.stats.wishlistHint}
+          </p>
         </Link>
       </RevealStagger>
 
       <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
-            Recent Orders
+            {t.recentOrders.heading}
           </h2>
           {overview.orderCount > 0 && (
             <Button asChild variant="ghost" size="sm">
               <Link href="/account/orders" className="gap-1.5">
-                <span>All Orders</span>
+                <span>{t.recentOrders.linkLabel}</span>
                 <ArrowRight className="size-4 stroke-[1.5]" aria-hidden="true" />
               </Link>
             </Button>
@@ -122,9 +133,9 @@ export default async function AccountOverviewPage() {
           <div className="mt-4">
             <EmptyState
               icon={Package}
-              title="No orders yet"
-              description="Your orders and their tracking will appear here."
-              actionLabel="Explore Collections"
+              title={t.recentOrders.emptyTitle}
+              description={t.recentOrders.emptyText}
+              actionLabel={t.recentOrders.emptyAction}
               actionHref="/collections"
             />
           </div>
@@ -186,10 +197,10 @@ export default async function AccountOverviewPage() {
         <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold tracking-[-0.01em] text-foreground">
-              Default Delivery
+              {t.delivery.heading}
             </h2>
             <Button asChild variant="ghost" size="sm" className="min-h-11 sm:min-h-9">
-              <Link href="/account/addresses">Manage</Link>
+              <Link href="/account/addresses">{t.delivery.linkLabel}</Link>
             </Button>
           </div>
           {overview.defaultShippingAddress ? (
@@ -208,34 +219,32 @@ export default async function AccountOverviewPage() {
               <p>{formatCountryName(overview.defaultShippingAddress.country)}</p>
             </address>
           ) : (
-            <p className="mt-3 text-sm text-muted-foreground">
-              No default delivery address saved yet.
-            </p>
+            <p className="mt-3 text-sm text-muted-foreground">{t.delivery.empty}</p>
           )}
         </section>
 
         <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold tracking-[-0.01em] text-foreground">
-              Account Security
+              {t.security.heading}
             </h2>
             <Button asChild variant="ghost" size="sm" className="min-h-11 sm:min-h-9">
-              <Link href="/account/settings">Settings</Link>
+              <Link href="/account/settings">{t.security.linkLabel}</Link>
             </Button>
           </div>
           <dl className="mt-3 space-y-2.5 text-sm">
             <div className="flex justify-between gap-2">
-              <dt className="text-muted-foreground">Email status</dt>
+              <dt className="text-muted-foreground">{t.security.emailStatus}</dt>
               <dd>
                 <Badge variant={overview.profile.emailVerified ? "success" : "warning"}>
-                  {overview.profile.emailVerified ? "Verified" : "Verification pending"}
+                  {overview.profile.emailVerified ? t.security.verified : t.security.pending}
                 </Badge>
               </dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-muted-foreground">Telephone</dt>
+              <dt className="text-muted-foreground">{t.security.phone}</dt>
               <dd className="tabular-nums-price text-foreground">
-                {overview.profile.phone ?? "Not provided"}
+                {overview.profile.phone ?? t.security.phoneMissing}
               </dd>
             </div>
           </dl>
@@ -244,7 +253,7 @@ export default async function AccountOverviewPage() {
               className="size-5 shrink-0 stroke-[1.5] text-accent-text"
               aria-hidden="true"
             />
-            <span>Ordered as a guest? Use Track Order to find it.</span>
+            <span>{t.security.guestHint}</span>
           </div>
         </section>
       </div>

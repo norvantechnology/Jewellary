@@ -1,0 +1,28 @@
+name: Scheduled jobs
+
+# Vercel Hobby runs crons at most once a day. This calls the same protected endpoints more often,
+# for free. Setup: repository secrets SITE_URL (https://your-domain.com) and CRON_SECRET, and the
+# repository variable ENABLE_CRON=true.
+on:
+  schedule:
+    - cron: "*/5 * * * *" # release expired stock holds
+    - cron: "0 * * * *" # publish scheduled content + custom design reminders
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    if: ${{ vars.ENABLE_CRON == 'true' }}
+    steps:
+      - name: Release expired stock holds
+        run: |
+          curl -fsS -X POST "${{ secrets.SITE_URL }}/api/cron/release-reservations" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+
+      - name: Publish scheduled content and send reminders
+        if: ${{ github.event.schedule == '0 * * * *' || github.event_name == 'workflow_dispatch' }}
+        run: |
+          curl -fsS -X POST "${{ secrets.SITE_URL }}/api/cron/publish-scheduled" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          curl -fsS -X POST "${{ secrets.SITE_URL }}/api/cron/customization-reminders" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

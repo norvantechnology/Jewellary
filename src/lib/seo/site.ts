@@ -1,10 +1,14 @@
+import siteContentFile from "../../../data/frontend/site-content.json";
 import { env } from "@/lib/env";
 
-export const CANONICAL_PRODUCTION_ORIGIN = "https://maisonaurelia.com";
-export const SITE_LOCALE = "en_US";
-export const SITE_LANGUAGE = "en-US";
-export const DEFAULT_BRAND_NAME = "Maison Aurelia";
-export const DEFAULT_LEGAL_NAME = "Maison Aurelia Fine Jewellery Ltd.";
+/** Technical SEO settings live in data/frontend/site-content.json → siteConfig (file-only). */
+const config = siteContentFile.siteConfig;
+
+export const CANONICAL_PRODUCTION_ORIGIN = config.canonicalOrigin;
+export const SITE_LOCALE = config.locale;
+export const SITE_LANGUAGE = config.language;
+export const DEFAULT_BRAND_NAME = config.brandName;
+export const DEFAULT_LEGAL_NAME = config.legalName;
 
 const LOCAL_OR_PLACEHOLDER_HOSTS = new Set([
   "localhost",
@@ -38,7 +42,11 @@ export function sanitizePublicOrigin(rawOrigin: string): string {
  * Returns the canonical public storefront origin without a trailing slash.
  */
 export function getSiteUrl(): string {
-  return sanitizePublicOrigin(env.NEXT_PUBLIC_SITE_URL);
+  // SITE_URL is read at runtime on the server, so one build can be deployed to any domain
+  // (staging, preview, production) without rebuilding. NEXT_PUBLIC_SITE_URL is the build-time
+  // fallback. Share previews (WhatsApp etc.) only work when this is the real public https domain.
+  const runtime = typeof window === "undefined" ? process.env.SITE_URL : undefined;
+  return sanitizePublicOrigin(runtime || env.NEXT_PUBLIC_SITE_URL);
 }
 
 /**
@@ -80,104 +88,15 @@ export const STATIC_INDEXABLE_ROUTES: ReadonlyArray<{
   label: string;
   priority: number;
   changeFrequency: "daily" | "weekly" | "monthly" | "yearly";
-}> = [
-  { path: "/", slug: "/", label: "Home", priority: 1.0, changeFrequency: "daily" },
-  {
-    path: "/collections",
-    slug: "collections",
-    label: "All Collections",
-    priority: 0.9,
-    changeFrequency: "daily",
-  },
-  {
-    path: "/guides",
-    slug: "guides",
-    label: "Atelier Journal",
-    priority: 0.8,
-    changeFrequency: "weekly",
-  },
-  {
-    path: "/about",
-    slug: "about",
-    label: "Atelier Heritage",
-    priority: 0.6,
-    changeFrequency: "monthly",
-  },
-  {
-    path: "/contact",
-    slug: "contact",
-    label: "Private Concierge",
-    priority: 0.7,
-    changeFrequency: "monthly",
-  },
-  {
-    path: "/faq",
-    slug: "faq",
-    label: "Frequently Asked Questions",
-    priority: 0.6,
-    changeFrequency: "monthly",
-  },
-  {
-    path: "/shipping-returns",
-    slug: "shipping-returns",
-    label: "Shipping & Returns",
-    priority: 0.6,
-    changeFrequency: "monthly",
-  },
-  {
-    path: "/ring-size-guide",
-    slug: "ring-size-guide",
-    label: "Ring Size Guide",
-    priority: 0.7,
-    changeFrequency: "monthly",
-  },
-  {
-    path: "/care-guide",
-    slug: "care-guide",
-    label: "Fine Jewellery Care Guide",
-    priority: 0.6,
-    changeFrequency: "monthly",
-  },
-  {
-    path: "/newsletter",
-    slug: "newsletter",
-    label: "Newsletter",
-    priority: 0.4,
-    changeFrequency: "monthly",
-  },
-  {
-    path: "/privacy",
-    slug: "privacy",
-    label: "Privacy Policy",
-    priority: 0.3,
-    changeFrequency: "yearly",
-  },
-  {
-    path: "/terms",
-    slug: "terms",
-    label: "Terms of Service",
-    priority: 0.3,
-    changeFrequency: "yearly",
-  },
-];
+}> = config.sitemap as ReadonlyArray<{
+  path: string;
+  slug: string;
+  label: string;
+  priority: number;
+  changeFrequency: "daily" | "weekly" | "monthly" | "yearly";
+}>;
 
-export const NOINDEX_PATH_PREFIXES = [
-  "/cart",
-  "/checkout",
-  "/account",
-  "/admin",
-  "/login",
-  "/register",
-  "/forgot-password",
-  "/reset-password",
-  "/verify-email",
-  "/orders",
-  "/wishlist",
-  "/search",
-  "/customize",
-  "/dev",
-  "/api",
-] as const;
+export const NOINDEX_PATH_PREFIXES: ReadonlyArray<string> = config.noindexPaths;
 
 export function isNoindexRoutePath(pathname: string): boolean {
   const normalized = normalizeSeoPath(pathname);

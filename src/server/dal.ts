@@ -3,6 +3,7 @@ import { getRequestReturnTo } from "@/server/return-to";
 import { cache } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { hasPermission, roleAtLeast, type Permission, type UserRole } from "@/lib/permissions";
 import { auth } from "@/server/auth";
 import { db } from "@/server/db";
@@ -35,6 +36,8 @@ export const getOptionalSession = cache(async (): Promise<AuthenticatedContext |
   if (!cookieHeader.includes("session_token=") && !hdrs.get("authorization")) {
     return null;
   }
+  // Session checks are always request-time; the auth library reads the clock (Date.now()).
+  await connection();
   const session = await auth.api.getSession({ headers: hdrs });
   if (!session?.user?.id || !session?.session?.id) {
     return null;

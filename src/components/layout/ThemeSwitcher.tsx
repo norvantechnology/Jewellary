@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
@@ -30,6 +32,7 @@ export function ThemeSwitcher({
   className?: string;
   showTooltip?: boolean;
 }) {
+  const ui = useUiText();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const reducedMotion = useReducedMotionSafe();
   const timerRef = React.useRef<number | null>(null);
@@ -59,15 +62,15 @@ export function ThemeSwitcher({
   if (inline) {
     const activeTheme = mounted ? (theme ?? "system") : "system";
     const options = [
-      { value: "light", label: "Light", Icon: Sun },
-      { value: "dark", label: "Dark", Icon: Moon },
-      { value: "system", label: "Auto", Icon: Monitor },
+      { value: "light", label: ui.layout.themeLight, Icon: Sun },
+      { value: "dark", label: ui.layout.themeDark, Icon: Moon },
+      { value: "system", label: ui.layout.themeAuto, Icon: Monitor },
     ] as const;
 
     return (
       <div
         role="radiogroup"
-        aria-label="Select colour theme"
+        aria-label={ui.layout.themeLabel}
         className={cn(
           "grid w-full grid-cols-3 gap-1 rounded-lg border border-border bg-surface-2 p-1",
           className,
@@ -130,7 +133,7 @@ export function ThemeSwitcher({
     <DropdownMenuTrigger asChild>
       <button
         type="button"
-        aria-label="Select colour theme"
+        aria-label={ui.layout.themeLabel}
         className={cn(
           compact
             ? "transition-ui inline-flex size-11 cursor-pointer items-center justify-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2"
@@ -153,7 +156,7 @@ export function ThemeSwitcher({
         <TooltipProvider delayDuration={250}>
           <Tooltip>
             <TooltipTrigger asChild>{triggerButton}</TooltipTrigger>
-            <TooltipContent className="hidden lg:block">Theme</TooltipContent>
+            <TooltipContent className="hidden lg:block">{ui.layout.themeTooltip}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       ) : (
@@ -167,15 +170,15 @@ export function ThemeSwitcher({
         >
           <DropdownMenuRadioItem value="light" className="gap-2">
             <Sun className="size-4 text-text-muted" strokeWidth={1.5} aria-hidden="true" />
-            <span>Light</span>
+            <span>{ui.layout.themeLight}</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark" className="gap-2">
             <Moon className="size-4 text-text-muted" strokeWidth={1.5} aria-hidden="true" />
-            <span>Dark</span>
+            <span>{ui.layout.themeDark}</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="system" className="gap-2">
             <Monitor className="size-4 text-text-muted" strokeWidth={1.5} aria-hidden="true" />
-            <span>System</span>
+            <span>{ui.layout.themeSystem}</span>
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>

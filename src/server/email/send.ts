@@ -97,7 +97,7 @@ export async function sendOrderConfirmationEmail(input: {
 }) {
   return sendTemplate({
     to: input.to,
-    subject: `Order ${input.orderNumber} Confirmed — ${env.NEXT_PUBLIC_SITE_NAME}`,
+    subject: `Order ${input.orderNumber} confirmed — ${env.NEXT_PUBLIC_SITE_NAME}`,
     tag: "order-confirmation",
     element: OrderConfirmationEmail({
       siteName: env.NEXT_PUBLIC_SITE_NAME,
@@ -156,7 +156,7 @@ export async function sendPaymentAlertEmail(input: {
     tag: "payment-alert",
     element: OrderStatusEmail({
       siteName: env.NEXT_PUBLIC_SITE_NAME,
-      recipientName: "Atelier team",
+      recipientName: "Store team",
       orderNumber: input.orderNumber,
       statusLabel: input.title,
       message: input.message,
@@ -176,7 +176,7 @@ export async function sendEnquiryNotificationEmails(input: {
   await Promise.all([
     sendTemplate({
       to: input.customerEmail,
-      subject: `We received your enquiry — ${env.NEXT_PUBLIC_SITE_NAME}`,
+      subject: `We received your message — ${env.NEXT_PUBLIC_SITE_NAME}`,
       tag: "enquiry-ack",
       element: EnquiryNotificationEmail({
         siteName: env.NEXT_PUBLIC_SITE_NAME,
@@ -191,7 +191,7 @@ export async function sendEnquiryNotificationEmails(input: {
     }),
     sendTemplate({
       to: env.ADMIN_NOTIFY_EMAIL,
-      subject: `[Enquiry] ${input.enquiryType} from ${input.customerName}`,
+      subject: `[Inquiry] ${input.enquiryType} from ${input.customerName}`,
       tag: "enquiry-admin",
       element: EnquiryNotificationEmail({
         siteName: env.NEXT_PUBLIC_SITE_NAME,

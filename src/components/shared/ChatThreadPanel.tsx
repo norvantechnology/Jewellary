@@ -1,4 +1,5 @@
 "use client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import dynamic from "next/dynamic";
@@ -97,14 +98,14 @@ const VIRTUAL_THRESHOLD = 100;
 const VIRTUAL_WINDOW_STEP = 60;
 const EST_ROW_HEIGHT = 68;
 
-function getDayGroupLabel(iso: string): string {
+function getDayGroupLabel(iso: string, labels: { today: string; yesterday: string }): string {
   const date = new Date(iso);
   const now = new Date();
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const startMsg = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   const diffDays = Math.round((startToday - startMsg) / (24 * 60 * 60 * 1000));
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
+  if (diffDays === 0) return labels.today;
+  if (diffDays === 1) return labels.yesterday;
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -148,7 +149,7 @@ export function ChatThreadPanel({
   viewerRole,
   suggestedPrompts = [],
   cannedReplies = [],
-  composerPlaceholder = "Ask concierge…",
+  composerPlaceholder,
   defaultShareOpen = false,
   initialDetail = null,
   initialFiles,
@@ -159,6 +160,11 @@ export function ChatThreadPanel({
   onNewMessage,
   className = "",
 }: ChatThreadPanelProps) {
+  const ui = useUiText();
+  const dayLabels = React.useMemo(
+    () => ({ today: ui.chat.thread.today, yesterday: ui.chat.thread.yesterday }),
+    [ui.chat.thread.today, ui.chat.thread.yesterday],
+  );
   const { formatPrice } = useCurrency();
 
   // The browser-only thread cache must not be read during hydration (server has no cache),
@@ -567,7 +573,7 @@ export function ChatThreadPanel({
       if (!files || files.length === 0) return;
       const availableSlots = 5 - queuedImages.length;
       if (availableSlots <= 0) {
-        toast.error("Maximum 5 images per message.");
+        toast.error(ui.chat.thread.maxImages);
         return;
       }
 
@@ -588,7 +594,7 @@ export function ChatThreadPanel({
         pumpUploadQueue();
       }
     },
-    [queuedImages.length, pumpUploadQueue],
+    [queuedImages.length, pumpUploadQueue, ui.chat.thread.maxImages],
   );
 
   React.useEffect(() => {
@@ -635,7 +641,7 @@ export function ChatThreadPanel({
         conversationId,
         senderId: null,
         senderRole: viewerRole,
-        senderName: viewerRole === "ADMIN" ? "Atelier Concierge" : "You",
+        senderName: viewerRole === "ADMIN" ? ui.chat.thread.teamName : ui.chat.you,
         type: params.type,
         body: params.body,
         attachments: (params.attachments ?? []).map((a) => ({
@@ -699,7 +705,14 @@ export function ChatThreadPanel({
         );
       }
     },
-    [conversationId, mergeMessages, scrollToBottom, viewerRole],
+    [
+      conversationId,
+      mergeMessages,
+      scrollToBottom,
+      viewerRole,
+      ui.chat.thread.teamName,
+      ui.chat.you,
+    ],
   );
 
   async function handleSend(overrideBody?: string) {
@@ -708,12 +721,12 @@ export function ChatThreadPanel({
       (q) => q.status === "uploading" || q.status === "queued",
     );
     if (uploadingNow) {
-      toast.error("Please wait for attached images to finish uploading.");
+      toast.error(ui.chat.thread.waitUploads);
       return;
     }
     const hasFailed = queuedImages.some((q) => q.status === "error");
     if (hasFailed) {
-      toast.error("Remove or retry failed image uploads before sending.");
+      toast.error(ui.chat.thread.failedUploads);
       return;
     }
 
@@ -813,7 +826,7 @@ export function ChatThreadPanel({
 
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i]!;
-      const dayLabel = getDayGroupLabel(msg.createdAt);
+      const dayLabel = getDayGroupLabel(msg.createdAt, dayLabels);
       if (dayLabel !== currentDay) {
         currentDay = dayLabel;
         out.push({ type: "day", label: dayLabel, key: `day-${msg.seq}-${i}-${dayLabel}` });
@@ -841,7 +854,7 @@ export function ChatThreadPanel({
         prev!.type !== "SYSTEM" &&
         ownRoleCheck(prev!.senderRole) === isOwn &&
         prev!.senderName === msg.senderName &&
-        getDayGroupLabel(prev!.createdAt) === dayLabel &&
+        getDayGroupLabel(prev!.createdAt, dayLabels) === dayLabel &&
         Math.abs(new Date(msg.createdAt).getTime() - new Date(prev!.createdAt).getTime()) <=
           5 * 60 * 1000;
 
@@ -850,7 +863,7 @@ export function ChatThreadPanel({
         next!.type !== "SYSTEM" &&
         ownRoleCheck(next!.senderRole) === isOwn &&
         next!.senderName === msg.senderName &&
-        getDayGroupLabel(next!.createdAt) === dayLabel &&
+        getDayGroupLabel(next!.createdAt, dayLabels) === dayLabel &&
         Math.abs(new Date(next!.createdAt).getTime() - new Date(msg.createdAt).getTime()) <=
           5 * 60 * 1000 &&
         msg.localStatus !== "failed" &&
@@ -873,7 +886,7 @@ export function ChatThreadPanel({
       });
     }
     return out;
-  }, [messages, ownRoleCheck]);
+  }, [messages, ownRoleCheck, dayLabels]);
 
   // Sliding DOM window when > 100 timeline items
   const isWindowed = timelineEntries.length > VIRTUAL_THRESHOLD;
@@ -894,16 +907,14 @@ export function ChatThreadPanel({
       {showOfflineBanner ? (
         <div className="flex items-start gap-2.5 border-b border-border/70 bg-surface-2/80 px-3 py-2 text-[13px] text-text-muted">
           <Clock className="mt-0.5 size-4 shrink-0 text-accent-text" aria-hidden="true" />
-          <p className="min-w-0 flex-1 leading-snug">
-            Outside live atelier hours — leave a note and we&apos;ll notify you by email.
-          </p>
+          <p className="min-w-0 flex-1 leading-snug">{ui.chat.thread.offlineNotice}</p>
           <button
             type="button"
             onClick={() => {
               dismissOfflineNoticeForSession();
               setNoticeDismissed(true);
             }}
-            aria-label="Dismiss atelier hours notice"
+            aria-label={ui.chat.thread.dismissNoticeAria}
             className="-mr-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <X className="size-3.5" aria-hidden="true" />
@@ -938,10 +949,8 @@ export function ChatThreadPanel({
                 <Sparkles className="size-5" aria-hidden="true" />
               </div>
               <div className="space-y-1">
-                <p className="text-base font-semibold text-text">How can we help?</p>
-                <p className="text-[13px] text-text-muted">
-                  Ask about sizing, diamonds, metals, or bespoke commissions.
-                </p>
+                <p className="text-base font-semibold text-text">{ui.chat.emptyTitle}</p>
+                <p className="text-[13px] text-text-muted">{ui.chat.thread.emptyText}</p>
               </div>
               {suggestedPrompts.length > 0 ? (
                 <div className="mt-1 flex w-full max-w-[300px] flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center">
@@ -1045,11 +1054,11 @@ export function ChatThreadPanel({
       {cannedOpen && cannedReplies.length > 0 ? (
         <div className="max-h-52 space-y-1.5 overflow-y-auto border-t border-border bg-card p-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-text">Insert Atelier Response</p>
+            <p className="text-xs font-semibold text-text">{ui.chat.thread.cannedTitle}</p>
             <button
               type="button"
               onClick={() => setCannedOpen(false)}
-              aria-label="Close canned replies"
+              aria-label={ui.chat.thread.cannedCloseAria}
               className="inline-flex size-8 items-center justify-center rounded-full text-text-muted hover:bg-surface-2"
             >
               <X className="size-3.5" aria-hidden="true" />
@@ -1082,7 +1091,11 @@ export function ChatThreadPanel({
               className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-border bg-surface"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.previewUrl} alt="Upload preview" className="size-full object-cover" />
+              <img
+                src={img.previewUrl}
+                alt={ui.chat.thread.uploadPreviewAlt}
+                className="size-full object-cover"
+              />
               {img.status === "uploading" || img.status === "queued" ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-footer-bg/70 text-[10px] font-semibold text-footer-text">
                   {img.progress}%
@@ -1092,17 +1105,17 @@ export function ChatThreadPanel({
                 <button
                   type="button"
                   onClick={() => retryUploadItem(img.localId, img.file)}
-                  aria-label="Retry image upload"
+                  aria-label={ui.chat.thread.retryUploadAria}
                   className="absolute inset-0 flex flex-col items-center justify-center bg-danger/90 text-danger-foreground"
                 >
                   <RefreshCw className="size-3.5" />
-                  <span className="text-[9px] font-medium">Retry</span>
+                  <span className="text-[9px] font-medium">{ui.chat.thread.retry}</span>
                 </button>
               ) : null}
               <button
                 type="button"
                 onClick={() => removeQueuedImage(img.localId)}
-                aria-label="Remove queued image"
+                aria-label={ui.chat.thread.removeImageAria}
                 className="absolute top-0.5 right-0.5 inline-flex size-5 items-center justify-center rounded-full bg-footer-bg/85 text-footer-text"
               >
                 <X className="size-3" />
@@ -1122,11 +1135,11 @@ export function ChatThreadPanel({
                 setPlusMenuOpen(false);
                 fileInputRef.current?.click();
               }}
-              aria-label="Attach images"
+              aria-label={ui.chat.attachAria}
               className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-medium text-text hover:bg-surface-2"
             >
               <ImagePlus className="size-4" aria-hidden="true" />
-              <span>Photo</span>
+              <span>{ui.chat.photo}</span>
             </button>
             <button
               type="button"
@@ -1136,11 +1149,11 @@ export function ChatThreadPanel({
                 setShareOpen(true);
                 setCannedOpen(false);
               }}
-              aria-label="Share product or reference"
+              aria-label={ui.chat.shareAria}
               className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-medium text-text hover:bg-surface-2"
             >
               <Paperclip className="size-4" aria-hidden="true" />
-              <span>Share piece</span>
+              <span>{ui.chat.sharePiece}</span>
             </button>
           </div>
         ) : null}
@@ -1149,7 +1162,7 @@ export function ChatThreadPanel({
           <input
             ref={fileInputRef}
             type="file"
-            aria-label="Upload chat image attachments"
+            aria-label={ui.chat.uploadAria}
             accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
             multiple
             className="hidden"
@@ -1163,7 +1176,7 @@ export function ChatThreadPanel({
           <button
             type="button"
             onClick={() => setPlusMenuOpen((o) => !o)}
-            aria-label="More attachment actions"
+            aria-label={ui.chat.moreActionsAria}
             className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none min-[360px]:hidden"
           >
             <Plus className="size-5" aria-hidden="true" />
@@ -1173,7 +1186,7 @@ export function ChatThreadPanel({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            aria-label="Attach images"
+            aria-label={ui.chat.attachAria}
             className="hidden size-10 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none min-[360px]:inline-flex"
           >
             <ImagePlus className="size-5" aria-hidden="true" />
@@ -1187,7 +1200,7 @@ export function ChatThreadPanel({
               setShareOpen((o) => !o);
               setCannedOpen(false);
             }}
-            aria-label="Share product or reference"
+            aria-label={ui.chat.shareAria}
             className="hidden size-10 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none min-[360px]:inline-flex"
           >
             <Paperclip className="size-5" aria-hidden="true" />
@@ -1200,7 +1213,7 @@ export function ChatThreadPanel({
                 setCannedOpen((o) => !o);
                 setShareOpen(false);
               }}
-              aria-label="Canned replies"
+              aria-label={ui.chat.thread.cannedAria}
               className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               <Sparkles className="size-5" aria-hidden="true" />
@@ -1222,15 +1235,15 @@ export function ChatThreadPanel({
                 void handleSend();
               }
             }}
-            placeholder={composerPlaceholder}
-            aria-label="Chat message"
+            placeholder={composerPlaceholder ?? ui.chat.composerPlaceholder}
+            aria-label={ui.chat.thread.messageAria}
             className="max-h-32 min-h-10 flex-1 resize-none rounded-[20px] border border-border-strong bg-surface px-3.5 py-2 text-[15px] leading-[1.35] text-text placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           />
 
           <button
             type="button"
             onClick={() => void handleSend()}
-            aria-label="Send message"
+            aria-label={ui.chat.sendAria}
             className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-95"
           >
             <ArrowUp className="size-4.5" strokeWidth={2.25} aria-hidden="true" />

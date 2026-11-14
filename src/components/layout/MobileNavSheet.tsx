@@ -1,12 +1,14 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { m } from "motion/react";
 import { CurrencySwitcher } from "@/components/layout/CurrencySwitcher";
-import { buildNavigationSections } from "@/components/layout/navigation-data";
+import { buildNavigationSections, type NavLabels } from "@/components/layout/navigation-data";
 import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
 import { Logo } from "@/components/shared/Logo";
 import {
@@ -22,14 +24,17 @@ import type { NavCategoryItem } from "@/types/navigation";
 export function MobileNavSheet({
   siteName,
   categories,
+  labels,
   open,
   onOpenChange,
 }: {
   siteName: string;
   categories: NavCategoryItem[];
+  labels: NavLabels;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
+  const ui = useUiText();
   const [internalOpen, setInternalOpen] = React.useState(false);
   const resolvedOpen = open ?? internalOpen;
   const setOpen = React.useCallback(
@@ -62,7 +67,7 @@ export function MobileNavSheet({
         <SheetTrigger asChild>
           <button
             type="button"
-            aria-label="Open navigation menu"
+            aria-label={ui.layout.openMenu}
             className="transition-ui inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-text-2 hover:bg-surface-3 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent lg:hidden"
           >
             <Menu className="size-6" strokeWidth={1.5} aria-hidden="true" />
@@ -92,14 +97,14 @@ export function MobileNavSheet({
                 onClick={() => setOpen(false)}
                 className="flex min-h-12 items-center border-b border-border text-sm font-medium text-text hover:text-accent-text"
               >
-                All Jewellery
+                {labels.allJewellery}
               </Link>
             </m.div>
 
             <Accordion type="multiple" defaultValue={["categories"]} className="w-full">
               <AccordionItem value="categories" className="border-b border-border">
                 <AccordionTrigger className="min-h-12 py-3 text-sm font-medium hover:no-underline">
-                  Shop by Category
+                  {labels.mobileShopByCategory}
                 </AccordionTrigger>
                 <AccordionContent className="space-y-4 pb-3">
                   {categoryGroups.map((group) => (
@@ -130,7 +135,7 @@ export function MobileNavSheet({
               </AccordionItem>
               <AccordionItem value="collections" className="border-b border-border">
                 <AccordionTrigger className="min-h-12 py-3 text-sm font-medium hover:no-underline">
-                  Collections
+                  {labels.collections}
                 </AccordionTrigger>
                 <AccordionContent className="pb-3">
                   <ul className="flex flex-col">
@@ -152,7 +157,7 @@ export function MobileNavSheet({
                         onClick={() => setOpen(false)}
                         className="flex min-h-12 items-center text-sm font-medium text-accent-text"
                       >
-                        View all collections
+                        {labels.viewAllCollections}
                       </Link>
                     </li>
                   </ul>
@@ -166,7 +171,7 @@ export function MobileNavSheet({
                 onClick={() => setOpen(false)}
                 className="flex min-h-12 items-center border-b border-border text-sm font-medium text-text hover:text-accent-text"
               >
-                Guides
+                {labels.guides}
               </Link>
             </m.div>
             <m.div variants={reducedMotion ? undefined : menuItemVariants}>
@@ -175,7 +180,7 @@ export function MobileNavSheet({
                 onClick={() => setOpen(false)}
                 className="flex min-h-12 items-center border-b border-border text-sm font-medium text-text hover:text-accent-text"
               >
-                About Us
+                {labels.mobileAbout}
               </Link>
             </m.div>
             <m.div variants={reducedMotion ? undefined : menuItemVariants}>
@@ -184,7 +189,7 @@ export function MobileNavSheet({
                 onClick={() => setOpen(false)}
                 className="flex min-h-12 items-center border-b border-border text-sm font-medium text-text hover:text-accent-text"
               >
-                Contact
+                {labels.mobileContact}
               </Link>
             </m.div>
           </m.div>
@@ -198,28 +203,28 @@ export function MobileNavSheet({
               onClick={() => setOpen(false)}
               className="inline-flex min-h-11 items-center text-sm text-text-2 hover:text-text"
             >
-              Account
+              {labels.account}
             </Link>
             <Link
               href="/account/orders"
               onClick={() => setOpen(false)}
               className="inline-flex min-h-11 items-center text-sm text-text-2 hover:text-text"
             >
-              Orders
+              {labels.orders}
             </Link>
             <Link
               href="/orders/track"
               onClick={() => setOpen(false)}
               className="inline-flex min-h-11 items-center text-sm text-text-2 hover:text-text"
             >
-              Track Order
+              {labels.trackOrder}
             </Link>
             <Link
               href="/wishlist"
               onClick={() => setOpen(false)}
               className="inline-flex min-h-11 items-center text-sm text-text-2 hover:text-text"
             >
-              Wishlist
+              {labels.wishlist}
             </Link>
           </div>
           <ThemeSwitcher inline />

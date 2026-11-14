@@ -11,40 +11,24 @@ import { HomeProductFinder } from "@/components/storefront/HomeProductFinder";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { Button } from "@/components/ui/button";
 import { buildJewelryStoreJsonLd } from "@/lib/seo/jsonld";
-import { INDEXABLE_ROBOTS, NOINDEX_FOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { getHomepagePayload } from "@/modules/catalog/catalog.public";
-import { getStaticPageSeo } from "@/modules/seo/seo.service";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
+import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const [settings, staticSeo] = await Promise.all([
-    getPublicStoreSettings(),
-    getStaticPageSeo("/"),
-  ]);
-  return buildMetadata({
-    absoluteTitle:
-      staticSeo?.seoTitle ?? `${settings.storeName} — Certified Diamonds & Fine Jewellery`,
-    description:
-      staticSeo?.seoDescription ??
-      settings.seoDefaultDescription ??
-      settings.tagline ??
-      "Discover GIA and IGI certified diamonds, engagement rings, and heirloom 18K gold jewellery crafted with full grading transparency.",
-    keywords: staticSeo?.seoKeywords ?? undefined,
-    ogTitle: staticSeo?.ogTitle ?? undefined,
-    ogDescription: staticSeo?.ogDescription ?? undefined,
-    images: staticSeo?.ogImageUrl
-      ? [{ url: staticSeo.ogImageUrl, alt: settings.storeName, width: 1200, height: 630 }]
-      : undefined,
-    pathname: "/",
-    canonical: staticSeo?.canonicalOverride ?? "/",
-    storeName: settings.storeName,
-    siteDefaultOgImage: settings.defaultOgImageUrl,
-    robots: staticSeo?.noindex ? NOINDEX_FOLLOW_ROBOTS : INDEXABLE_ROBOTS,
-  });
+  return buildPageMetadata((c) => c.pages.home.seo, { pathname: "/", absoluteTitle: true });
 }
 
+const STEP_ICONS = [Compass, Sparkles, Award];
+const GUARANTEE_ICONS = [Award, Truck, ShieldCheck];
+
 export default async function HomePage() {
-  const [payload, settings] = await Promise.all([getHomepagePayload(), getPublicStoreSettings()]);
+  const [payload, settings, content] = await Promise.all([
+    getHomepagePayload(),
+    getPublicStoreSettings(),
+    getSiteContent(),
+  ]);
+  const home = content.pages.home;
   const jewelryStoreJsonLd = buildJewelryStoreJsonLd(settings);
 
   const heroBanner = payload.banners.hero[0] ?? null;
@@ -54,7 +38,7 @@ export default async function HomePage() {
     .filter((item, idx, arr) => arr.findIndex((p) => p.id === item.id) === idx)
     .slice(0, 4);
 
-  const heroHeadline = heroBanner?.title ?? "Timeless Form, Certified Radiance";
+  const heroHeadline = heroBanner?.title ?? home.hero.headline;
   const heroWords = heroHeadline.split(/\s+/).filter(Boolean);
   const populatedCategories = payload.categories.filter((c) => c.productCount > 0);
   const featuredCategories = (
@@ -87,8 +71,7 @@ export default async function HomePage() {
                 className="ma-hero-line prose-limit text-base leading-relaxed text-text-2 sm:text-lg"
                 style={{ ["--ma-delay" as string]: "140ms" }}
               >
-                {heroBanner?.subtitle ??
-                  "GIA-graded diamonds sculpted into low-profile cathedral mounts in 18K recycled gold and 950 platinum."}
+                {heroBanner?.subtitle ?? home.hero.subtitle}
               </p>
 
               {/* Prominent instant product finder & quick category bar */}
@@ -102,13 +85,13 @@ export default async function HomePage() {
               >
                 <Magnetic strength={4} className="w-full min-[480px]:w-auto">
                   <Button asChild size="lg" className="w-full min-[480px]:w-auto">
-                    <Link href={heroBanner?.ctaHref ?? "/collections"}>
-                      {heroBanner?.ctaLabel ?? "Explore collections"}
+                    <Link href={heroBanner?.ctaHref ?? home.hero.primaryCta.href}>
+                      {heroBanner?.ctaLabel ?? home.hero.primaryCta.label}
                     </Link>
                   </Button>
                 </Magnetic>
                 <Button asChild variant="outline" size="lg" className="w-full min-[480px]:w-auto">
-                  <Link href="/contact?type=BESPOKE">Book consultation</Link>
+                  <Link href={home.hero.secondaryCta.href}>{home.hero.secondaryCta.label}</Link>
                 </Button>
               </div>
             </div>
@@ -157,13 +140,13 @@ export default async function HomePage() {
           <Container variant="wide">
             <Reveal className="mb-5 flex items-center justify-between gap-4 sm:mb-6">
               <h2 id="collections-heading" className="type-h2 font-display font-semibold text-text">
-                Shop by Collection
+                {home.sections.collections.heading}
               </h2>
               <Link
                 href="/collections"
                 className="ma-link-underline inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-medium text-accent-text transition-colors hover:text-accent-hover focus-visible:underline focus-visible:outline-none"
               >
-                <span>View all</span>
+                <span>{home.sections.collections.linkLabel}</span>
                 <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
               </Link>
             </Reveal>
@@ -234,13 +217,13 @@ export default async function HomePage() {
           <Container variant="wide">
             <Reveal className="mb-5 flex items-center justify-between gap-4 sm:mb-6">
               <h2 id="featured-heading" className="type-h2 font-display font-semibold text-text">
-                Featured Pieces
+                {home.sections.featured.heading}
               </h2>
               <Link
                 href="/collections?featured=1"
                 className="ma-link-underline inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-medium text-accent-text transition-colors hover:text-accent-hover focus-visible:underline focus-visible:outline-none"
               >
-                <span>Shop featured</span>
+                <span>{home.sections.featured.linkLabel}</span>
                 <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
               </Link>
             </Reveal>
@@ -289,13 +272,13 @@ export default async function HomePage() {
                 id="new-arrivals-heading"
                 className="type-h2 font-display font-semibold text-text"
               >
-                New Arrivals
+                {home.sections.newArrivals.heading}
               </h2>
               <Link
                 href="/collections?new=1"
                 className="ma-link-underline inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-medium text-accent-text transition-colors hover:text-accent-hover focus-visible:underline focus-visible:outline-none"
               >
-                <span>View new arrivals</span>
+                <span>{home.sections.newArrivals.linkLabel}</span>
                 <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
               </Link>
             </Reveal>
@@ -318,56 +301,39 @@ export default async function HomePage() {
           <div className="grid items-start gap-8 lg:grid-cols-12 lg:gap-10">
             <Reveal className="space-y-4 lg:col-span-5">
               <h2 id="bespoke-heading" className="type-h2 font-display font-semibold text-text">
-                {editorialBanner?.title ?? "Custom Design"}
+                {editorialBanner?.title ?? home.custom.heading}
               </h2>
               <p className="prose-limit text-base leading-relaxed text-text-2">
-                {editorialBanner?.subtitle ??
-                  "Design an engagement ring or anniversary piece around a GIA-certified diamond."}
+                {editorialBanner?.subtitle ?? home.custom.text}
               </p>
               <div className="flex flex-col gap-3 pt-1 min-[480px]:flex-row min-[480px]:flex-wrap min-[480px]:items-center">
                 <Button asChild className="w-full min-[480px]:w-auto">
-                  <Link href={editorialBanner?.ctaHref ?? "/contact?type=BESPOKE"}>
-                    {editorialBanner?.ctaLabel ?? "Speak with a gemologist"}
+                  <Link href={editorialBanner?.ctaHref ?? home.custom.primaryCta.href}>
+                    {editorialBanner?.ctaLabel ?? home.custom.primaryCta.label}
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full min-[480px]:w-auto">
-                  <Link href="/about">About us</Link>
+                  <Link href={home.custom.secondaryCta.href}>{home.custom.secondaryCta.label}</Link>
                 </Button>
               </div>
             </Reveal>
 
             <RevealStagger className="grid gap-3 sm:grid-cols-3 sm:gap-4 lg:col-span-7 lg:gap-6">
-              <div className="ma-card-elevate flex flex-col rounded-xl border border-border bg-surface p-4 shadow-sm hover:border-border-strong md:p-5 dark:hover:bg-surface-2">
-                <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-accent-tint text-accent-text">
-                  <Compass className="size-5" strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <h3 className="text-base leading-[1.35] font-medium text-text">Stone selection</h3>
-                <p className="mt-1.5 text-sm text-text-muted">
-                  Hand-vetted natural and lab-grown stones matched for light return.
-                </p>
-              </div>
-
-              <div className="ma-card-elevate flex flex-col rounded-xl border border-border bg-surface p-4 shadow-sm hover:border-border-strong md:p-5 dark:hover:bg-surface-2">
-                <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-accent-tint text-accent-text">
-                  <Sparkles className="size-5" strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <h3 className="text-base leading-[1.35] font-medium text-text">Bench craft</h3>
-                <p className="mt-1.5 text-sm text-text-muted">
-                  Cast in 18K recycled gold or 950 platinum with precision prong work.
-                </p>
-              </div>
-
-              <div className="ma-card-elevate flex flex-col rounded-xl border border-border bg-surface p-4 shadow-sm hover:border-border-strong md:p-5 dark:hover:bg-surface-2">
-                <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-accent-tint text-accent-text">
-                  <Award className="size-5" strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <h3 className="text-base leading-[1.35] font-medium text-text">
-                  Full certification
-                </h3>
-                <p className="mt-1.5 text-sm text-text-muted">
-                  Delivered with numbered GIA or IGI laboratory dossiers and valuation.
-                </p>
-              </div>
+              {home.custom.steps.map((step, idx) => {
+                const StepIcon = STEP_ICONS[idx % STEP_ICONS.length]!;
+                return (
+                  <div
+                    key={`${step.title}-${idx}`}
+                    className="ma-card-elevate flex flex-col rounded-xl border border-border bg-surface p-4 shadow-sm hover:border-border-strong md:p-5 dark:hover:bg-surface-2"
+                  >
+                    <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-accent-tint text-accent-text">
+                      <StepIcon className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                    </div>
+                    <h3 className="text-base leading-[1.35] font-medium text-text">{step.title}</h3>
+                    <p className="mt-1.5 text-sm text-text-muted">{step.text}</p>
+                  </div>
+                );
+              })}
             </RevealStagger>
           </div>
         </Container>
@@ -382,13 +348,13 @@ export default async function HomePage() {
           <Container variant="wide">
             <Reveal className="mb-5 flex items-center justify-between gap-4 sm:mb-6">
               <h2 id="guides-heading" className="type-h2 font-display font-semibold text-text">
-                Buying Guides
+                {home.sections.guides.heading}
               </h2>
               <Link
                 href="/guides"
                 className="ma-link-underline inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-medium text-accent-text transition-colors hover:text-accent-hover focus-visible:underline focus-visible:outline-none"
               >
-                <span>All guides</span>
+                <span>{home.sections.guides.linkLabel}</span>
                 <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
               </Link>
             </Reveal>
@@ -414,7 +380,7 @@ export default async function HomePage() {
                       href={`/guides/${article.slug}`}
                       className="ma-link-underline group inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-accent-text hover:text-accent-hover"
                     >
-                      <span>Read guide</span>
+                      <span>{home.sections.guides.readLabel}</span>
                       <ArrowRight
                         className="size-4 transition-transform duration-200 group-hover:translate-x-1"
                         strokeWidth={1.5}
@@ -437,49 +403,26 @@ export default async function HomePage() {
       >
         <Container variant="wide">
           <div className="grid grid-cols-3 gap-3 sm:gap-6">
-            <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:items-start sm:gap-3 sm:text-left">
-              <ScaleIn className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-accent-text shadow-sm ring-1 ring-border">
-                <Award className="size-5" strokeWidth={1.5} aria-hidden="true" />
-              </ScaleIn>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-text">Certified provenance</p>
-                <p className="mt-0.5 hidden text-sm text-text-2 sm:block">
-                  GIA and IGI graded stones with hallmarked 18K gold and 950 platinum.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:items-start sm:gap-3 sm:text-left">
-              <ScaleIn
-                delayMs={60}
-                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-accent-text shadow-sm ring-1 ring-border"
-              >
-                <Truck className="size-5" strokeWidth={1.5} aria-hidden="true" />
-              </ScaleIn>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-text">Insured delivery</p>
-                <p className="mt-0.5 hidden text-sm text-text-2 sm:block">
-                  Signature-required armored or courier transit worldwide.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:items-start sm:gap-3 sm:text-left">
-              <ScaleIn
-                delayMs={120}
-                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-accent-text shadow-sm ring-1 ring-border"
-              >
-                <ShieldCheck className="size-5" strokeWidth={1.5} aria-hidden="true" />
-              </ScaleIn>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-text">
-                  {settings.returnWindowDays}-day returns
-                </p>
-                <p className="mt-0.5 hidden text-sm text-text-2 sm:block">
-                  Complimentary resizing and returns on unworn pieces.
-                </p>
-              </div>
-            </div>
+            {home.guarantees.map((item, idx) => {
+              const GuaranteeIcon = GUARANTEE_ICONS[idx % GUARANTEE_ICONS.length]!;
+              return (
+                <div
+                  key={`${item.title}-${idx}`}
+                  className="flex flex-col items-center gap-2 text-center sm:flex-row sm:items-start sm:gap-3 sm:text-left"
+                >
+                  <ScaleIn
+                    delayMs={idx * 60}
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-accent-text shadow-sm ring-1 ring-border"
+                  >
+                    <GuaranteeIcon className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                  </ScaleIn>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-text">{item.title}</p>
+                    <p className="mt-0.5 hidden text-sm text-text-2 sm:block">{item.text}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </Container>
       </Section>

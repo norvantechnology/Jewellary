@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
-import { buildNavigationSections } from "@/components/layout/navigation-data";
+import { buildNavigationSections, type NavLabels } from "@/components/layout/navigation-data";
 import { useReducedMotionSafe } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { NavCategoryItem } from "@/types/navigation";
@@ -25,10 +25,11 @@ function prefetchMegaMenuPortal() {
 const emptySubscribe = () => () => {};
 
 interface MegaMenuProps {
+  labels: NavLabels;
   categories: NavCategoryItem[];
 }
 
-export function MegaMenu({ categories }: MegaMenuProps) {
+export function MegaMenu({ categories, labels }: MegaMenuProps) {
   const pathname = usePathname();
   const [openForPath, setOpenForPath] = React.useState<string | null>(null);
   const open = openForPath === pathname;
@@ -230,7 +231,7 @@ export function MegaMenu({ categories }: MegaMenuProps) {
   return (
     <nav aria-label="Primary" className="hidden items-center gap-6 lg:flex">
       <Link href="/collections" className={navLinkClass(isAllJewelleryActive)}>
-        All Jewellery
+        {labels.allJewellery}
       </Link>
 
       <div
@@ -248,7 +249,7 @@ export function MegaMenu({ categories }: MegaMenuProps) {
           onKeyDown={handleTriggerKeyDown}
           className={cn(navLinkClass(isCollectionsActive), "cursor-pointer gap-1")}
         >
-          <span>Collections</span>
+          <span>{labels.collections}</span>
           <ChevronDown
             className={cn(
               "size-4 text-muted-foreground transition-transform duration-150",
@@ -261,13 +262,13 @@ export function MegaMenu({ categories }: MegaMenuProps) {
       </div>
 
       <Link href="/guides" className={navLinkClass(isGuidesActive)}>
-        Guides
+        {labels.guides}
       </Link>
       <Link href="/about" className={navLinkClass(isAtelierActive)}>
-        Atelier
+        {labels.atelier}
       </Link>
       <Link href="/contact" className={navLinkClass(isConciergeActive)}>
-        Concierge
+        {labels.concierge}
       </Link>
 
       {mounted && (hasOpenedPortal || open) ? (
@@ -279,6 +280,7 @@ export function MegaMenu({ categories }: MegaMenuProps) {
           reducedMotion={reducedMotion}
           categoryGroups={categoryGroups}
           collections={collections}
+          labels={labels}
           closeMenu={closeMenu}
           handleMouseEnterZone={handleMouseEnterZone}
           handleMouseLeaveZone={handleMouseLeaveZone}
@@ -289,38 +291,38 @@ export function MegaMenu({ categories }: MegaMenuProps) {
   );
 }
 
-export function MegaMenuFallback() {
+export function MegaMenuFallback({ labels }: { labels: NavLabels }) {
   return (
     <nav aria-label="Primary" className="hidden items-center gap-6 lg:flex">
       <Link
         href="/collections"
         className="inline-flex h-[72px] items-center text-sm font-medium text-muted-foreground"
       >
-        All Jewellery
+        {labels.allJewellery}
       </Link>
       <Link
         href="/collections"
         className="inline-flex h-[72px] items-center text-sm font-medium text-muted-foreground"
       >
-        Collections
+        {labels.collections}
       </Link>
       <Link
         href="/guides"
         className="inline-flex h-[72px] items-center text-sm font-medium text-muted-foreground"
       >
-        Guides
+        {labels.guides}
       </Link>
       <Link
         href="/about"
         className="inline-flex h-[72px] items-center text-sm font-medium text-muted-foreground"
       >
-        Atelier
+        {labels.atelier}
       </Link>
       <Link
         href="/contact"
         className="inline-flex h-[72px] items-center text-sm font-medium text-muted-foreground"
       >
-        Concierge
+        {labels.concierge}
       </Link>
     </nav>
   );

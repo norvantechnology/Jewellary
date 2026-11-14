@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import dynamic from "next/dynamic";
@@ -45,6 +46,7 @@ const ADDED_FEEDBACK_MS = 1200;
 export const ProductCardActions = React.memo(function ProductCardActions({
   product,
 }: ProductCardActionsProps) {
+  const ui = useUiText();
   const [busy, setBusy] = React.useState(false);
   const [addedRecently, setAddedRecently] = React.useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -87,7 +89,7 @@ export const ProductCardActions = React.memo(function ProductCardActions({
         className="h-11 min-h-11 w-full rounded-[10px] px-3 text-sm font-medium md:text-[15px]"
       >
         <Link href={`/contact?type=BESPOKE&product=${encodeURIComponent(product.name)}`}>
-          <span>Enquire</span>
+          <span>{ui.productCard.enquire}</span>
         </Link>
       </Button>
     );
@@ -106,7 +108,7 @@ export const ProductCardActions = React.memo(function ProductCardActions({
         aria-label={`${product.name} is sold out`}
         className="h-11 min-h-11 w-full rounded-[10px] px-3 text-sm font-medium md:text-[15px]"
       >
-        Sold Out
+        {ui.productCard.soldOut}
       </Button>
     );
   }
@@ -139,7 +141,7 @@ export const ProductCardActions = React.memo(function ProductCardActions({
       product.primaryImage?.mediumUrl ?? product.primaryImage?.url ?? null,
     );
     visitorStore.openCartDrawer();
-    void notifySuccess(`${product.name} added to bag.`);
+    void notifySuccess(fill(ui.productCard.addedToast, { name: product.name }));
   }
 
   const quickSelectSummary: QuickSelectProductSummary = {
@@ -165,8 +167,8 @@ export const ProductCardActions = React.memo(function ProductCardActions({
         onMouseEnter={prefetchCustomize}
         onFocus={prefetchCustomize}
         onTouchStart={prefetchCustomize}
-        aria-label={`Customize ${product.name}`}
-        title="Customize"
+        aria-label={fill(ui.productCard.customizeAria, { name: product.name })}
+        title={ui.productCard.customize}
         className="transition-ui inline-flex size-11 cursor-pointer items-center justify-center rounded-[10px] border border-border-strong bg-surface text-accent-text shadow-xs hover:border-accent hover:bg-accent-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.98]"
       >
         <Sparkles className="size-5 shrink-0" strokeWidth={1.5} aria-hidden="true" />
@@ -175,7 +177,7 @@ export const ProductCardActions = React.memo(function ProductCardActions({
         role="tooltip"
         className="pointer-events-none absolute -top-9 left-1/2 hidden -translate-x-1/2 rounded-md bg-primary px-2 py-1 text-[11px] font-medium whitespace-nowrap text-on-primary opacity-0 shadow-sm transition-opacity duration-150 group-focus-within/cust:opacity-100 group-hover/cust:opacity-100 md:block"
       >
-        Customize
+        {ui.productCard.customize}
       </span>
     </div>
   ) : null;
@@ -196,13 +198,13 @@ export const ProductCardActions = React.memo(function ProductCardActions({
             onMouseEnter={prefetchQuickSelect}
             onFocus={prefetchQuickSelect}
             onTouchStart={prefetchQuickSelect}
-            aria-label={`Choose options for ${product.name}`}
+            aria-label={fill(ui.productCard.chooseOptionsAria, { name: product.name })}
             className="h-11 min-h-11 min-w-0 flex-1 rounded-[10px] px-2 text-[13px] font-medium active:scale-[0.98] min-[1400px]:px-3 min-[1400px]:text-sm sm:px-2.5 sm:text-sm lg:px-2 lg:text-[13px]"
           >
             {addedRecently ? (
               <span className="inline-flex items-center gap-1.5">
                 <Check className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
-                <span>Added &#10003;</span>
+                <span>{ui.productCard.added}</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5">
@@ -211,8 +213,8 @@ export const ProductCardActions = React.memo(function ProductCardActions({
                   strokeWidth={1.5}
                   aria-hidden="true"
                 />
-                <span className="min-[540px]:hidden">Options</span>
-                <span className="hidden min-[540px]:inline">Choose Options</span>
+                <span className="min-[540px]:hidden">{ui.productCard.options}</span>
+                <span className="hidden min-[540px]:inline">{ui.productCard.chooseOptions}</span>
               </span>
             )}
           </Button>
@@ -234,7 +236,7 @@ export const ProductCardActions = React.memo(function ProductCardActions({
           size="sm"
           disabled={busy || !singleVariant}
           onClick={() => void handleDirectAdd()}
-          aria-label={`Add ${product.name} to bag`}
+          aria-label={fill(ui.productCard.addAria, { name: product.name })}
           className="relative h-11 min-h-11 min-w-0 flex-1 rounded-[10px] px-2 text-[13px] font-medium active:scale-[0.98] min-[1400px]:px-3 min-[1400px]:text-sm sm:px-2.5 sm:text-sm lg:px-2 lg:text-[13px]"
         >
           {busy && <Loader2 className="absolute size-4 shrink-0 animate-spin" aria-hidden="true" />}
@@ -248,7 +250,7 @@ export const ProductCardActions = React.memo(function ProductCardActions({
             {addedRecently ? (
               <>
                 <Check className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
-                <span>Added &#10003;</span>
+                <span>{ui.productCard.added}</span>
               </>
             ) : (
               <>
@@ -257,8 +259,8 @@ export const ProductCardActions = React.memo(function ProductCardActions({
                   strokeWidth={1.5}
                   aria-hidden="true"
                 />
-                <span className="min-[420px]:hidden">Add</span>
-                <span className="hidden min-[420px]:inline">Add to Bag</span>
+                <span className="min-[420px]:hidden">{ui.productCard.add}</span>
+                <span className="hidden min-[420px]:inline">{ui.productCard.addToBag}</span>
               </>
             )}
           </span>

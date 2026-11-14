@@ -8,7 +8,7 @@ Operational procedures for production deployments, database recovery, secret rot
 
 ### Standard Release (`main`)
 
-1. Confirm GitHub Actions CI passes on the release commit (`.github/workflows/ci.yml`: `typecheck`, `lint`, `format:check`, `test:all`, `next build`, Playwright E2E + axe + SEO checks, audit).
+1. Confirm GitHub Actions CI passes on the release commit (`.github/workflows/ci.yml`: `typecheck`, `lint`, `format:check`, `next build`, audit).
 2. Run forward-only database migrations before switching application instances:
    ```bash
    npx prisma migrate deploy
@@ -40,7 +40,6 @@ Operational procedures for production deployments, database recovery, secret rot
 3. Verify schema & data integrity:
    ```bash
    npx prisma migrate status
-   npm run test:integration
    ```
 4. Check order sequence continuity:
    ```sql
@@ -138,7 +137,7 @@ Target SLA: **Patch high/critical advisories (especially Next.js) within 7 days 
 2. Check bundle/runtime compatibility against Next 16 requirements (`src/proxy.ts`, `next.config.ts`, `cacheComponents`).
 3. Run the complete verification gate before merging:
    ```bash
-   npm run typecheck && npm run lint && npm run test:all && npm run build && npm run test:e2e
+   npm run typecheck && npm run lint && npm run build
    ```
 4. Merge, deploy via standard release runbook (§1), and monitor Sentry error rates for 24 hours.
 

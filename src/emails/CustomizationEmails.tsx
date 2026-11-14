@@ -59,34 +59,34 @@ export function CustomizationSubmittedCustomerEmail(props: {
     <EmailLayout
       siteName={props.siteName}
       contactEmail={props.contactEmail}
-      previewText={`Bespoke request ${props.requestNumber} received`}
-      heading={`We have received request ${props.requestNumber}`}
+      previewText={`We received your custom request ${props.requestNumber}`}
+      heading={`We received your custom request ${props.requestNumber}`}
     >
-      <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {props.customerName},</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {props.customerName},</Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        Thank you for commissioning a bespoke variation of <strong>{props.productName}</strong> with{" "}
-        {props.siteName}. Our master gemologists and bench jewelers are reviewing your
-        specifications and will return a formal quotation shortly.
+        Thank you for your custom design request for <strong>{props.productName}</strong> with{" "}
+        {props.siteName}. Our jewelers are reviewing your choices and will send you a price quote
+        soon.
       </Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        <strong>Indicative estimate:</strong> {props.indicativeRangeDisplay} (final atelier quote
-        confirmed upon gemstone allocation)
+        <strong>Indicative estimate:</strong> {props.indicativeRangeDisplay} (your final price is
+        confirmed once we select your stones)
       </Text>
       <SelectionsSummary selections={props.selections} />
       <Section style={{ margin: "24px 0" }}>
         <Button href={props.requestUrl} style={EMAIL_BUTTON_STYLE}>
-          View Customization Request
+          View your request
         </Button>
       </Section>
       <Text
         style={{ ...EMAIL_PARAGRAPH_STYLE, fontSize: "13px", color: BRAND_PALETTE.light.text2 }}
       >
-        Have additional inspiration notes? You can also continue the conversation directly via{" "}
+        Have more ideas or photos to share? You can also message us in{" "}
         <a
           href={props.chatUrl}
           style={{ color: BRAND_PALETTE.light.accentText, textDecoration: "underline" }}
         >
-          Atelier Concierge Chat
+          live chat
         </a>
         .
       </Text>
@@ -107,20 +107,20 @@ export function CustomizationSubmittedAdminEmail(props: {
   return (
     <EmailLayout
       siteName={props.siteName}
-      previewText={`New bespoke request ${props.requestNumber}`}
-      heading={`New Customization Request ${props.requestNumber}`}
+      previewText={`New custom request ${props.requestNumber}`}
+      heading={`New custom request ${props.requestNumber}`}
     >
       <Text style={EMAIL_PARAGRAPH_STYLE}>
         <strong>Customer:</strong> {props.customerName} ({props.customerEmail})
         <br />
         <strong>Piece:</strong> {props.productName}
         <br />
-        <strong>Indicative Range (Base):</strong> {props.indicativeRangeBase}
+        <strong>Estimated range (base currency):</strong> {props.indicativeRangeBase}
       </Text>
       <SelectionsSummary selections={props.selections} />
       <Section style={{ margin: "24px 0" }}>
         <Button href={props.adminUrl} style={EMAIL_BUTTON_STYLE}>
-          Review Request in Admin
+          Review request in admin
         </Button>
       </Section>
     </EmailLayout>
@@ -145,16 +145,16 @@ export function CustomizationQuoteApprovedEmail(props: {
     <EmailLayout
       siteName={props.siteName}
       contactEmail={props.contactEmail}
-      previewText={`Your bespoke quote for ${props.requestNumber} is ready`}
-      heading={`Atelier Quotation Ready — ${props.requestNumber}`}
+      previewText={`Your custom design quote ${props.requestNumber} is ready`}
+      heading={`Your quote is ready — ${props.requestNumber}`}
     >
-      <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {props.customerName},</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {props.customerName},</Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        Our atelier has finalized specifications and stone sourcing for your bespoke{" "}
+        Our jewelers have finalized the details and stones for your custom{" "}
         <strong>{props.productName}</strong>.
       </Text>
       <Section style={CARD_STYLE}>
-        <Text style={LABEL_STYLE}>Approved Quotation Price</Text>
+        <Text style={LABEL_STYLE}>Your price</Text>
         <Text style={{ ...VALUE_STYLE, fontSize: "20px", marginBottom: "6px" }}>
           {props.finalPriceDisplay}
         </Text>
@@ -170,11 +170,11 @@ export function CustomizationQuoteApprovedEmail(props: {
             {props.basePriceNote}
           </Text>
         ) : null}
-        <Text style={LABEL_STYLE}>Quote Valid Until</Text>
+        <Text style={LABEL_STYLE}>Quote valid until</Text>
         <Text style={VALUE_STYLE}>{props.expiresAtFormatted}</Text>
         {props.estimatedDeliveryDays ? (
           <>
-            <Text style={LABEL_STYLE}>Estimated Bench Crafting</Text>
+            <Text style={LABEL_STYLE}>Estimated time to make</Text>
             <Text style={{ ...VALUE_STYLE, marginBottom: 0 }}>
               Approximately {props.estimatedDeliveryDays} days from confirmation
             </Text>
@@ -183,21 +183,21 @@ export function CustomizationQuoteApprovedEmail(props: {
       </Section>
       {props.adminMessage ? (
         <Text style={EMAIL_PARAGRAPH_STYLE}>
-          <strong>Atelier Note:</strong> {props.adminMessage}
+          <strong>Note from our jewelers:</strong> {props.adminMessage}
         </Text>
       ) : null}
       <SelectionsSummary selections={props.selections} />
       <Section style={{ margin: "24px 0" }}>
         <Button href={props.acceptUrl} style={EMAIL_BUTTON_STYLE}>
-          Review &amp; Complete Your Order
+          Review and place your order
         </Button>
       </Section>
       <Hr style={{ borderColor: BRAND_PALETTE.light.border, margin: "16px 0" }} />
       <Text
         style={{ ...EMAIL_PARAGRAPH_STYLE, fontSize: "12px", color: BRAND_PALETTE.light.textMuted }}
       >
-        This private quotation link is single-use and expires on {props.expiresAtFormatted}. Your
-        approved configuration price is locked server-side upon confirmation.
+        This quote link is just for you, can be used once and expires on {props.expiresAtFormatted}.
+        Your price is locked in when you confirm.
       </Text>
     </EmailLayout>
   );
@@ -216,24 +216,24 @@ export function CustomizationRejectedEmail(props: {
     <EmailLayout
       siteName={props.siteName}
       contactEmail={props.contactEmail}
-      previewText={`Update on bespoke request ${props.requestNumber}`}
-      heading={`Update Regarding Request ${props.requestNumber}`}
+      previewText={`Update on your custom request ${props.requestNumber}`}
+      heading={`Update on your request ${props.requestNumber}`}
     >
-      <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {props.customerName},</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {props.customerName},</Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        Thank you for sharing your vision for <strong>{props.productName}</strong>. Unfortunately,
-        our bench cannot fulfill this exact specification at present:
+        Thank you for sharing your ideas for <strong>{props.productName}</strong>. Unfortunately, we
+        can’t make this exact design right now:
       </Text>
       <Section style={CARD_STYLE}>
         <Text style={{ ...EMAIL_PARAGRAPH_STYLE, margin: 0 }}>{props.reason}</Text>
       </Section>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        If you would like to explore alternative proportions, metals, or gemstone pairings with our
-        senior concierge, we would be delighted to assist.
+        If you’d like to try a different size, metal or stone, our jewelers would be happy to help
+        you find an option that works.
       </Text>
       <Section style={{ margin: "24px 0" }}>
         <Button href={props.chatUrl} style={EMAIL_BUTTON_STYLE}>
-          Speak With an Atelier Specialist
+          Talk to a jeweler
         </Button>
       </Section>
     </EmailLayout>
@@ -253,20 +253,20 @@ export function CustomizationMoreInfoEmail(props: {
     <EmailLayout
       siteName={props.siteName}
       contactEmail={props.contactEmail}
-      previewText={`Atelier question regarding ${props.requestNumber}`}
-      heading={`Quick Question on Request ${props.requestNumber}`}
+      previewText={`A quick question about your request ${props.requestNumber}`}
+      heading={`A quick question about request ${props.requestNumber}`}
     >
-      <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {props.customerName},</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {props.customerName},</Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        Before finalizing your quotation for <strong>{props.productName}</strong>, our atelier
-        concierge sent a message in your thread:
+        Before we finish your quote for <strong>{props.productName}</strong>, our team has a
+        question for you:
       </Text>
       <Section style={CARD_STYLE}>
         <Text style={{ ...EMAIL_PARAGRAPH_STYLE, margin: 0 }}>{props.question}</Text>
       </Section>
       <Section style={{ margin: "24px 0" }}>
         <Button href={props.threadUrl} style={EMAIL_BUTTON_STYLE}>
-          Reply in Atelier Chat
+          Reply in chat
         </Button>
       </Section>
     </EmailLayout>
@@ -287,18 +287,17 @@ export function CustomizationQuoteExpiringEmail(props: {
     <EmailLayout
       siteName={props.siteName}
       contactEmail={props.contactEmail}
-      previewText={`Quotation ${props.requestNumber} expires in 24 hours`}
-      heading={`Quotation Expiring Soon — ${props.requestNumber}`}
+      previewText={`Your quote ${props.requestNumber} expires in 24 hours`}
+      heading={`Your quote expires soon — ${props.requestNumber}`}
     >
-      <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {props.customerName},</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {props.customerName},</Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        A gentle reminder that your atelier quotation of <strong>{props.finalPriceDisplay}</strong>{" "}
-        for your bespoke <strong>{props.productName}</strong> will expire on{" "}
-        <strong>{props.expiresAtFormatted}</strong>.
+        Just a reminder: your quote of <strong>{props.finalPriceDisplay}</strong> for your custom{" "}
+        <strong>{props.productName}</strong> expires on <strong>{props.expiresAtFormatted}</strong>.
       </Text>
       <Section style={{ margin: "24px 0" }}>
         <Button href={props.reviewUrl} style={EMAIL_BUTTON_STYLE}>
-          Review &amp; Accept Quotation
+          Review and accept quote
         </Button>
       </Section>
     </EmailLayout>
@@ -319,19 +318,19 @@ export function CustomizationOrderPlacedEmail(props: {
     <EmailLayout
       siteName={props.siteName}
       contactEmail={props.contactEmail}
-      previewText={`Bespoke commission ${props.orderNumber} entered production`}
-      heading={`Bespoke Commission Confirmed — ${props.orderNumber}`}
+      previewText={`Your custom order ${props.orderNumber} is now being made`}
+      heading={`Custom order confirmed — ${props.orderNumber}`}
     >
-      <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {props.customerName},</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {props.customerName},</Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        Your order <strong>{props.orderNumber}</strong> for bespoke request{" "}
+        Your order <strong>{props.orderNumber}</strong> for custom request{" "}
         <strong>{props.requestNumber}</strong> ({props.productName} ·{" "}
-        <strong>{props.lockedPriceDisplay}</strong>) has been commissioned and placed with our bench
-        team.
+        <strong>{props.lockedPriceDisplay}</strong>) is confirmed. Our jewelers have started making
+        your piece.
       </Text>
       <Section style={{ margin: "24px 0" }}>
         <Button href={props.orderUrl} style={EMAIL_BUTTON_STYLE}>
-          Track Commission Progress
+          Track your order
         </Button>
       </Section>
     </EmailLayout>

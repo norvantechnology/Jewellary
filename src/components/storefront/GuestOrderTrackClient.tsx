@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
@@ -21,6 +23,8 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
   const [pending, startTransition] = React.useTransition();
   const [result, setResult] = React.useState<GuestOrderTrackResultDTO | null>(null);
   const abuse = useAbuseProtection();
+  const ui = useUiText();
+  const t = ui.track;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,10 +57,10 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <FormField
             id="track-order-number"
-            label="Order Number"
+            label={t.orderNumberLabel}
             required
             error={fieldErrors.orderNumber?.[0]}
-            hint="In your confirmation email, e.g. ORD-2026-10001."
+            hint={t.orderNumberHint}
           >
             {(fieldProps) => (
               <Input
@@ -64,7 +68,7 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
                 name="orderNumber"
                 value={orderNumber}
                 onChange={(e) => setOrderNumber(e.target.value)}
-                placeholder="ORD-2026-10001"
+                placeholder={t.orderNumberPlaceholder}
                 autoComplete="off"
                 required
               />
@@ -73,10 +77,10 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
 
           <FormField
             id="track-order-email"
-            label="Email Address"
+            label={t.emailLabel}
             required
             error={fieldErrors.email?.[0]}
-            hint="The email address entered during checkout."
+            hint={t.emailHint}
           >
             {(fieldProps) => (
               <Input
@@ -86,7 +90,7 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
                 inputMode="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="client@example.com"
+                placeholder={t.emailPlaceholder}
                 autoComplete="email"
                 required
               />
@@ -111,17 +115,17 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
 
           <Button type="submit" loading={pending} size="lg" className="w-full sm:w-auto">
             <Search className="size-5 stroke-[1.5]" aria-hidden="true" />
-            <span>Track Order</span>
+            <span>{t.submit}</span>
           </Button>
         </form>
 
         <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
-          Have an account?{" "}
+          {t.haveAccount}{" "}
           <Link
             href="/account/orders"
             className="font-medium text-foreground underline underline-offset-4 hover:text-accent-text"
           >
-            View your orders
+            {t.viewOrders}
           </Link>
           .
         </p>
@@ -132,9 +136,10 @@ export function GuestOrderTrackClient({ initialOrderNumber }: { initialOrderNumb
           <OrderDetailView
             order={result.order}
             guestToken={result.accessToken}
+            text={ui.orders}
             secondaryAction={{
               href: `/orders/${encodeURIComponent(result.order.orderNumber)}/confirmation?token=${encodeURIComponent(result.accessToken)}`,
-              label: "Open Printable Receipt",
+              label: t.printableReceipt,
             }}
           />
         </FadeIn>

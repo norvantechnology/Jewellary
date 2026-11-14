@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import dynamic from "next/dynamic";
@@ -62,6 +63,7 @@ export function ProductDetailClient({
   signatureThreshold,
   returnWindowDays,
 }: ProductDetailClientProps) {
+  const ui = useUiText();
   const router = useRouter();
   const { formatPrice } = useCurrency();
   const reducedMotion = useReducedMotionSafe();
@@ -187,7 +189,9 @@ export function ProductDetailClient({
     setLiveStatus(`${product.name} (${selectedVariant.title}) added to bag.`);
     if (addedTimerRef.current !== null) window.clearTimeout(addedTimerRef.current);
     addedTimerRef.current = window.setTimeout(() => setAddedRecently(false), 2000);
-    void notifySuccess(`${product.name} (${selectedVariant.title}) added to bag.`);
+    void notifySuccess(
+      fill(ui.product.addedToast, { name: product.name, variant: selectedVariant.title }),
+    );
   }
 
   async function handleBuyNow() {
@@ -215,55 +219,55 @@ export function ProductDetailClient({
   const specRows: Array<{ label: string; value: string }> = [];
   if (product.metalType) {
     specRows.push({
-      label: "Precious Metal",
+      label: ui.product.specs.metal,
       value: [product.metalPurity, product.metalType].filter(Boolean).join(" "),
     });
   }
   if (selectedVariant?.weightGrams ?? product.metalWeightGrams) {
     specRows.push({
-      label: "Approx. Metal Weight",
+      label: ui.product.specs.metalWeight,
       value: `${selectedVariant?.weightGrams ?? product.metalWeightGrams} g`,
     });
   }
   if (product.stoneOrigin) {
-    specRows.push({ label: "Stone Origin", value: product.stoneOrigin });
+    specRows.push({ label: ui.product.specs.stoneOrigin, value: product.stoneOrigin });
   }
   if (product.stoneShape) {
-    specRows.push({ label: "Cut Shape", value: product.stoneShape });
+    specRows.push({ label: ui.product.specs.cutShape, value: product.stoneShape });
   }
   if (product.caratTotal) {
     specRows.push({
-      label: "Total Carat Weight",
+      label: ui.product.specs.caratTotal,
       value: `${product.caratTotal} ct`,
     });
   }
   if (product.caratCenter) {
     specRows.push({
-      label: "Centre Stone Carat",
+      label: ui.product.specs.caratCenter,
       value: `${product.caratCenter} ct`,
     });
   }
   if (product.colorGrade) {
-    specRows.push({ label: "Colour Grade", value: product.colorGrade });
+    specRows.push({ label: ui.product.specs.colourGrade, value: product.colorGrade });
   }
   if (product.clarityGrade) {
-    specRows.push({ label: "Clarity Grade", value: product.clarityGrade });
+    specRows.push({ label: ui.product.specs.clarityGrade, value: product.clarityGrade });
   }
   if (product.cutGrade) {
-    specRows.push({ label: "Cut Grade", value: product.cutGrade });
+    specRows.push({ label: ui.product.specs.cutGrade, value: product.cutGrade });
   }
   if (product.polishGrade || product.symmetryGrade) {
     specRows.push({
-      label: "Polish / Symmetry",
+      label: ui.product.specs.polishSymmetry,
       value: [product.polishGrade, product.symmetryGrade].filter(Boolean).join(" / "),
     });
   }
   if (product.fluorescence) {
-    specRows.push({ label: "Fluorescence", value: product.fluorescence });
+    specRows.push({ label: ui.product.specs.fluorescence, value: product.fluorescence });
   }
   if (product.certificationLab) {
     specRows.push({
-      label: "Laboratory Certification",
+      label: ui.product.specs.labCertification,
       value: product.certificateNumber
         ? `${product.certificationLab} · #${product.certificateNumber}`
         : product.certificationLab,
@@ -318,7 +322,7 @@ export function ProductDetailClient({
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium text-foreground">
-              {product.hasSizing ? "Size & specification" : "Select option"}
+              {product.hasSizing ? ui.product.sizeHeading : ui.product.optionHeading}
             </p>
             {product.hasSizing && (
               <button
@@ -327,7 +331,7 @@ export function ProductDetailClient({
                 className="ma-link-underline inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-xs font-medium text-accent-text"
               >
                 <Ruler className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                <span>Ring Size Guide</span>
+                <span>{ui.product.ringSizeGuide}</span>
               </button>
             )}
           </div>
@@ -335,7 +339,7 @@ export function ProductDetailClient({
           <div
             ref={variantGroupRef}
             role="radiogroup"
-            aria-label="Product options"
+            aria-label={ui.product.optionsAria}
             className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
           >
             {product.variants.map((variant) => {
@@ -372,7 +376,7 @@ export function ProductDetailClient({
                     )}
                   </div>
                   <span className="tabular-nums-price relative z-10 shrink-0 text-xs text-text-muted">
-                    {outOfStock ? "Out of stock" : "In stock"}
+                    {outOfStock ? ui.product.outOfStock : ui.product.inStock}
                   </span>
                 </button>
               );
@@ -390,7 +394,7 @@ export function ProductDetailClient({
                 strokeWidth={1.5}
                 aria-hidden="true"
               />
-              <span>In stock · ships in 1–2 days</span>
+              <span>{ui.product.inStockShips}</span>
             </p>
           )}
           {availableStock > 0 && availableStock <= selectedVariant.lowStockThreshold && (
@@ -400,13 +404,16 @@ export function ProductDetailClient({
                 strokeWidth={1.5}
                 aria-hidden="true"
               />
-              <span>Only {availableStock} left in stock.</span>
+              <span>{fill(ui.product.onlyLeft, { count: availableStock })}</span>
             </p>
           )}
           {availableStock <= 0 && (
             <p className="text-muted-foreground">
-              Out of stock. We can make it to order
-              {product.leadTimeDays ? ` in about ${product.leadTimeDays} days` : ""}.
+              {fill(ui.product.madeToOrder, {
+                leadTime: product.leadTimeDays
+                  ? fill(ui.product.leadTimeSuffix, { days: product.leadTimeDays })
+                  : "",
+              })}
             </p>
           )}
         </div>
@@ -422,7 +429,9 @@ export function ProductDetailClient({
         {product.priceMode === "FIXED" && availableStock > 0 ? (
           <>
             <div className="col-span-2 flex items-center justify-between gap-4 sm:border-0 sm:bg-transparent sm:p-0">
-              <span className="text-sm font-medium text-foreground sm:sr-only">Quantity</span>
+              <span className="text-sm font-medium text-foreground sm:sr-only">
+                {ui.product.quantity}
+              </span>
               <QuantityStepper
                 value={safeQuantity}
                 min={1}
@@ -459,7 +468,11 @@ export function ProductDetailClient({
                     <ShoppingBag className="size-5" strokeWidth={1.5} aria-hidden="true" />
                   )}
                   <span>
-                    {addingToBag ? "Adding to Bag…" : addedRecently ? "Added ✓" : "Add to Bag"}
+                    {addingToBag
+                      ? ui.product.addingToBag
+                      : addedRecently
+                        ? ui.product.added
+                        : ui.product.addToBag}
                   </span>
                 </m.span>
               </AnimatePresence>
@@ -475,10 +488,10 @@ export function ProductDetailClient({
               {buyingNow ? (
                 <>
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  <span>Preparing…</span>
+                  <span>{ui.product.preparing}</span>
                 </>
               ) : (
-                <span>Buy Now</span>
+                <span>{ui.product.buyNow}</span>
               )}
             </Button>
           </>
@@ -491,7 +504,9 @@ export function ProductDetailClient({
           >
             <MessageSquare className="size-5" strokeWidth={1.5} aria-hidden="true" />
             <span>
-              {product.priceMode === "PRICE_ON_REQUEST" ? "Request a Price" : "Order Made-to-Order"}
+              {product.priceMode === "PRICE_ON_REQUEST"
+                ? ui.product.requestPrice
+                : ui.product.orderMadeToOrder}
             </span>
           </Button>
         )}
@@ -515,7 +530,7 @@ export function ProductDetailClient({
             className="col-span-2 w-full gap-2 sm:w-auto"
           >
             <Sparkles className="size-5 stroke-[1.5]" aria-hidden="true" />
-            <span>Customize this piece</span>
+            <span>{ui.product.customize}</span>
           </Button>
         )}
 
@@ -533,7 +548,7 @@ export function ProductDetailClient({
           className="col-span-2 min-h-11 w-full gap-1.5 text-text-2 sm:w-auto"
         >
           <MessagesSquare className="size-4" strokeWidth={1.5} aria-hidden="true" />
-          <span>Ask an expert</span>
+          <span>{ui.product.askExpert}</span>
         </Button>
 
         {hasOpenedEnquiry ? (
@@ -564,11 +579,11 @@ export function ProductDetailClient({
               headingLevel="h2"
               className="min-h-14 py-4 text-left text-base font-medium"
             >
-              Details &amp; Specifications
+              {ui.product.detailsHeading}
             </AccordionTrigger>
             <AccordionContent className="space-y-5 pt-1 pb-4">
               <div className="space-y-2.5">
-                <h3 className="text-sm font-semibold text-foreground">Specifications</h3>
+                <h3 className="text-sm font-semibold text-foreground">{ui.product.specsHeading}</h3>
                 {specRows.length > 0 ? (
                   <dl className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface-2">
                     {specRows.map((row) => (
@@ -584,9 +599,7 @@ export function ProductDetailClient({
                     ))}
                   </dl>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Crafted in small atelier batches with hallmarked precious metals.
-                  </p>
+                  <p className="text-sm text-muted-foreground">{ui.product.craftedNote}</p>
                 )}
               </div>
             </AccordionContent>
@@ -597,13 +610,22 @@ export function ProductDetailClient({
               headingLevel="h2"
               className="min-h-14 py-4 text-left text-base font-medium"
             >
-              Certification
+              {ui.product.certificationHeading}
             </AccordionTrigger>
             <AccordionContent className="space-y-3 pt-1 pb-4 text-sm text-muted-foreground">
               <p className="prose-limit leading-relaxed">
                 {product.certificationLab
-                  ? `This creation is accompanied by its official ${product.certificationLab} grading dossier${product.certificateNumber ? ` (#${product.certificateNumber})` : ""}, stamped metal purity mark${product.metalPurity ? ` (${product.metalPurity})` : ""}, and laser girdle inscription verification.`
-                  : `Hallmarked for recycled ${product.metalType ?? "precious metal"}${product.metalPurity ? ` (${product.metalPurity})` : ""} purity and verified by master gemologists under 10× magnification.`}
+                  ? fill(ui.product.certifiedText, {
+                      lab: product.certificationLab,
+                      certificate: product.certificateNumber
+                        ? ` (#${product.certificateNumber})`
+                        : "",
+                      purity: product.metalPurity ? ` (${product.metalPurity})` : "",
+                    })
+                  : fill(ui.product.hallmarkedText, {
+                      metal: product.metalType ?? ui.product.defaultMetal,
+                      purity: product.metalPurity ? ` (${product.metalPurity})` : "",
+                    })}
               </p>
               {product.certificateUrl && (
                 <a
@@ -612,7 +634,7 @@ export function ProductDetailClient({
                   rel="noopener noreferrer"
                   className="inline-flex min-h-11 items-center gap-1.5 font-medium text-accent-text hover:underline"
                 >
-                  <span>View Lab Report</span>
+                  <span>{ui.product.viewLabReport}</span>
                   <ExternalLink className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </a>
               )}
@@ -624,18 +646,19 @@ export function ProductDetailClient({
               headingLevel="h2"
               className="min-h-14 py-4 text-left text-base font-medium"
             >
-              Shipping &amp; Returns
+              {ui.product.shippingHeading}
             </AccordionTrigger>
             <AccordionContent className="space-y-2.5 pt-1 pb-4 text-sm text-muted-foreground">
               <p className="prose-limit leading-relaxed">
                 {freeShippingThreshold
-                  ? `Complimentary insured delivery on orders above ${formatPrice(freeShippingThreshold)}. `
+                  ? fill(ui.product.freeShippingText, {
+                      amount: formatPrice(freeShippingThreshold),
+                    })
                   : ""}
-                Signature-required insured transit from {formatPrice(signatureThreshold)}.
+                {fill(ui.product.signatureText, { amount: formatPrice(signatureThreshold) })}
               </p>
               <p className="prose-limit leading-relaxed">
-                Unworn creations qualify for complimentary sizing adjustment and returns within{" "}
-                {returnWindowDays} days of delivery.
+                {fill(ui.product.returnsText, { days: returnWindowDays })}
               </p>
             </AccordionContent>
           </AccordionItem>
@@ -684,7 +707,11 @@ export function ProductDetailClient({
                       <ShoppingBag className="size-4" strokeWidth={1.5} aria-hidden="true" />
                     )}
                     <span>
-                      {addingToBag ? "Adding…" : addedRecently ? "Added ✓" : "Add to Bag"}
+                      {addingToBag
+                        ? ui.product.adding
+                        : addedRecently
+                          ? ui.product.added
+                          : ui.product.addToBag}
                     </span>
                   </Button>
                 </div>
@@ -696,7 +723,7 @@ export function ProductDetailClient({
                   className="min-h-11 shrink-0 gap-2"
                 >
                   <MessageSquare className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                  <span>Enquire</span>
+                  <span>{ui.product.enquire}</span>
                 </Button>
               )}
             </div>

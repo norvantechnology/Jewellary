@@ -52,7 +52,10 @@ if (process.env.NODE_ENV !== "production") {
 const allowedOrigins = Array.from(allowedOriginsSet);
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Docker uses the standalone server; Vercel builds its own output.
+  output: process.env.VERCEL ? undefined : "standalone",
+  // Files read at runtime with fs must be bundled into serverless functions.
+  outputFileTracingIncludes: { "/**": ["./certs/**"] },
   devIndicators: false,
   cacheComponents: true,
   partialPrefetching: true,
@@ -147,7 +150,8 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/api/:path*",
+        // Every API route except /api/og/* (social share images must stay fetchable/indexable).
+        source: "/api/:path((?!og/).*)",
         headers: [
           {
             key: "X-Robots-Tag",

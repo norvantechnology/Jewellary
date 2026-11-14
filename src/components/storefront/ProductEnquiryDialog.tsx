@@ -1,4 +1,5 @@
 "use client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { EnquiryForm } from "@/components/storefront/EnquiryForm";
@@ -27,6 +28,7 @@ export function ProductEnquiryDialog({
   priceMode,
   availableStock,
 }: ProductEnquiryDialogProps) {
+  const ui = useUiText();
   const isConciergeAdvice = priceMode === "FIXED" && availableStock > 0;
 
   return (
@@ -35,15 +37,13 @@ export function ProductEnquiryDialog({
         <DialogHeader>
           <DialogTitle>
             {isConciergeAdvice
-              ? "Private Concierge"
+              ? ui.product.enquiry.conciergeTitle
               : priceMode === "PRICE_ON_REQUEST"
-                ? "High Jewellery Consultation"
-                : "Bespoke Commission Enquiry"}
+                ? ui.product.enquiry.consultationTitle
+                : ui.product.enquiry.bespokeTitle}
           </DialogTitle>
           <DialogDescription>
-            {isConciergeAdvice
-              ? "Ask a gemologist about stone certificates, custom metal finishes, or sizing."
-              : "Receive personalised stone specifications, studio imagery, and availability directly from our private client team."}
+            {isConciergeAdvice ? ui.product.enquiry.conciergeText : ui.product.enquiry.bespokeText}
           </DialogDescription>
         </DialogHeader>
         <EnquiryForm

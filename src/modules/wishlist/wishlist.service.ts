@@ -136,7 +136,7 @@ function mapWishlistRowsToState(
       productId: p.id,
       productName: p.name,
       productSlug: p.slug,
-      categoryName: p.category?.name ?? "Fine Jewellery",
+      categoryName: p.category?.name ?? "Fine Jewelry",
       hasSizing: p.hasSizing,
       priceMode: p.priceMode,
       price,
@@ -253,7 +253,7 @@ export async function toggleWishlistForOwner(
     variant.product.status !== "ACTIVE" ||
     variant.product.deletedAt !== null
   ) {
-    throw new NotFoundError("The selected jewellery piece or option is unavailable.");
+    throw new NotFoundError("This item or option is no longer available.");
   }
 
   let wishlist = await db.wishlist.findFirst({

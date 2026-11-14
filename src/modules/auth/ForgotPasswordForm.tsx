@@ -1,5 +1,7 @@
 "use client";
 
+import type { SiteContent } from "@/modules/site-content/site-content.shared";
+
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -9,10 +11,19 @@ import { Input } from "@/components/ui/input";
 import { AuthCard, AuthHelpLink } from "@/modules/auth/AuthCard";
 import { forgotPasswordSchema, type ForgotPasswordInput } from "@/modules/auth/auth.schemas";
 import { authClient } from "@/server/auth-client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
-export function ForgotPasswordForm({ nextUrl = "/account" }: { nextUrl?: string }) {
+export function ForgotPasswordForm({
+  nextUrl = "/account",
+  copy,
+}: {
+  nextUrl?: string;
+  /** Card text from site-content.json → pages.auth.forgotPassword. */
+  copy: Pick<SiteContent["pages"]["auth"]["forgotPassword"], "card">;
+}) {
   const loginHref =
     nextUrl === "/account" ? "/login" : `/login?next=${encodeURIComponent(nextUrl)}`;
+  const t = useUiText().auth.forgotPassword;
   const [submitted, setSubmitted] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
 
@@ -34,7 +45,7 @@ export function ForgotPasswordForm({ nextUrl = "/account" }: { nextUrl?: string 
     });
 
     if (res.error && res.error.status === 429) {
-      setServerError("Too many reset requests. Please try again in a few minutes.");
+      setServerError(t.rateLimitError);
       return;
     }
 
@@ -43,10 +54,10 @@ export function ForgotPasswordForm({ nextUrl = "/account" }: { nextUrl?: string 
 
   return (
     <AuthCard
-      eyebrow="Account Recovery"
-      title="Reset Password"
-      description="Enter your account email and we will send secure password reset instructions."
-      footer={<AuthHelpLink href={loginHref}>Return to sign in</AuthHelpLink>}
+      eyebrow={copy.card.eyebrow}
+      title={copy.card.title}
+      description={copy.card.description}
+      footer={<AuthHelpLink href={loginHref}>{t.returnToSignIn}</AuthHelpLink>}
     >
       {serverError && (
         <div
@@ -62,17 +73,14 @@ export function ForgotPasswordForm({ nextUrl = "/account" }: { nextUrl?: string 
           role="status"
           className="space-y-2 rounded-md border border-border bg-surface-2 p-4 text-sm text-foreground"
         >
-          <p className="font-semibold">Reset Instructions Dispatched</p>
-          <p className="text-muted-foreground">
-            If an account exists for that email address, we have sent a link to choose a new
-            password.
-          </p>
+          <p className="font-semibold">{t.sentTitle}</p>
+          <p className="text-muted-foreground">{t.sentText}</p>
         </div>
       ) : (
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
           <FormField
             id="forgot-email"
-            label="Email Address"
+            label={t.emailLabel}
             required
             error={form.formState.errors.email?.message}
           >
@@ -81,7 +89,7 @@ export function ForgotPasswordForm({ nextUrl = "/account" }: { nextUrl?: string 
                 type="email"
                 inputMode="email"
                 autoComplete="email"
-                placeholder="client@example.com"
+                placeholder={t.emailPlaceholder}
                 {...form.register("email")}
                 {...aria}
               />
@@ -89,7 +97,7 @@ export function ForgotPasswordForm({ nextUrl = "/account" }: { nextUrl?: string 
           </FormField>
 
           <Button type="submit" className="w-full" size="lg" loading={form.formState.isSubmitting}>
-            Send Reset Link
+            {t.submit}
           </Button>
         </form>
       )}

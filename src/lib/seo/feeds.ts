@@ -1,6 +1,9 @@
 import { escapeXml } from "@/lib/seo/sitemap";
 import { getSiteUrl, toAbsoluteUrl } from "@/lib/seo/site";
-import { stripMarkup } from "@/lib/seo/templates";
+import { SEO_TEMPLATE_TEXT, fillSeoText, stripMarkup } from "@/lib/seo/templates";
+
+// Wording: data/frontend/site-content.json → site.seoTemplates.feed
+const feedText = SEO_TEMPLATE_TEXT.feed;
 import type { PublicStoreSettings, ShippingZoneDTO } from "@/modules/settings/settings.service";
 
 export interface MerchantFeedProductInput {
@@ -131,8 +134,7 @@ export function buildMerchantFeedXml(
           : caratNum > 0
             ? "under-1ct"
             : "unspecified";
-    const priceTier =
-      baseNum >= 5000 ? "high-jewellery" : baseNum >= 1500 ? "signature" : "essential";
+    const priceTier = baseNum >= 5000 ? "luxury" : baseNum >= 1500 ? "signature" : "essential";
     const originLabel = product.stoneOrigin || "Certified Diamond";
 
     const variants = product.variants.length > 0 ? product.variants : [null];
@@ -214,13 +216,13 @@ export function buildMerchantFeedXml(
           ...(variant?.ringSize ? [`      <g:size>${escapeXml(variant.ringSize)}</g:size>`] : []),
           "      <g:shipping>",
           `        <g:country>${escapeXml(country)}</g:country>`,
-          `        <g:service>${escapeXml(activeZone?.isInsured !== false ? "Insured Atelier Courier" : "Standard Courier")}</g:service>`,
+          `        <g:service>${escapeXml(activeZone?.isInsured !== false ? feedText.insuredShipping : feedText.standardShipping)}</g:service>`,
           `        <g:price>${escapeXml(formatMerchantPrice(shippingCost, currency, rate, decimals))}</g:price>`,
           "      </g:shipping>",
           `      <g:custom_label_0>${product.isFeatured ? "featured" : "catalog"}</g:custom_label_0>`,
           `      <g:custom_label_1>${escapeXml(caratBucket)}</g:custom_label_1>`,
           `      <g:custom_label_2>${escapeXml(priceTier)}</g:custom_label_2>`,
-          `      <g:custom_label_3>${escapeXml(product.certificationLab || "Maison-Graded")}</g:custom_label_3>`,
+          `      <g:custom_label_3>${escapeXml(product.certificationLab || "Uncertified")}</g:custom_label_3>`,
           `      <g:custom_label_4>${escapeXml(originLabel)}</g:custom_label_4>`,
           "    </item>",
         ].join("\n"),
@@ -234,7 +236,7 @@ export function buildMerchantFeedXml(
     "  <channel>",
     `    <title>${escapeXml(settings.storeName)} — Google Merchant Center Product Feed</title>`,
     `    <link>${escapeXml(siteUrl)}</link>`,
-    `    <description>${escapeXml(settings.tagline || "Certified diamond engagement rings and bespoke fine jewellery")}</description>`,
+    `    <description>${escapeXml(settings.tagline || feedText.channelDescription)}</description>`,
     itemsXml.join("\n"),
     "  </channel>",
     "</rss>",
@@ -283,10 +285,10 @@ export function buildGuidesRssXml(
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
     "  <channel>",
-    `    <title>${escapeXml(settings.storeName)} — Fine Jewellery Journal</title>`,
+    `    <title>${escapeXml(fillSeoText(feedText.guidesTitle, { brand: settings.storeName }))}</title>`,
     `    <link>${escapeXml(toAbsoluteUrl("/guides"))}</link>`,
     `    <atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml" />`,
-    `    <description>${escapeXml(`Gemology guides, sizing reference, and diamond education from ${settings.storeName}.`)}</description>`,
+    `    <description>${escapeXml(fillSeoText(feedText.guidesDescription, { brand: settings.storeName }))}</description>`,
     `    <language>en-us</language>`,
     `    <copyright>© ${new Date().getFullYear()} ${escapeXml(settings.storeName)}</copyright>`,
     `    <docs>${escapeXml(siteUrl)}</docs>`,

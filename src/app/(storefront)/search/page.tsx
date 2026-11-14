@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
 import Link from "next/link";
 import { Search as SearchIcon, X } from "lucide-react";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
@@ -16,31 +17,41 @@ import {
   parseCatalogFilterParams,
   type RawSearchParams,
 } from "@/lib/search-params";
-import { NOINDEX_FOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
+import { NOINDEX_FOLLOW_ROBOTS } from "@/lib/seo/metadata";
+import { getCategoryShortcuts } from "@/modules/catalog/catalog.public";
 import { searchProducts } from "@/modules/search/search.service";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
-export const metadata: Metadata = buildMetadata({
-  title: "Search Fine Jewellery",
-  description: "Search certified diamond rings, necklaces, earrings, bracelets, metals, and SKUs.",
-  pathname: "/search",
-  canonical: "/search",
-  robots: NOINDEX_FOLLOW_ROBOTS,
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return buildPageMetadata((c) => c.pages.search.seo, {
+    pathname: "/search",
+    canonical: "/search",
+    robots: NOINDEX_FOLLOW_ROBOTS,
+  });
+}
 
 async function SearchPageBody({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
-  const [rawSearch, settings] = await Promise.all([searchParams, getPublicStoreSettings()]);
+  const [rawSearch, settings, siteContent] = await Promise.all([
+    searchParams,
+    getPublicStoreSettings(),
+    getSiteContent(),
+  ]);
+  const page = siteContent.pages.search;
+  const withQuery = (text: string) => text.replace("{query}", result.query ?? "");
   const filters = parseCatalogFilterParams(rawSearch);
-  const result = await searchProducts(filters);
+  const [result, categoryLinks] = await Promise.all([
+    searchProducts(filters),
+    getCategoryShortcuts(6),
+  ]);
 
   return (
     <Section spacing="sm">
       <Container variant="wide">
-        <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Search" }]} />
+        <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: page.breadcrumb }]} />
 
         <header className="mt-2 mb-6 border-b border-border pb-6 sm:mb-8">
           <h1 className="type-h1 font-display font-semibold break-words text-foreground">
-            {result.query ? `Search: “${result.query}”` : "Search Our Collections"}
+            {result.query ? withQuery(page.resultsHeading) : page.heading}
           </h1>
 
           <form
@@ -49,7 +60,7 @@ async function SearchPageBody({ searchParams }: { searchParams: Promise<RawSearc
             className="mt-5 flex max-w-2xl flex-col gap-2.5 sm:flex-row sm:items-center"
           >
             <label htmlFor="search-page-input" className="sr-only">
-              Search jewellery pieces
+              {page.inputLabel}
             </label>
             <div className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-lg border border-input bg-card px-3 transition-colors focus-within:border-foreground/50 focus-within:ring-2 focus-within:ring-ring md:h-11">
               <SearchIcon
@@ -62,7 +73,7 @@ async function SearchPageBody({ searchParams }: { searchParams: Promise<RawSearc
                 name="q"
                 type="search"
                 defaultValue={result.query}
-                placeholder="Search by stone shape, metal, GIA certificate, or SKU..."
+                placeholder={page.placeholder}
                 className="h-full w-full min-w-0 flex-1 border-0 bg-transparent text-base text-foreground shadow-none ring-0 outline-none placeholder:text-muted-foreground focus:ring-0 focus:outline-none focus-visible:shadow-none focus-visible:ring-0 focus-visible:outline-none md:text-sm [&::-webkit-search-cancel-button]:hidden"
               />
               {result.query && (
@@ -76,24 +87,24 @@ async function SearchPageBody({ searchParams }: { searchParams: Promise<RawSearc
               )}
             </div>
             <Button type="submit" size="md" className="h-12 w-full shrink-0 sm:w-auto md:h-11">
-              Search
+              {page.submitLabel}
             </Button>
           </form>
 
-          {!result.query && (
+          {!result.query && categoryLinks.length > 0 && (
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground">Try searching:</span>
-              {["Solitaire", "Emerald Cut", "Platinum", "18K Yellow Gold", "Tennis Bracelet"].map(
-                (term) => (
-                  <Link
-                    key={term}
-                    href={`/search?q=${encodeURIComponent(term)}`}
-                    className="transition-ui inline-flex min-h-11 items-center rounded-full border border-border bg-card px-3.5 text-xs font-medium text-foreground hover:border-foreground/35 hover:bg-muted sm:min-h-9"
-                  >
-                    {term}
-                  </Link>
-                ),
-              )}
+              <span className="text-xs font-medium text-muted-foreground">
+                {page.suggestionsLabel}
+              </span>
+              {categoryLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="transition-ui inline-flex min-h-11 items-center rounded-full border border-border bg-card px-3.5 text-xs font-medium text-foreground hover:border-foreground/35 hover:bg-muted sm:min-h-9"
+                >
+                  {link.label}
+                </Link>
+              ))}
             </div>
           )}
         </header>
@@ -106,25 +117,17 @@ async function SearchPageBody({ searchParams }: { searchParams: Promise<RawSearc
           {result.items.length === 0 ? (
             <EmptyState
               icon={SearchIcon}
-              title="No pieces match"
-              description={
-                result.query
-                  ? `No pieces match “${result.query}”. Try another term or clear filters.`
-                  : "Enter a keyword above or browse all collections."
-              }
-              actionLabel={result.query ? "Clear filters" : "Browse all pieces"}
+              title={page.empty.title}
+              description={result.query ? withQuery(page.empty.withQuery) : page.empty.withoutQuery}
+              actionLabel={result.query ? page.empty.clearLabel : page.empty.browseLabel}
               actionHref={
                 result.query ? `/search?q=${encodeURIComponent(result.query)}` : "/collections"
               }
-              suggestions={[
-                { label: "Solitaire", href: "/search?q=Solitaire" },
-                { label: "18K Yellow Gold", href: "/search?q=18K+Yellow+Gold" },
-                { label: "All Jewellery", href: "/collections" },
-              ]}
+              suggestions={categoryLinks}
             />
           ) : (
             <>
-              <h2 className="sr-only">Search Results</h2>
+              <h2 className="sr-only">{page.resultsSrHeading}</h2>
               <RevealStagger className={getProductGridClassName("catalog")}>
                 {result.items.map((product, idx) => (
                   <ProductCard
@@ -161,7 +164,7 @@ export default function SearchPage({ searchParams }: { searchParams: Promise<Raw
               className="space-y-6 py-4"
               role="status"
               aria-busy="true"
-              aria-label="Searching catalogue"
+              aria-label="Searching products"
             >
               <Skeleton className="h-5 w-40" />
               <Skeleton className="h-10 w-72 max-w-full" />

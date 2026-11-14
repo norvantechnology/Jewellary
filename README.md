@@ -27,7 +27,7 @@ Key environment variables (validated at runtime in `src/lib/env.ts` and document
 
 | Group                    | Variables                                                                                                                                       | Purpose                                                                             |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| App & Brand              | `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SITE_NAME`, `NODE_ENV`                                                                                     | Canonical origin, brand name, runtime environment                                   |
+| App & Brand              | `SITE_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SITE_NAME`, `NODE_ENV`                                                                         | Canonical origin, brand name, runtime environment                                   |
 | Database                 | `DATABASE_URL`, `DIRECT_URL`, `POSTGRES_PORT`                                                                                                   | Pooled / direct PostgreSQL 16 connection strings                                    |
 | Auth                     | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                                                             | Session signing, base URL, optional Google OAuth                                    |
 | Payments                 | `PAYMENT_PROVIDER`, `PAYMENT_TEST_SANDBOX`, `STRIPE_*`, `RAZORPAY_*`                                                                            | Active gateway (`stripe` or `razorpay`), keys & webhooks                            |
@@ -85,12 +85,6 @@ Open `http://localhost:3000`. Sign in to `/admin` using `ADMIN_SEED_EMAIL` and `
 | `npm run typecheck`                       | Run TypeScript strict compiler (`tsc --noEmit`)                                                                |
 | `npm run lint`                            | Run ESLint (includes design-token / no-blue-purple check)                                                      |
 | `npm run format` / `npm run format:check` | Format or verify formatting with Prettier                                                                      |
-| `npm run test` / `npm run test:unit`      | Run Vitest unit test suite (`tests/unit`)                                                                      |
-| `npm run test:integration`                | Run Vitest database/service integration suite (`tests/integration`, requires PostgreSQL)                       |
-| `npm run test:all`                        | Run all Vitest unit + integration suites                                                                       |
-| `npm run test:coverage`                   | Run all Vitest suites with v8 statement coverage gate (`>= 85%`)                                               |
-| `npm run test:e2e`                        | Run Playwright E2E, WCAG 2.2 AA (`axe-core`), security header & SEO suites                                     |
-| `npm run seo:crawl`                       | Crawl running production server and fail on broken internal links or sitemap orphans                           |
 | `npm run db:generate`                     | Generate Prisma Client                                                                                         |
 | `npm run db:migrate`                      | Apply production SQL migrations (`prisma migrate deploy`)                                                      |
 | `npm run db:migrate:dev`                  | Create/apply development Prisma migrations                                                                     |
@@ -112,7 +106,7 @@ Webhook endpoints:
 
 ### Docker Standalone Image
 
-The included multi-stage [`Dockerfile`](./Dockerfile) builds Next.js standalone output (`output: "standalone"`) alongside `public/`, `.next/static/`, `prisma/`, and `content/`:
+The included multi-stage [`Dockerfile`](./Dockerfile) builds Next.js standalone output (`output: "standalone"`) alongside `public/`, `.next/static/`, and `prisma/`:
 
 ```bash
 docker build -t jewellery-platform:latest .
@@ -133,7 +127,7 @@ All public-facing copy, transactional emails, JSON-LD entities, Open Graph cards
 
 1. **Environment Brand Configuration (`.env`)**:
    - `NEXT_PUBLIC_SITE_NAME`: Brand name shown in metadata fallback templates, emails, Open Graph alt text, and default store seed.
-   - `NEXT_PUBLIC_SITE_URL`: Canonical origin used across sitemaps, `robots.txt`, JSON-LD IDs, and verification links.
+   - `SITE_URL` (runtime) / `NEXT_PUBLIC_SITE_URL` (build-time fallback): the real public https domain. Used for canonical links, sitemaps, `robots.txt`, JSON-LD and social share images. WhatsApp/Facebook link previews only show images when this domain is publicly reachable.
    - `EMAIL_FROM` and `ADMIN_NOTIFY_EMAIL`: Sender and studio concierge inbox addresses.
    - `ADMIN_SEED_EMAIL` / `ADMIN_SEED_NAME` / `ADMIN_SEED_PASSWORD`: Initial administrator credentials created by `prisma/seed.ts`.
 2. **Runtime Store Identity (`/admin/settings`)**:
@@ -142,18 +136,9 @@ All public-facing copy, transactional emails, JSON-LD entities, Open Graph cards
 3. **Typography, Palette & Visual Marks**:
    - Adjust semantic CSS design tokens (ivory/champagne surfaces, ink foregrounds, gold/bronze accents) inside [`src/app/globals.css`](./src/app/globals.css) while preserving WCAG AA contrast in both Light and Dark themes.
    - Replace the geometric diamond emblem or wordmark typography in [`src/components/shared/Logo.tsx`](./src/components/shared/Logo.tsx) and Open Graph layouts under [`src/app/opengraph-image.tsx`](./src/app/opengraph-image.tsx) if needed.
-   - Edit storefront brand narrative copy inside [`content/about.md`](./content/about.md) (`{{siteName}}` and `{{contactEmail}}` interpolate automatically).
+   - Edit page text and SEO in **Admin → Page Content**. Defaults live in [`data/frontend/site-content.json`](./data/frontend/site-content.json); admin edits are saved in the database and override them (`{{siteName}}`, `{{contactEmail}}`, `{{returnWindowDays}}` interpolate automatically). Use **Download JSON** in admin to copy edits back into the file.
 
 ## Documentation Index
 
-- [`PROJECT_REQUIREMENTS.md`](./PROJECT_REQUIREMENTS.md) — Authoritative platform specification
-- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — System architecture, data flows, and trust boundaries
-- [`docs/PLAN.md`](./docs/PLAN.md) — Phased implementation architecture plan
-- [`docs/DECISIONS.md`](./docs/DECISIONS.md) — Recorded architectural decisions
-- [`docs/PROGRESS.md`](./docs/PROGRESS.md) — Phase 0–9 & gap-closure progress log
-- [`docs/PERFORMANCE.md`](./docs/PERFORMANCE.md) — Bundle analysis & Lighthouse optimisation report
-- [`docs/SEO_RUNBOOK.md`](./docs/SEO_RUNBOOK.md) — Bot rendering verification & indexing checklist
-- [`docs/QA_CHECKLIST.md`](./docs/QA_CHECKLIST.md) — Pre-launch verification & manual QA checklist
-- [`docs/CONTENT_TODO.md`](./docs/CONTENT_TODO.md) — Pre-launch editorial & photography placeholders
 - [`docs/RUNBOOKS.md`](./docs/RUNBOOKS.md) — Production operations, disaster recovery, & security runbooks
-- [`docs/FINAL_AUDIT.md`](./docs/FINAL_AUDIT.md) — Complete requirement traceability and gate audit report
+- [`data/frontend/site-content.json`](./data/frontend/site-content.json) — Default storefront page text and SEO

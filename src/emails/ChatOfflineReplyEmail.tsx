@@ -14,12 +14,12 @@ export function ChatOfflineReplyEmail(props: {
     <EmailLayout
       siteName={props.siteName}
       contactEmail={props.contactEmail}
-      previewText={`New reply from ${props.siteName} Atelier Concierge`}
-      heading="New Message From Our Atelier Concierge"
+      previewText={`New reply from the ${props.siteName} team`}
+      heading="You have a new message from our team"
     >
-      <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {props.recipientName},</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {props.recipientName},</Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        Our concierge responded to your conversation ({props.subjectLabel}):
+        Our team replied to your conversation ({props.subjectLabel}):
       </Text>
       <Section
         style={{
@@ -34,7 +34,7 @@ export function ChatOfflineReplyEmail(props: {
       </Section>
       <Section style={{ margin: "24px 0" }}>
         <Button href={props.conversationUrl} style={EMAIL_BUTTON_STYLE}>
-          Open Conversation
+          Open conversation
         </Button>
       </Section>
     </EmailLayout>

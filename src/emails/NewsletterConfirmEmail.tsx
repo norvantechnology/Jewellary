@@ -19,21 +19,20 @@ export function NewsletterConfirmEmail({
   return (
     <EmailLayout
       siteName={siteName}
-      previewText={`Confirm your subscription to ${siteName} private previews`}
-      heading="Confirm Your Subscription"
+      previewText={`Confirm your ${siteName} newsletter subscription`}
+      heading="Confirm your subscription"
       contactEmail={contactEmail}
     >
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        Thank you for requesting private collection dispatches and gemological notes from {siteName}
-        .
+        Thanks for signing up for new arrivals, offers and jewelry tips from {siteName}.
       </Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        To complete your subscription and confirm consent to receive occasional previews, please
-        click the confirmation button below within 48 hours.
+        To finish signing up, please tap the button below within 48 hours. We’ll only email you
+        occasionally.
       </Text>
       <Section style={{ margin: "24px 0" }}>
         <Button href={confirmUrl} style={EMAIL_BUTTON_STYLE}>
-          Confirm Subscription
+          Confirm subscription
         </Button>
       </Section>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
@@ -42,7 +41,7 @@ export function NewsletterConfirmEmail({
           href={unsubscribeUrl}
           style={{ color: BRAND_PALETTE.light.accentText, textDecoration: "underline" }}
         >
-          unsubscribe immediately
+          unsubscribe now
         </Link>
         .
       </Text>

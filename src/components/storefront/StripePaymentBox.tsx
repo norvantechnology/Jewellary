@@ -1,5 +1,7 @@
 "use client";
 
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe, type Appearance } from "@stripe/stripe-js";
@@ -16,6 +18,7 @@ interface StripePaymentFormProps {
 }
 
 function StripePaymentForm({ orderNumber, guestToken, total, currency }: StripePaymentFormProps) {
+  const t = useUiText().checkout;
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = React.useState(false);
@@ -40,8 +43,8 @@ function StripePaymentForm({ orderNumber, guestToken, total, currency }: StripeP
       // A voided session (reservation expired) must read as "not charged", not as a card problem.
       const msg =
         result.error.code === "payment_intent_unexpected_state"
-          ? "This payment session has expired and you have not been charged. Please refresh to start a new checkout."
-          : (result.error.message ?? "Payment authorization failed.");
+          ? t.sessionExpired
+          : (result.error.message ?? t.paymentFailed);
       setErrorMessage(msg);
       toast.error(msg);
       setSubmitting(false);
@@ -68,8 +71,10 @@ function StripePaymentForm({ orderNumber, guestToken, total, currency }: StripeP
         <Lock className="size-4" aria-hidden="true" />
         <span>
           {submitting
-            ? "Authorizing Payment…"
-            : `Authorize ${formatMoneyExact(total, currency, "en-US", getCurrencyExponent(currency))}`}
+            ? t.authorizing
+            : fill(t.authorize, {
+                amount: formatMoneyExact(total, currency, "en-US", getCurrencyExponent(currency)),
+              })}
         </span>
       </Button>
     </form>

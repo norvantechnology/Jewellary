@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { NOINDEX_NOFOLLOW_ROBOTS } from "@/lib/seo/metadata";
+import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
 import { redirect } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sanitizeRedirectPath } from "@/lib/sanitize-redirect";
@@ -7,10 +9,12 @@ import { RegisterForm } from "@/modules/auth/RegisterForm";
 import { isGoogleAuthEnabled } from "@/server/auth";
 import { getOptionalSession } from "@/server/dal";
 
-export const metadata: Metadata = {
-  title: "Create Account",
-  description: "Register to save pieces, track orders, and store insured shipping addresses.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildPageMetadata((c) => c.pages.auth.register.seo, {
+    pathname: "/register",
+    robots: NOINDEX_NOFOLLOW_ROBOTS,
+  });
+}
 
 async function RegisterContent({
   searchParams,
@@ -19,12 +23,18 @@ async function RegisterContent({
 }) {
   const params = await searchParams;
   const nextUrl = sanitizeRedirectPath(params.next, "/account");
-  const session = await getOptionalSession();
+  const [session, content] = await Promise.all([getOptionalSession(), getSiteContent()]);
   if (session) {
     redirect(nextUrl);
   }
 
-  return <RegisterForm nextUrl={nextUrl} googleEnabled={isGoogleAuthEnabled} />;
+  return (
+    <RegisterForm
+      nextUrl={nextUrl}
+      googleEnabled={isGoogleAuthEnabled}
+      copy={content.pages.auth.register}
+    />
+  );
 }
 
 export default function RegisterPage({

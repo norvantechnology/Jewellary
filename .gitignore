@@ -15,10 +15,6 @@ next-env.d.ts
 .env*.local
 
 # Testing & Coverage
-coverage/
-playwright-report/
-test-results/
-.lighthouseci/
 
 # Logs & OS
 *.log

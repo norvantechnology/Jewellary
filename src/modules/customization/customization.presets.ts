@@ -244,7 +244,7 @@ export const CUSTOMIZATION_CATEGORY_PRESETS: Record<
       code: "metal",
       label: "Precious Metal",
       type: "SWATCH",
-      helperText: "All metals are recycled and hallmarked to atelier standard.",
+      helperText: "All our metals are recycled and hallmarked for purity.",
       required: true,
       isActive: true,
       sortOrder: 0,
@@ -262,7 +262,7 @@ export const CUSTOMIZATION_CATEGORY_PRESETS: Record<
     },
     {
       code: "diamond_color",
-      label: "Diamond Colour Grade",
+      label: "Diamond color grade",
       type: "SELECT",
       helperText: "Applied when your configuration includes a center diamond.",
       required: true,

@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import { Minus, Plus } from "lucide-react";
 import { AnimatedCounter } from "@/components/motion/AnimatedCounter";
 import { cn } from "@/lib/utils";
@@ -21,10 +23,11 @@ export function QuantityStepper({
   max = 99,
   onChange,
   disabled = false,
-  label = "Quantity",
+  label,
   size = "default",
   className,
 }: QuantityStepperProps) {
+  const ui = useUiText();
   const canDecrement = !disabled && value > min;
   const canIncrement = !disabled && value < max;
   const isCompact = size === "compact";
@@ -39,13 +42,13 @@ export function QuantityStepper({
         className,
       )}
       role="group"
-      aria-label={label}
+      aria-label={label ?? ui.common.quantity}
     >
       <button
         type="button"
         onClick={() => canDecrement && onChange(value - 1)}
         disabled={!canDecrement}
-        aria-label="Decrease quantity"
+        aria-label={ui.common.decreaseQuantity}
         className={cn(
           "transition-ui inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-l-md text-text hover:bg-surface-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-40",
           buttonSizeClass,
@@ -63,7 +66,7 @@ export function QuantityStepper({
         type="button"
         onClick={() => canIncrement && onChange(value + 1)}
         disabled={!canIncrement}
-        aria-label="Increase quantity"
+        aria-label={ui.common.increaseQuantity}
         className={cn(
           "transition-ui inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-r-md text-text hover:bg-surface-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-40",
           buttonSizeClass,

@@ -433,7 +433,7 @@ export const config = {
   matcher: [
     {
       source:
-        "/((?!_next/static|_next/image|favicon.ico|icon.svg|icon-.*\\.png|apple-touch-icon\\.png|robots.txt|sitemap.*|sitemaps/.*|feeds/.*|llms.txt|llms-full.txt|manifest.webmanifest).*)",
+        "/((?!_next/static|_next/image|api/og/|favicon.ico|icon.svg|icon-.*\\.png|apple-touch-icon\\.png|robots.txt|sitemap.*|sitemaps/.*|feeds/.*|llms.txt|llms-full.txt|manifest.webmanifest).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

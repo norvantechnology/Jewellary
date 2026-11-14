@@ -90,13 +90,13 @@ export function AdminCustomerDetailClient({
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-md border border-border bg-card p-5">
           <p className="text-xs tracking-wider text-muted-foreground uppercase">Total Orders</p>
-          <p className="mt-1 font-display text-3xl font-medium text-foreground tabular-nums-price">
+          <p className="tabular-nums-price mt-1 font-display text-3xl font-medium text-foreground">
             {customer.orderCount}
           </p>
         </div>
         <div className="rounded-md border border-border bg-card p-5">
           <p className="text-xs tracking-wider text-muted-foreground uppercase">Lifetime Spend</p>
-          <p className="mt-1 font-display text-3xl font-medium text-foreground tabular-nums-price">
+          <p className="tabular-nums-price mt-1 font-display text-3xl font-medium text-foreground">
             {formatMoneyExact(customer.lifetimeSpend, customer.currency)}
           </p>
         </div>
@@ -136,7 +136,7 @@ export function AdminCustomerDetailClient({
                       <Badge variant={ORDER_STATUS_META[order.status].badgeVariant}>
                         {ORDER_STATUS_META[order.status].label}
                       </Badge>
-                      <span className="font-medium tabular-nums-price">
+                      <span className="tabular-nums-price font-medium">
                         {formatMoneyExact(order.total, order.currency)}
                       </span>
                     </div>

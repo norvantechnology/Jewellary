@@ -1,5 +1,7 @@
 "use client";
 
+import type { SiteContent } from "@/modules/site-content/site-content.shared";
+
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -14,12 +16,16 @@ import {
   type ResendVerificationInput,
 } from "@/modules/auth/auth.schemas";
 import { authClient } from "@/server/auth-client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 interface VerifyEmailPanelProps {
   token: string | null;
+  /** Card text from site-content.json → pages.auth.verifyEmail.card. */
+  copy: SiteContent["pages"]["auth"]["verifyEmail"]["card"];
 }
 
-export function VerifyEmailPanel({ token }: VerifyEmailPanelProps) {
+export function VerifyEmailPanel({ token, copy }: VerifyEmailPanelProps) {
+  const t = useUiText().auth.verifyEmail;
   const [status, setStatus] = React.useState<"idle" | "verifying" | "verified" | "error">(
     token ? "verifying" : "idle",
   );
@@ -37,7 +43,7 @@ export function VerifyEmailPanel({ token }: VerifyEmailPanelProps) {
       if (!active) return;
       if (res.error) {
         setStatus("error");
-        setErrorMessage(res.error.message ?? "Verification link is invalid or expired.");
+        setErrorMessage(res.error.message ?? t.invalidLinkError);
       } else {
         setStatus("verified");
       }
@@ -47,7 +53,7 @@ export function VerifyEmailPanel({ token }: VerifyEmailPanelProps) {
     return () => {
       active = false;
     };
-  }, [token]);
+  }, [token, t.invalidLinkError]);
 
   const form = useForm<ResendVerificationInput>({
     resolver: zodResolver(resendVerificationSchema),
@@ -61,27 +67,23 @@ export function VerifyEmailPanel({ token }: VerifyEmailPanelProps) {
       callbackURL: "/account",
     });
     if (res.error) {
-      setErrorMessage(res.error.message ?? "Could not send verification email.");
+      setErrorMessage(res.error.message ?? t.sendError);
       return;
     }
     setResent(true);
-    toast.success("Verification link sent if the account exists");
+    toast.success(t.sentToast);
   });
 
   return (
     <AuthCard
-      eyebrow="Email Verification"
-      title={status === "verified" ? "Email Verified" : "Verify Your Email"}
-      description={
-        status === "verified"
-          ? "Your email address has been confirmed."
-          : "Confirm your email address to protect your account and receive order dossiers."
-      }
-      footer={<AuthHelpLink href="/account">Go to My Account</AuthHelpLink>}
+      eyebrow={copy.eyebrow}
+      title={status === "verified" ? copy.verifiedTitle : copy.title}
+      description={status === "verified" ? copy.verifiedDescription : copy.description}
+      footer={<AuthHelpLink href="/account">{t.goToAccount}</AuthHelpLink>}
     >
       {status === "verifying" && (
         <p role="status" className="text-sm text-muted-foreground">
-          Verifying your confirmation token...
+          {t.verifying}
         </p>
       )}
 
@@ -91,10 +93,10 @@ export function VerifyEmailPanel({ token }: VerifyEmailPanelProps) {
             role="status"
             className="rounded-md border border-success/40 bg-success/10 p-4 text-sm text-foreground"
           >
-            Thank you. Your email is verified and your account is ready.
+            {t.verifiedText}
           </div>
           <Button asChild className="w-full">
-            <Link href="/account">Continue to Account</Link>
+            <Link href="/account">{t.continueToAccount}</Link>
           </Button>
         </div>
       )}
@@ -112,13 +114,13 @@ export function VerifyEmailPanel({ token }: VerifyEmailPanelProps) {
 
           {resent ? (
             <p role="status" className="text-sm text-foreground">
-              Please check your inbox for a fresh verification link.
+              {t.resentText}
             </p>
           ) : (
             <form onSubmit={onResend} className="space-y-4" noValidate>
               <FormField
                 id="verify-email-input"
-                label="Email Address"
+                label={t.emailLabel}
                 required
                 error={form.formState.errors.email?.message}
               >
@@ -126,7 +128,7 @@ export function VerifyEmailPanel({ token }: VerifyEmailPanelProps) {
                   <Input
                     type="email"
                     autoComplete="email"
-                    placeholder="claire@example.com"
+                    placeholder={t.emailPlaceholder}
                     {...form.register("email")}
                     {...aria}
                   />
@@ -134,7 +136,7 @@ export function VerifyEmailPanel({ token }: VerifyEmailPanelProps) {
               </FormField>
 
               <Button type="submit" className="w-full" loading={form.formState.isSubmitting}>
-                Resend Verification Link
+                {t.submit}
               </Button>
             </form>
           )}

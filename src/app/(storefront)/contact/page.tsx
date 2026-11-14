@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
 import { Clock, Mail, MapPin, Phone } from "lucide-react";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -11,22 +12,11 @@ import {
   buildJewelryStoreJsonLd,
   buildWebPageJsonLd,
 } from "@/lib/seo/jsonld";
-import { INDEXABLE_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
 import { ENQUIRY_TYPE_VALUES } from "@/modules/enquiries/enquiry.schemas";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getPublicStoreSettings();
-  return buildMetadata({
-    title: "Private Concierge & Bespoke Enquiries",
-    description:
-      "Connect with our gemology specialists for bespoke designs, diamond inspection, sizing guidance, or salon appointments.",
-    pathname: "/contact",
-    canonical: "/contact",
-    storeName: settings.storeName,
-    siteDefaultOgImage: settings.defaultOgImageUrl,
-    robots: INDEXABLE_ROBOTS,
-  });
+  return buildPageMetadata((c) => c.pages.contact.seo, { pathname: "/contact" });
 }
 
 interface ContactPageProps {
@@ -34,7 +24,12 @@ interface ContactPageProps {
 }
 
 async function ContactPageBody({ searchParams }: ContactPageProps) {
-  const [rawSearch, settings] = await Promise.all([searchParams, getPublicStoreSettings()]);
+  const [rawSearch, settings, content] = await Promise.all([
+    searchParams,
+    getPublicStoreSettings(),
+    getSiteContent(),
+  ]);
+  const page = content.pages.contact;
 
   const rawType = rawSearch.type?.toUpperCase();
   const defaultType = ENQUIRY_TYPE_VALUES.includes(rawType as (typeof ENQUIRY_TYPE_VALUES)[number])
@@ -44,15 +39,15 @@ async function ContactPageBody({ searchParams }: ContactPageProps) {
   const productHint = rawSearch.product?.trim() || null;
   const contactJsonLd = buildWebPageJsonLd({
     type: "ContactPage",
-    name: `Private Concierge | ${settings.storeName}`,
+    name: `${page.heading} | ${settings.storeName}`,
     description:
-      "Connect with our gemology specialists for bespoke designs, diamond inspection, sizing guidance, or salon appointments.",
+      "Talk to our jewelry experts about custom designs, diamonds, ring sizing or booking an appointment.",
     path: "/contact",
     settings,
   });
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd([
     { name: "Home", path: "/" },
-    { name: "Private Concierge", path: "/contact" },
+    { name: "Contact us", path: "/contact" },
   ]);
   const jewelryStoreJsonLd = buildJewelryStoreJsonLd(settings);
 
@@ -62,17 +57,13 @@ async function ContactPageBody({ searchParams }: ContactPageProps) {
       <JsonLd data={breadcrumbJsonLd} />
       {jewelryStoreJsonLd && <JsonLd data={jewelryStoreJsonLd} />}
       <Container>
-        <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Private Concierge" }]} />
+        <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: page.heading }]} />
 
         <div className="mt-4 grid gap-8 lg:grid-cols-12 lg:gap-10">
           <div className="space-y-6 lg:col-span-5">
             <div>
-              <h1 className="type-h1 font-semibold text-foreground">Private Concierge</h1>
-              <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-                Whether commissioning an heirloom solitaire, arranging an in-salon viewing, or
-                confirming ring size tolerances, our specialists respond personally within one
-                business day.
-              </p>
+              <h1 className="type-h1 font-semibold text-foreground">{page.heading}</h1>
+              <p className="mt-3 text-base leading-relaxed text-muted-foreground">{page.intro}</p>
             </div>
 
             <div className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
@@ -83,7 +74,7 @@ async function ContactPageBody({ searchParams }: ContactPageProps) {
                 />
                 <div className="min-w-0">
                   <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    Email
+                    {page.emailLabel}
                   </p>
                   <a
                     href={`mailto:${settings.contactEmail}`}
@@ -102,7 +93,7 @@ async function ContactPageBody({ searchParams }: ContactPageProps) {
                   />
                   <div>
                     <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                      Telephone
+                      {page.phoneLabel}
                     </p>
                     <p className="tabular-nums-price mt-0.5 text-sm font-semibold text-foreground">
                       {settings.contactPhone}
@@ -119,7 +110,7 @@ async function ContactPageBody({ searchParams }: ContactPageProps) {
                   />
                   <div>
                     <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                      Concierge Hours
+                      {page.hoursLabel}
                     </p>
                     <p className="mt-0.5 text-sm text-foreground">{settings.supportHours}</p>
                   </div>
@@ -134,7 +125,7 @@ async function ContactPageBody({ searchParams }: ContactPageProps) {
                   />
                   <div>
                     <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                      {settings.physicalStore.name ?? "Atelier Salon"}
+                      {settings.physicalStore.name ?? "Our showroom"}
                     </p>
                     <p className="mt-0.5 text-sm text-foreground">
                       {[
@@ -160,7 +151,7 @@ async function ContactPageBody({ searchParams }: ContactPageProps) {
           <div className="lg:col-span-7">
             <div className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-8">
               <h2 className="mb-5 text-2xl font-semibold tracking-[-0.015em] text-foreground">
-                Send a Note to the Studio
+                {page.formHeading}
               </h2>
               <EnquiryForm defaultType={defaultType} productName={productHint} />
             </div>

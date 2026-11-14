@@ -1,3 +1,4 @@
+import { UiText } from "@/components/shared/UiText";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Float } from "@/components/motion/Float";
@@ -57,7 +58,9 @@ export function EmptyState({
       )}
       {suggestions && suggestions.length > 0 && (
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2 border-t border-border pt-5">
-          <span className="text-xs font-medium text-muted-foreground">Explore instead:</span>
+          <span className="text-xs font-medium text-muted-foreground">
+            <UiText section="common" name="exploreInstead" />
+          </span>
           {suggestions.map((item) => (
             <Link
               key={item.href}

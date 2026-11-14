@@ -1,14 +1,18 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { NOINDEX_NOFOLLOW_ROBOTS } from "@/lib/seo/metadata";
+import { buildPageMetadata } from "@/modules/site-content/site-content.service";
 import { QuoteAcceptClient } from "@/components/storefront/QuoteAcceptClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import { resolveQuoteAcceptanceToken } from "@/modules/customization/customization.service";
 import { resolveActorIdentity } from "@/server/customer-identity";
 
-export const metadata: Metadata = {
-  title: "Review Bespoke Quotation",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildPageMetadata((c) => c.pages.quote.seo, {
+    pathname: "/customize/accept",
+    robots: NOINDEX_NOFOLLOW_ROBOTS,
+  });
+}
 
 async function AcceptQuoteContent({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;

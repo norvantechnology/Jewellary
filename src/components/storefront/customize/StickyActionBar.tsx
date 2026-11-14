@@ -1,4 +1,5 @@
 "use client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -32,17 +33,18 @@ export function StickyActionBar({
   onSubmitClick,
   isDesktopPage = false,
 }: StickyActionBarProps) {
+  const ui = useUiText();
   const { formatPrice } = useCurrency();
   const reducedMotion = useReducedMotionSafe();
 
   const submitLabel =
     mode === "edit"
       ? submitting
-        ? "Saving..."
-        : "Save changes"
+        ? ui.customize.actions.saving
+        : ui.customize.actions.save
       : submitting
-        ? "Sending..."
-        : "Send request";
+        ? ui.customize.actions.sending
+        : ui.customize.actions.send;
 
   return (
     <div
@@ -61,7 +63,9 @@ export function StickyActionBar({
         )}
       >
         <div className="min-w-0">
-          <span className="block text-xs font-medium text-muted-foreground">Estimated price</span>
+          <span className="block text-xs font-medium text-muted-foreground">
+            {ui.customize.actions.estimatedPrice}
+          </span>
           <div aria-live="polite" className="min-h-6">
             <AnimatePresence mode="wait" initial={false}>
               <m.span
@@ -84,13 +88,13 @@ export function StickyActionBar({
               type="button"
               variant="ghost"
               size="md"
-              aria-label="Back"
+              aria-label={ui.customize.actions.back}
               onClick={onBack}
               disabled={submitting}
               className="h-12 w-12 shrink-0 rounded-xl p-0 text-[15px] font-medium text-foreground min-[480px]:w-auto min-[480px]:px-4"
             >
               <ArrowLeft className="size-5 min-[480px]:hidden" aria-hidden="true" />
-              <span className="hidden min-[480px]:inline">Back</span>
+              <span className="hidden min-[480px]:inline">{ui.customize.actions.back}</span>
             </Button>
           ) : null}
 
@@ -102,7 +106,7 @@ export function StickyActionBar({
               onClick={onNext}
               className="h-12 min-w-[120px] rounded-xl px-5 text-[15px] font-semibold"
             >
-              Next
+              {ui.customize.actions.next}
             </Button>
           ) : (
             <Button

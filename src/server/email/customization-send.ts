@@ -102,9 +102,9 @@ export async function sendCustomizationSubmittedEmails(input: {
   );
 
   const customerText = [
-    `Dear ${input.customerName},`,
-    `We have received bespoke request ${input.requestNumber} for ${input.productName}.`,
-    `Indicative estimate: ${input.indicativeRangeDisplay}`,
+    `Hi ${input.customerName},`,
+    `We received your custom design request ${input.requestNumber} for ${input.productName}.`,
+    `Estimated price: ${input.indicativeRangeDisplay}`,
     formatSelectionsPlainText(input.selections),
     `View request: ${requestUrl}`,
   ]
@@ -125,10 +125,10 @@ export async function sendCustomizationSubmittedEmails(input: {
   );
 
   const adminText = [
-    `New Customization Request ${input.requestNumber}`,
+    `New custom request ${input.requestNumber}`,
     `Customer: ${input.customerName} (${input.customerEmail})`,
     `Product: ${input.productName}`,
-    `Indicative Base Range: ${input.indicativeRangeBase}`,
+    `Estimated range (base currency): ${input.indicativeRangeBase}`,
     formatSelectionsPlainText(input.selections),
     `Review in admin: ${adminUrl}`,
   ]
@@ -138,14 +138,14 @@ export async function sendCustomizationSubmittedEmails(input: {
   await Promise.all([
     dispatchEmailWithRetry({
       to: input.customerEmail,
-      subject: `Customization Request ${input.requestNumber} Received — ${env.NEXT_PUBLIC_SITE_NAME}`,
+      subject: `We received your custom request ${input.requestNumber} — ${env.NEXT_PUBLIC_SITE_NAME}`,
       html: customerHtml,
       text: customerText,
       tag: "customization-submitted-customer",
     }),
     dispatchEmailWithRetry({
       to: env.ADMIN_NOTIFY_EMAIL,
-      subject: `[Bespoke Request] ${input.requestNumber} — ${input.productName}`,
+      subject: `[Custom request] ${input.requestNumber} — ${input.productName}`,
       html: adminHtml,
       text: adminText,
       tag: "customization-submitted-admin",
@@ -187,23 +187,23 @@ export async function sendCustomizationQuoteEmail(input: {
   );
 
   const text = [
-    `Dear ${input.customerName},`,
-    `Your bespoke quotation for ${input.requestNumber} (${input.productName}) is ready.`,
+    `Hi ${input.customerName},`,
+    `Your custom design quote ${input.requestNumber} (${input.productName}) is ready.`,
     `Final Quotation Price: ${input.finalPriceDisplay}${input.basePriceNote ? ` (${input.basePriceNote})` : ""}`,
-    `Valid Until: ${input.expiresAtFormatted}`,
+    `Valid until: ${input.expiresAtFormatted}`,
     input.estimatedDeliveryDays
       ? `Estimated Bench Lead Time: ${input.estimatedDeliveryDays} days`
       : null,
-    input.adminMessage ? `Atelier Note: ${input.adminMessage}` : null,
+    input.adminMessage ? `Note from our jewelers: ${input.adminMessage}` : null,
     formatSelectionsPlainText(input.selections),
-    `Review & Complete Your Order: ${acceptUrl}`,
+    `Review and place your order: ${acceptUrl}`,
   ]
     .filter(Boolean)
     .join("\n\n");
 
   return dispatchEmailWithRetry({
     to: input.customerEmail,
-    subject: `Your Bespoke Quote ${input.requestNumber} Is Ready — ${env.NEXT_PUBLIC_SITE_NAME}`,
+    subject: `Your custom design quote ${input.requestNumber} is ready — ${env.NEXT_PUBLIC_SITE_NAME}`,
     html,
     text,
     tag: "customization-quote-approved",
@@ -234,15 +234,15 @@ export async function sendCustomizationRejectedEmail(input: {
   );
 
   const text = [
-    `Dear ${input.customerName},`,
-    `Regarding bespoke request ${input.requestNumber} (${input.productName}):`,
+    `Hi ${input.customerName},`,
+    `About your custom request ${input.requestNumber} (${input.productName}):`,
     input.reason,
-    `Continue discussing alternatives: ${chatUrl}`,
+    `Talk to us about other options: ${chatUrl}`,
   ].join("\n\n");
 
   return dispatchEmailWithRetry({
     to: input.customerEmail,
-    subject: `Update on Bespoke Request ${input.requestNumber} — ${env.NEXT_PUBLIC_SITE_NAME}`,
+    subject: `Update on your custom request ${input.requestNumber} — ${env.NEXT_PUBLIC_SITE_NAME}`,
     html,
     text,
     tag: "customization-rejected",
@@ -273,15 +273,15 @@ export async function sendCustomizationMoreInfoEmail(input: {
   );
 
   const text = [
-    `Dear ${input.customerName},`,
-    `Our atelier has a question about customization request ${input.requestNumber} (${input.productName}):`,
+    `Hi ${input.customerName},`,
+    `Our team has a question about your custom request ${input.requestNumber} (${input.productName}):`,
     input.question,
     `Reply in chat: ${threadUrl}`,
   ].join("\n\n");
 
   return dispatchEmailWithRetry({
     to: input.customerEmail,
-    subject: `Additional Details Needed for ${input.requestNumber} — ${env.NEXT_PUBLIC_SITE_NAME}`,
+    subject: `We need a few more details for ${input.requestNumber} — ${env.NEXT_PUBLIC_SITE_NAME}`,
     html,
     text,
     tag: "customization-more-info",
@@ -314,14 +314,14 @@ export async function sendCustomizationQuoteExpiringEmail(input: {
   );
 
   const text = [
-    `Dear ${input.customerName},`,
-    `Your quotation of ${input.finalPriceDisplay} for bespoke request ${input.requestNumber} (${input.productName}) expires on ${input.expiresAtFormatted}.`,
-    `Review & accept: ${reviewUrl}`,
+    `Hi ${input.customerName},`,
+    `Your quote of ${input.finalPriceDisplay} for custom request ${input.requestNumber} (${input.productName}) expires on ${input.expiresAtFormatted}.`,
+    `Review and accept: ${reviewUrl}`,
   ].join("\n\n");
 
   return dispatchEmailWithRetry({
     to: input.customerEmail,
-    subject: `24-Hour Reminder: Quotation ${input.requestNumber} — ${env.NEXT_PUBLIC_SITE_NAME}`,
+    subject: `Reminder: your quote ${input.requestNumber} expires in 24 hours — ${env.NEXT_PUBLIC_SITE_NAME}`,
     html,
     text,
     tag: "customization-quote-expiring",
@@ -353,14 +353,14 @@ export async function sendCustomizationOrderPlacedEmail(input: {
   );
 
   const text = [
-    `Dear ${input.customerName},`,
-    `Order ${input.orderNumber} for customization request ${input.requestNumber} (${input.productName}) at locked price ${input.lockedPriceDisplay} is confirmed.`,
-    `Track your commission: ${orderUrl}`,
+    `Hi ${input.customerName},`,
+    `Your order ${input.orderNumber} for custom request ${input.requestNumber} (${input.productName}) at ${input.lockedPriceDisplay} is confirmed.`,
+    `Track your order: ${orderUrl}`,
   ].join("\n\n");
 
   return dispatchEmailWithRetry({
     to: input.customerEmail,
-    subject: `Bespoke Commission Confirmed (${input.orderNumber}) — ${env.NEXT_PUBLIC_SITE_NAME}`,
+    subject: `Custom order confirmed (${input.orderNumber}) — ${env.NEXT_PUBLIC_SITE_NAME}`,
     html,
     text,
     tag: "customization-order-placed",
@@ -389,15 +389,15 @@ export async function sendChatOfflineReplyEmail(input: {
   );
 
   const text = [
-    `Dear ${input.recipientName},`,
-    `New reply from ${env.NEXT_PUBLIC_SITE_NAME} Atelier Concierge (${input.subjectLabel}):`,
+    `Hi ${input.recipientName},`,
+    `New reply from the ${env.NEXT_PUBLIC_SITE_NAME} team (${input.subjectLabel}):`,
     input.messagePreview,
     `Open conversation: ${conversationUrl}`,
   ].join("\n\n");
 
   return dispatchEmailWithRetry({
     to: input.recipientEmail,
-    subject: `New Message From ${env.NEXT_PUBLIC_SITE_NAME} Concierge`,
+    subject: `New message from ${env.NEXT_PUBLIC_SITE_NAME}`,
     html,
     text,
     tag: "chat-offline-reply",

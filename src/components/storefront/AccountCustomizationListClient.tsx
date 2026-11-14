@@ -9,23 +9,22 @@ import { useUserCustomizationsRealtime } from "@/components/providers/useChatRea
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useUiText } from "@/components/providers/UiTextProvider";
 import { formatDate } from "@/lib/dates";
 import type { CustomizationRequestSummaryDTO } from "@/modules/customization/customization.service";
 
-const STATUS_BADGE_MAP: Record<
+// Status labels come from site-content.json → ui.account.customizationStatus.
+const STATUS_VARIANTS: Record<
   string,
-  {
-    label: string;
-    variant: "default" | "primary" | "success" | "warning" | "destructive" | "outline";
-  }
+  "default" | "primary" | "success" | "warning" | "destructive" | "outline"
 > = {
-  SUBMITTED: { label: "Submitted", variant: "outline" },
-  IN_REVIEW: { label: "In Review", variant: "warning" },
-  ACCEPTED: { label: "Quoted", variant: "primary" },
-  ORDERED: { label: "Ordered", variant: "success" },
-  REJECTED: { label: "Declined", variant: "destructive" },
-  CANCELLED: { label: "Cancelled", variant: "outline" },
-  EXPIRED: { label: "Expired", variant: "outline" },
+  SUBMITTED: "outline",
+  IN_REVIEW: "warning",
+  ACCEPTED: "primary",
+  ORDERED: "success",
+  REJECTED: "destructive",
+  CANCELLED: "outline",
+  EXPIRED: "outline",
 };
 
 interface AccountCustomizationListClientProps {
@@ -42,6 +41,9 @@ export function AccountCustomizationListClient({
   ownerKey,
 }: AccountCustomizationListClientProps) {
   const { formatPrice } = useCurrency();
+  const ui = useUiText().account;
+  const t = ui.customizations;
+  const statusLabels = ui.customizationStatus;
   const [requests, setRequests] = React.useState(initialRequests);
 
   const refreshList = React.useCallback(async () => {
@@ -72,9 +74,9 @@ export function AccountCustomizationListClient({
     return (
       <EmptyState
         icon={Sparkles}
-        title="No bespoke customization requests yet"
-        description="Select Customize on any eligible piece to tailor precious metals, gemstone specifications, or bespoke engraving."
-        actionLabel="Explore Collections"
+        title={t.emptyTitle}
+        description={t.emptyText}
+        actionLabel={t.emptyAction}
         actionHref="/collections"
       />
     );
@@ -85,9 +87,9 @@ export function AccountCustomizationListClient({
       {/* Mobile Card List (< md) */}
       <div className="space-y-3 md:hidden">
         {requests.map((req) => {
-          const meta = STATUS_BADGE_MAP[req.status] ?? {
-            label: req.status,
-            variant: "outline" as const,
+          const meta = {
+            label: (statusLabels as Record<string, string>)[req.status] ?? req.status,
+            variant: STATUS_VARIANTS[req.status] ?? ("outline" as const),
           };
           return (
             <article key={req.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -126,7 +128,7 @@ export function AccountCustomizationListClient({
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-sm">
                 <div>
                   <span className="text-xs text-muted-foreground">
-                    {req.quotedPriceBase ? "Quoted Price" : "Est. Range"}
+                    {req.quotedPriceBase ? t.quotedPrice : t.estimatedRange}
                   </span>
                   <p className="tabular-nums-price font-semibold text-foreground">
                     {req.quotedPriceBase
@@ -136,7 +138,7 @@ export function AccountCustomizationListClient({
                 </div>
                 <Button asChild size="sm" variant="outline" className="min-h-11 gap-1.5">
                   <Link href={`/account/customizations/${encodeURIComponent(req.id)}`}>
-                    <span>View</span>
+                    <span>{t.view}</span>
                     <ArrowRight className="size-3.5" aria-hidden="true" />
                   </Link>
                 </Button>
@@ -151,19 +153,19 @@ export function AccountCustomizationListClient({
         <table className="w-full border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-2/60 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-              <th className="px-4 py-3">Request</th>
-              <th className="px-4 py-3">Piece</th>
-              <th className="px-4 py-3">Submitted</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Estimate / Quote</th>
-              <th className="px-4 py-3 text-right">Action</th>
+              <th className="px-4 py-3">{t.columns.request}</th>
+              <th className="px-4 py-3">{t.columns.piece}</th>
+              <th className="px-4 py-3">{t.columns.submitted}</th>
+              <th className="px-4 py-3">{t.columns.status}</th>
+              <th className="px-4 py-3">{t.columns.estimate}</th>
+              <th className="px-4 py-3 text-right">{t.columns.action}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {requests.map((req) => {
-              const meta = STATUS_BADGE_MAP[req.status] ?? {
-                label: req.status,
-                variant: "outline" as const,
+              const meta = {
+                label: (statusLabels as Record<string, string>)[req.status] ?? req.status,
+                variant: STATUS_VARIANTS[req.status] ?? ("outline" as const),
               };
               return (
                 <tr key={req.id} className="hover:bg-surface-2/40">
@@ -204,7 +206,8 @@ export function AccountCustomizationListClient({
                   <td className="px-4 py-3 text-right">
                     <Button asChild variant="outline" size="sm">
                       <Link href={`/account/customizations/${encodeURIComponent(req.id)}`}>
-                        View
+                        {" "}
+                        {t.view}{" "}
                       </Link>
                     </Button>
                   </td>

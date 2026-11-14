@@ -51,6 +51,7 @@ import type {
   ProductCustomizationSchemaDTO,
 } from "@/modules/customization/customization.service";
 import { visitorStore } from "@/modules/storefront/visitor-store";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 interface AccountCustomizationDetailClientProps {
   initialDetail: CustomizationRequestDetailDTO;
@@ -58,35 +59,33 @@ interface AccountCustomizationDetailClientProps {
   ownerKey: string;
 }
 
-const TIMELINE_STEPS = [
-  { key: "SUBMITTED", label: "Submitted" },
-  { key: "IN_REVIEW", label: "In Review" },
-  { key: "ACCEPTED", label: "Quoted" },
-  { key: "ORDERED", label: "Ordered" },
-] as const;
+// Labels come from site-content.json → ui.account.customizationStatus / customizationDetail.
+const TIMELINE_STEPS = ["SUBMITTED", "IN_REVIEW", "ACCEPTED", "ORDERED"] as const;
 
-function getBadgeMeta(status: string): {
-  label: string;
-  variant: "default" | "primary" | "success" | "warning" | "destructive" | "outline";
-} {
-  switch (status) {
-    case "SUBMITTED":
-      return { label: "Submitted", variant: "outline" };
-    case "IN_REVIEW":
-      return { label: "In Review", variant: "warning" };
-    case "ACCEPTED":
-      return { label: "Quoted & Ready", variant: "primary" };
-    case "ORDERED":
-      return { label: "Ordered", variant: "success" };
-    case "REJECTED":
-      return { label: "Declined", variant: "destructive" };
-    case "CANCELLED":
-      return { label: "Cancelled", variant: "outline" };
-    case "EXPIRED":
-      return { label: "Quote Expired", variant: "outline" };
-    default:
-      return { label: status, variant: "outline" };
-  }
+type BadgeVariant = "default" | "primary" | "success" | "warning" | "destructive" | "outline";
+
+const STATUS_VARIANTS: Record<string, BadgeVariant> = {
+  SUBMITTED: "outline",
+  IN_REVIEW: "warning",
+  ACCEPTED: "primary",
+  ORDERED: "success",
+  REJECTED: "destructive",
+  CANCELLED: "outline",
+  EXPIRED: "outline",
+};
+
+function getBadgeMeta(
+  status: string,
+  labels: Record<string, string>,
+  detailLabels: { acceptedBadge: string; expiredBadge: string },
+): { label: string; variant: BadgeVariant } {
+  const label =
+    status === "ACCEPTED"
+      ? detailLabels.acceptedBadge
+      : status === "EXPIRED"
+        ? detailLabels.expiredBadge
+        : (labels[status] ?? status);
+  return { label, variant: STATUS_VARIANTS[status] ?? "outline" };
 }
 
 /**
@@ -101,6 +100,9 @@ export function AccountCustomizationDetailClient({
 }: AccountCustomizationDetailClientProps) {
   const router = useRouter();
   const { formatPrice } = useCurrency();
+  const ui = useUiText().account;
+  const t = ui.customizationDetail;
+  const statusLabels = ui.customizationStatus as Record<string, string>;
   const [detail, setDetail] = React.useState(initialDetail);
   const [editOpen, setEditOpen] = React.useState(false);
   const [confirmCancel, setConfirmCancel] = React.useState(false);
@@ -142,7 +144,7 @@ export function AccountCustomizationDetailClient({
     },
   });
 
-  const statusMeta = getBadgeMeta(detail.status);
+  const statusMeta = getBadgeMeta(detail.status, statusLabels, t);
   const isQuoteExpired =
     detail.status === "EXPIRED" ||
     (detail.status === "ACCEPTED" &&
@@ -156,7 +158,7 @@ export function AccountCustomizationDetailClient({
   const lightboxImages: LightboxImageItem[] = detail.images.map((img, i) => ({
     url: img.url,
     thumbUrl: img.thumbUrl,
-    alt: img.originalName ?? `Reference image ${i + 1}`,
+    alt: img.originalName ?? fill(t.imageAlt, { n: i + 1 }),
   }));
 
   async function handleAcceptToBag() {
@@ -168,7 +170,7 @@ export function AccountCustomizationDetailClient({
       return;
     }
     visitorStore.setLatestCart(res.data);
-    notifySuccess("Bespoke commission locked in your bag. Proceeding to checkout...");
+    notifySuccess(t.acceptedToast);
     router.push("/checkout");
   }
 
@@ -185,7 +187,7 @@ export function AccountCustomizationDetailClient({
     }
     setDetail(res.data);
     setConfirmCancel(false);
-    notifySuccess("Customization request cancelled.");
+    notifySuccess(t.cancelledToast);
   }
 
   async function handleDuplicate() {
@@ -196,7 +198,7 @@ export function AccountCustomizationDetailClient({
       notifyError(res.error.message);
       return;
     }
-    notifySuccess(`Created new request ${res.data.requestNumber}.`);
+    notifySuccess(fill(t.duplicatedToast, { number: res.data.requestNumber }));
     router.push(`/account/customizations/${encodeURIComponent(res.data.id)}`);
   }
 
@@ -217,11 +219,11 @@ export function AccountCustomizationDetailClient({
         error?: { message?: string };
       };
       if (!res.ok || !body.ok || !body.data?.conversation?.id) {
-        throw new Error(body.error?.message ?? "Unable to start atelier conversation.");
+        throw new Error(body.error?.message ?? t.chatError);
       }
       setConversationId(body.data.conversation.id);
     } catch (err) {
-      notifyError(err instanceof Error ? err.message : "Unable to start atelier conversation.");
+      notifyError(err instanceof Error ? err.message : t.chatError);
     } finally {
       setBusyAction(null);
     }
@@ -243,13 +245,13 @@ export function AccountCustomizationDetailClient({
           className="inline-flex min-h-10 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
-          <span>Back to Customization Requests</span>
+          <span>{t.back}</span>
         </Link>
 
         {detail.orderNumber ? (
           <Button asChild variant="outline" size="sm" className="min-h-10">
             <Link href={`/account/orders/${encodeURIComponent(detail.orderNumber)}`}>
-              View Order {detail.orderNumber}
+              {t.viewOrder} {detail.orderNumber}
             </Link>
           </Button>
         ) : null}
@@ -287,7 +289,7 @@ export function AccountCustomizationDetailClient({
                 </Link>
               </h2>
               <p className="tabular-nums-price text-xs text-muted-foreground">
-                Submitted {formatDate(detail.createdAt)} · SKU {detail.productSku}
+                {t.submitted} {formatDate(detail.createdAt)} · {t.sku} {detail.productSku}
               </p>
             </div>
           </div>
@@ -307,7 +309,7 @@ export function AccountCustomizationDetailClient({
                 ) : (
                   <ShoppingBag className="size-4" aria-hidden="true" />
                 )}
-                <span>Accept Quote &amp; Checkout</span>
+                <span>{t.acceptQuote}</span>
               </Button>
             ) : null}
 
@@ -320,7 +322,7 @@ export function AccountCustomizationDetailClient({
                 className="min-h-11 gap-1.5"
               >
                 <Edit3 className="size-4" aria-hidden="true" />
-                <span>Edit Request</span>
+                <span>{t.edit}</span>
               </Button>
             ) : null}
 
@@ -333,7 +335,7 @@ export function AccountCustomizationDetailClient({
               className="min-h-11 gap-1.5"
             >
               <CopyPlus className="size-4" aria-hidden="true" />
-              <span>Reorder / Duplicate</span>
+              <span>{t.duplicate}</span>
             </Button>
 
             {canCancel ? (
@@ -345,7 +347,8 @@ export function AccountCustomizationDetailClient({
                 onClick={() => setConfirmCancel((v) => !v)}
                 className="min-h-11 text-destructive hover:text-destructive"
               >
-                Cancel Request
+                {" "}
+                {t.cancel}{" "}
               </Button>
             ) : null}
           </div>
@@ -353,9 +356,7 @@ export function AccountCustomizationDetailClient({
 
         {confirmCancel ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-3.5 text-sm">
-            <p className="text-foreground">
-              Withdraw this customization request? You can still duplicate it later if needed.
-            </p>
+            <p className="text-foreground"> {t.cancelConfirmText} </p>
             <div className="flex items-center gap-2">
               <Button
                 type="button"
@@ -363,7 +364,8 @@ export function AccountCustomizationDetailClient({
                 size="sm"
                 onClick={() => setConfirmCancel(false)}
               >
-                Keep Request
+                {" "}
+                {t.keep}{" "}
               </Button>
               <Button
                 type="button"
@@ -372,7 +374,7 @@ export function AccountCustomizationDetailClient({
                 disabled={busyAction === "cancel"}
                 onClick={() => void handleCancel()}
               >
-                {busyAction === "cancel" ? "Cancelling..." : "Confirm Cancel"}
+                {busyAction === "cancel" ? t.cancelling : t.confirmCancel}
               </Button>
             </div>
           </div>
@@ -385,7 +387,7 @@ export function AccountCustomizationDetailClient({
               const reached = idx <= reachedIndex;
               return (
                 <li
-                  key={step.key}
+                  key={step}
                   className={cn(
                     "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium",
                     reached
@@ -398,7 +400,7 @@ export function AccountCustomizationDetailClient({
                   ) : (
                     <Clock className="size-4 shrink-0" aria-hidden="true" />
                   )}
-                  <span>{step.label}</span>
+                  <span>{statusLabels[step]}</span>
                 </li>
               );
             })}
@@ -408,7 +410,7 @@ export function AccountCustomizationDetailClient({
             <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-destructive/40 bg-destructive/5 p-3.5 text-sm text-foreground">
               <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden="true" />
               <div>
-                <p className="font-semibold">Atelier Response</p>
+                <p className="font-semibold">{t.rejectionHeading}</p>
                 <p className="text-muted-foreground">{detail.rejectionReason}</p>
               </div>
             </div>
@@ -418,11 +420,8 @@ export function AccountCustomizationDetailClient({
             <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-warning/45 bg-warning/10 p-3.5 text-sm text-foreground">
               <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
               <div>
-                <p className="font-semibold">Quotation Expired</p>
-                <p className="text-muted-foreground">
-                  Precious metal &amp; gemstone pricing has lapsed. Click &ldquo;Reorder /
-                  Duplicate&rdquo; to request an updated atelier quote cleanly.
-                </p>
+                <p className="font-semibold">{t.expiredHeading}</p>
+                <p className="text-muted-foreground"> {t.expiredText} </p>
               </div>
             </div>
           ) : null}
@@ -435,24 +434,24 @@ export function AccountCustomizationDetailClient({
           {/* Quotation Summary */}
           <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <h3 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-              Quotation &amp; Estimates
+              {" "}
+              {t.quoteHeading}{" "}
             </h3>
             {detail.quotedPriceBase ? (
               <div className="mt-3 space-y-2">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">Locked Atelier Quote</span>
+                  <span className="text-sm text-muted-foreground">{t.lockedQuote}</span>
                   <span className="tabular-nums-price text-2xl font-semibold text-foreground">
                     {formatPrice(detail.quotedPriceBase)}
                   </span>
                 </div>
                 <p className="tabular-nums-price text-xs text-muted-foreground">
-                  Base currency amount:{" "}
-                  {formatMoneyExact(detail.quotedPriceBase, "USD", "en-US", 2)}
+                  {t.baseAmount} {formatMoneyExact(detail.quotedPriceBase, "USD", "en-US", 2)}
                   {detail.quoteExpiresAt
-                    ? ` · Valid until ${formatDate(detail.quoteExpiresAt)}`
+                    ? ` · ${fill(t.validUntil, { date: formatDate(detail.quoteExpiresAt) })}`
                     : ""}
                   {detail.estimatedDeliveryDays
-                    ? ` · Est. craft & delivery ${detail.estimatedDeliveryDays} days`
+                    ? ` · ${fill(t.deliveryEstimate, { days: detail.estimatedDeliveryDays })}`
                     : ""}
                 </p>
                 {detail.adminMessage ? (
@@ -464,15 +463,13 @@ export function AccountCustomizationDetailClient({
             ) : (
               <div className="mt-3 space-y-1.5">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">Indicative Range</span>
+                  <span className="text-sm text-muted-foreground">{t.indicativeRange}</span>
                   <span className="tabular-nums-price text-lg font-semibold text-foreground">
                     {formatPrice(detail.indicativeMinBase)} –{" "}
                     {formatPrice(detail.indicativeMaxBase)}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Our atelier reviews your specifications carefully before locking the final quote.
-                </p>
+                <p className="text-xs text-muted-foreground"> {t.indicativeText} </p>
               </div>
             )}
           </section>
@@ -480,7 +477,8 @@ export function AccountCustomizationDetailClient({
           {/* Specifications List */}
           <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <h3 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-              Bespoke Specifications
+              {" "}
+              {t.specsHeading}{" "}
             </h3>
             <dl className="mt-3 divide-y divide-border text-sm">
               {detail.selections.map((sel) => (
@@ -528,7 +526,8 @@ export function AccountCustomizationDetailClient({
           {detail.images.length > 0 ? (
             <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
               <h3 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-                Reference Images ({detail.images.length})
+                {" "}
+                {fill(t.imagesHeading, { count: detail.images.length })}{" "}
               </h3>
               <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-5">
                 {detail.images.map((img, idx) => (
@@ -536,12 +535,14 @@ export function AccountCustomizationDetailClient({
                     key={img.id}
                     type="button"
                     onClick={() => setLightboxIndex(idx)}
-                    aria-label={`Inspect ${img.originalName ?? `image ${idx + 1}`}`}
+                    aria-label={fill(t.inspectAria, {
+                      name: img.originalName ?? fill(t.imageName, { n: idx + 1 }),
+                    })}
                     className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted focus-visible:outline-2 focus-visible:outline-ring"
                   >
                     <Image
                       src={img.thumbUrl}
-                      alt={img.originalName ?? `Reference ${idx + 1}`}
+                      alt={img.originalName ?? fill(t.thumbAlt, { n: idx + 1 })}
                       fill
                       unoptimized
                       sizes="120px"
@@ -557,7 +558,8 @@ export function AccountCustomizationDetailClient({
           {detail.events.length > 0 ? (
             <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
               <h3 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-                Activity History
+                {" "}
+                {t.historyHeading}{" "}
               </h3>
               <ul className="mt-3 space-y-2.5 text-xs">
                 {detail.events.map((ev) => (
@@ -581,7 +583,7 @@ export function AccountCustomizationDetailClient({
             <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
               <div className="flex items-center gap-2">
                 <MessagesSquare className="size-4 text-accent-text" aria-hidden="true" />
-                <h3 className="text-sm font-semibold text-foreground">Atelier Concierge Thread</h3>
+                <h3 className="text-sm font-semibold text-foreground">{t.chatHeading}</h3>
               </div>
               <Badge variant="outline">{detail.requestNumber}</Badge>
             </div>
@@ -591,11 +593,8 @@ export function AccountCustomizationDetailClient({
                 <ChatThreadPanel
                   conversationId={conversationId}
                   viewerRole="CUSTOMER"
-                  composerPlaceholder={`Message atelier about ${detail.requestNumber}...`}
-                  suggestedPrompts={[
-                    "Can I adjust my ring size before setting?",
-                    "What clarity stones are currently available?",
-                  ]}
+                  composerPlaceholder={fill(t.chatPlaceholder, { number: detail.requestNumber })}
+                  suggestedPrompts={t.chatSuggestions}
                   className="h-full"
                 />
               </div>
@@ -606,14 +605,14 @@ export function AccountCustomizationDetailClient({
                   aria-hidden="true"
                 />
                 <p className="text-sm text-muted-foreground">
-                  Start a direct concierge conversation linked to {detail.requestNumber}.
+                  {fill(t.chatStartText, { number: detail.requestNumber })}
                 </p>
                 <Button
                   type="button"
                   disabled={busyAction === "chat"}
                   onClick={() => void handleStartChatThread()}
                 >
-                  {busyAction === "chat" ? "Starting..." : "Open Atelier Chat"}
+                  {busyAction === "chat" ? t.chatStarting : t.chatOpen}
                 </Button>
               </div>
             )}
@@ -634,11 +633,9 @@ export function AccountCustomizationDetailClient({
           >
             <SheetHeader className="border-b border-border px-5 py-4 sm:px-6">
               <SheetTitle className="font-sans text-lg font-semibold">
-                Edit Bespoke Request {detail.requestNumber}
+                {fill(t.editTitle, { number: detail.requestNumber })}
               </SheetTitle>
-              <SheetDescription>
-                Adjust selections and reference images while your request awaits review.
-              </SheetDescription>
+              <SheetDescription> {t.editText} </SheetDescription>
             </SheetHeader>
             <div className="min-h-0 flex-1 overflow-hidden">
               <CustomizationFormClient

@@ -1,5 +1,7 @@
 "use client";
 
+import type { SiteContent } from "@/modules/site-content/site-content.shared";
+
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -18,13 +20,17 @@ import { registerSchema, type RegisterInput } from "@/modules/auth/auth.schemas"
 import { syncGuestCartOnAuthAction } from "@/modules/cart/cart.actions";
 import { syncGuestWishlistOnAuthAction } from "@/modules/wishlist/wishlist.actions";
 import { authClient } from "@/server/auth-client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 interface RegisterFormProps {
+  /** Card text from site-content.json → pages.auth.register. */
+  copy: Pick<SiteContent["pages"]["auth"]["register"], "card" | "checkInbox">;
   nextUrl: string;
   googleEnabled: boolean;
 }
 
-export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
+export function RegisterForm({ nextUrl, googleEnabled, copy }: RegisterFormProps) {
+  const t = useUiText().auth.register;
   const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [googlePending, setGooglePending] = React.useState(false);
@@ -64,7 +70,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
     );
 
     if (res.error) {
-      setServerError(res.error.message ?? "Unable to create your account. Please try again.");
+      setServerError(res.error.message ?? t.createError);
       abuse.refreshToken();
       return;
     }
@@ -77,7 +83,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
     }
 
     await Promise.allSettled([syncGuestWishlistOnAuthAction(), syncGuestCartOnAuthAction()]);
-    toast.success("Account created.");
+    toast.success(t.createdToast);
     router.replace(nextUrl);
     router.refresh();
   });
@@ -91,19 +97,19 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
     });
     if (res?.error) {
       setGooglePending(false);
-      setServerError(res.error.message ?? "Unable to continue with Google.");
+      setServerError(res.error.message ?? t.googleError);
     }
   }
 
   if (sentTo) {
     return (
       <AuthCard
-        eyebrow="Client Registration"
-        title="Check Your Inbox"
-        description="One last step to activate your account."
+        eyebrow={copy.checkInbox.eyebrow}
+        title={copy.checkInbox.title}
+        description={copy.checkInbox.description}
         footer={
           <span>
-            Didn&apos;t get it? <AuthHelpLink href="/verify-email">Resend the link</AuthHelpLink>
+            {t.didntGetIt} <AuthHelpLink href="/verify-email">{t.resendLink}</AuthHelpLink>
           </span>
         }
       >
@@ -111,9 +117,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
           role="status"
           className="rounded-md border border-success/40 bg-success/10 p-4 text-sm text-foreground"
         >
-          If <strong className="break-all">{sentTo}</strong> is new to us, we&apos;ve sent a
-          verification link to it. Open the link to activate your account, then sign in. Your bag
-          and wishlist stay saved on this device.
+          {t.sentBefore} <strong className="break-all">{sentTo}</strong> {t.sentAfter}
         </div>
       </AuthCard>
     );
@@ -121,13 +125,15 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
 
   return (
     <AuthCard
-      eyebrow="Client Registration"
-      title="Create an Account"
-      description="Register for saved addresses, lifetime appraisal dossiers, and express checkout."
+      eyebrow={copy.card.eyebrow}
+      title={copy.card.title}
+      description={copy.card.description}
       footer={
         <span>
-          Already registered?{" "}
-          <AuthHelpLink href={`/login?next=${encodeURIComponent(nextUrl)}`}>Sign in</AuthHelpLink>
+          {t.alreadyRegistered}{" "}
+          <AuthHelpLink href={`/login?next=${encodeURIComponent(nextUrl)}`}>
+            {t.signIn}
+          </AuthHelpLink>
         </span>
       }
     >
@@ -143,7 +149,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <FormField
           id="register-name"
-          label="Full Name"
+          label={t.nameLabel}
           required
           error={form.formState.errors.name?.message}
         >
@@ -151,7 +157,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
             <Input
               type="text"
               autoComplete="name"
-              placeholder="Claire Laurent"
+              placeholder={t.namePlaceholder}
               {...form.register("name")}
               {...aria}
             />
@@ -160,7 +166,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
 
         <FormField
           id="register-email"
-          label="Email Address"
+          label={t.emailLabel}
           required
           error={form.formState.errors.email?.message}
         >
@@ -169,7 +175,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
               type="email"
               inputMode="email"
               autoComplete="email"
-              placeholder="claire@example.com"
+              placeholder={t.emailPlaceholder}
               {...form.register("email")}
               {...aria}
             />
@@ -178,8 +184,8 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
 
         <FormField
           id="register-phone"
-          label="Phone Number"
-          hint="Optional, used for insured courier delivery coordination"
+          label={t.phoneLabel}
+          hint={t.phoneHint}
           error={form.formState.errors.phone?.message}
         >
           {(aria) => (
@@ -187,7 +193,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
               type="tel"
               inputMode="tel"
               autoComplete="tel"
-              placeholder="+1 212 555 0140"
+              placeholder={t.phonePlaceholder}
               {...form.register("phone")}
               {...aria}
             />
@@ -196,16 +202,16 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
 
         <FormField
           id="register-password"
-          label="Password"
+          label={t.passwordLabel}
           required
-          hint="Minimum 10 characters"
+          hint={t.passwordHint}
           error={form.formState.errors.password?.message}
         >
           {(aria) => (
             <Input
               type="password"
               autoComplete="new-password"
-              placeholder="At least 10 characters"
+              placeholder={t.passwordPlaceholder}
               {...form.register("password")}
               {...aria}
             />
@@ -214,7 +220,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
 
         <FormField
           id="register-confirm"
-          label="Confirm Password"
+          label={t.confirmLabel}
           required
           error={form.formState.errors.confirmPassword?.message}
         >
@@ -222,7 +228,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
             <Input
               type="password"
               autoComplete="new-password"
-              placeholder="Re-enter password"
+              placeholder={t.confirmPlaceholder}
               {...form.register("confirmPassword")}
               {...aria}
             />
@@ -246,15 +252,15 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
                   htmlFor="register-terms"
                   className="cursor-pointer text-sm leading-relaxed font-normal text-muted-foreground"
                 >
-                  I agree to the{" "}
+                  {t.termsPrefix}{" "}
                   <AuthHelpLink inline href="/terms">
-                    Terms of Service
+                    {t.termsLink}
                   </AuthHelpLink>{" "}
-                  and{" "}
+                  {t.termsAnd}{" "}
                   <AuthHelpLink inline href="/privacy">
-                    Privacy Policy
+                    {t.privacyLink}
                   </AuthHelpLink>
-                  .
+                  {t.termsSuffix}
                 </Label>
               </div>
             )}
@@ -274,7 +280,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
         />
 
         <Button type="submit" className="w-full" size="lg" loading={form.formState.isSubmitting}>
-          Create Account
+          {t.submit}
         </Button>
       </form>
 
@@ -282,7 +288,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <Separator className="flex-1" />
-            <span className="text-xs tracking-wider text-muted-foreground uppercase">Or</span>
+            <span className="text-xs tracking-wider text-muted-foreground uppercase">{t.or}</span>
             <Separator className="flex-1" />
           </div>
           <Button
@@ -292,7 +298,7 @@ export function RegisterForm({ nextUrl, googleEnabled }: RegisterFormProps) {
             loading={googlePending}
             onClick={handleGoogleSignUp}
           >
-            Continue with Google
+            {t.google}
           </Button>
         </div>
       )}

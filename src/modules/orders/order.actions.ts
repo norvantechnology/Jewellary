@@ -8,12 +8,14 @@ import {
 } from "@/modules/currencies/currency.service";
 import { calculateCheckoutQuote } from "@/modules/orders/checkout-quote";
 import {
+  confirmRazorpayPaymentSchema,
   confirmSandboxPaymentSchema,
   createCheckoutOrderSchema,
   quoteCheckoutSchema,
   retryOrderPaymentSchema,
 } from "@/modules/orders/order.schemas";
 import {
+  confirmRazorpayCheckoutPayment,
   confirmSandboxOrderPayment,
   createOrderAndPayment,
   resolveCheckoutActorsForAction,
@@ -114,5 +116,20 @@ export const confirmSandboxPaymentAction = createAction(
       orderNumber: settled.orderNumber,
       status: settled.status,
     };
+  },
+);
+
+export const confirmRazorpayPaymentAction = createAction(
+  {
+    name: "checkout.confirmRazorpayPayment",
+    schema: confirmRazorpayPaymentSchema,
+    auth: "public",
+    rateLimit: { tier: "checkout" },
+  },
+  async (input, { auth }) => {
+    const settled = await confirmRazorpayCheckoutPayment(input, auth?.user.id ?? null);
+    revalidateProductStockCaches(settled.productIds);
+    revalidatePath(`/orders/${settled.orderNumber}/confirmation`);
+    return { orderNumber: settled.orderNumber, status: settled.status };
   },
 );

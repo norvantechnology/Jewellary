@@ -81,9 +81,6 @@ function getBusState(): BusState {
 }
 
 function getRedisTarget(): string | { host: string; port: number } | null {
-  if (process.env.VITEST === "true" && process.env.FORCE_REDIS_IN_TEST !== "true") {
-    return null;
-  }
   if (env.REDIS_URL) {
     return env.REDIS_URL;
   }

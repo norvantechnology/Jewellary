@@ -448,7 +448,7 @@ export async function getAdminProductCustomizationEditorData(productId: string) 
     minLeadTimeDays: product.customizationConfig?.minLeadTimeDays ?? 21,
     disclaimerText:
       product.customizationConfig?.disclaimerText ??
-      "Indicative estimate shown; final quotation is confirmed by our atelier after stone curation.",
+      "This is an estimate. Your final price is confirmed by our jewelers once your stones are selected.",
     detectedPresetKey: detectCategoryPresetKey(`${product.category.slug} ${product.category.name}`),
     productGroups: product.customizationGroups.map((g) => mapGroupRowToDTO(g, "product")),
     categoryGroups: categoryGroupsRaw.map((g) => mapGroupRowToDTO(g, "category")),
@@ -629,8 +629,8 @@ export async function sendGuestCustomizationVerificationOtp(
   await dispatchEmailWithRetry({
     to: email,
     subject: `Your Verification Code (${code}) — ${env.NEXT_PUBLIC_SITE_NAME}`,
-    html: `<p>Use verification code <strong>${code}</strong> to submit your bespoke customization request. It expires in 15 minutes.</p>`,
-    text: `Your ${env.NEXT_PUBLIC_SITE_NAME} bespoke request verification code is: ${code} (expires in 15 minutes).`,
+    html: `<p>Use verification code <strong>${code}</strong> to submit your custom design request. It expires in 15 minutes.</p>`,
+    text: `Your ${env.NEXT_PUBLIC_SITE_NAME} verification code is: ${code} (expires in 15 minutes).`,
     tag: "customization-guest-otp",
   });
 
@@ -683,7 +683,7 @@ async function assertGuestEmailVerifiedIfAnonymous(
   if (actor.userId) return null;
   if (!actor.guestToken) {
     throw new ValidationError(
-      "Please verify your email address before submitting a bespoke request.",
+      "Please confirm your email address before sending your custom request.",
     );
   }
   const normalizedEmail = email.trim().toLowerCase();
@@ -1140,7 +1140,7 @@ export async function editSubmittedCustomizationRequest(
 
   if (existing.status !== "SUBMITTED") {
     throw new ConflictError(
-      "Only newly submitted requests can be edited directly. Message the atelier to adjust requests in review.",
+      "You can only edit a request before we start reviewing it. Message us in chat to make changes.",
     );
   }
 
@@ -1473,7 +1473,7 @@ export async function adminEditRequestSelections(
         fromStatus: reqRow.status,
         toStatus: reqRow.status === "SUBMITTED" ? "IN_REVIEW" : reqRow.status,
         eventType: "ADMIN_SELECTIONS_EDITED",
-        message: "Atelier curator refined specifications before quoting",
+        message: "Our jewelers updated the details before quoting",
         actorId: staffActor.id,
         actorRole: staffActor.role,
       },
@@ -1598,8 +1598,7 @@ export async function adminAcceptCustomizationQuote(
     requestNumber: reqRow.requestNumber,
     productName: reqRow.product.name,
     finalPriceDisplay: displayFormatted,
-    basePriceNote:
-      customerCurr.code !== baseCurrency.code ? `Atelier base value: ${baseFormatted}` : null,
+    basePriceNote: customerCurr.code !== baseCurrency.code ? `Base price: ${baseFormatted}` : null,
     expiresAtFormatted: expiresAt.toUTCString().replace("GMT", "UTC"),
     estimatedDeliveryDays: input.estimatedDeliveryDays ?? null,
     adminMessage: input.adminMessage ?? null,
@@ -1769,7 +1768,7 @@ export async function adminRequestMoreInfo(
         conversationId: convId,
         senderId: staffActor.id,
         senderRole: "ADMIN",
-        senderName: staffActor.name ?? "Atelier Concierge",
+        senderName: staffActor.name ?? "Customer Care",
         type: "TEXT",
         body: question,
         deliveredAt: new Date(),

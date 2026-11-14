@@ -1,5 +1,7 @@
 "use client";
 
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -54,6 +56,7 @@ export function CartPageClient({
   const { currency, formatPrice } = useCurrency();
   const reducedMotion = useReducedMotionSafe();
   const [cart, setCart] = React.useState(initialCart);
+  const p = useUiText().cart.page;
   const [quote, setQuote] = React.useState<CheckoutQuoteDTO | null>(initialQuote);
   const [selectedCountry, setSelectedCountry] = React.useState(
     initialQuote?.shippingCountry ?? supportedCountries[0] ?? "US",
@@ -134,7 +137,7 @@ export function CartPageClient({
     };
     setCart(updatedCart);
     visitorStore.setLatestCart(updatedCart);
-    void notifySuccess(`${name} removed from your bag.`);
+    void notifySuccess(fill(p.removedToast, { name }));
     if (updatedItems.length > 0) {
       await refreshQuote(selectedCountry);
     } else {
@@ -155,7 +158,7 @@ export function CartPageClient({
     setCart(result.data.cart);
     visitorStore.setLatestCart(result.data.cart);
     visitorStore.setWishlistVariantIds(result.data.wishlistVariantIds);
-    void notifySuccess(`${name} moved to your saved wishlist.`);
+    void notifySuccess(fill(p.savedToast, { name }));
     if (result.data.cart.items.length > 0) {
       await refreshQuote(selectedCountry);
     } else {
@@ -172,9 +175,9 @@ export function CartPageClient({
     return (
       <EmptyState
         icon={ShoppingBag}
-        title="Your Shopping Bag Is Empty"
-        description="Select any ready-to-ship piece from our collections to prepare an insured studio order."
-        actionLabel="Browse Collections"
+        title={p.emptyTitle}
+        description={p.emptyDescription}
+        actionLabel={p.emptyAction}
         actionHref="/collections"
       />
     );
@@ -207,17 +210,8 @@ export function CartPageClient({
             aria-hidden="true"
           />
           <div className="space-y-1">
-            {hasPriceUpdates && (
-              <p className="font-medium text-foreground">
-                Prices for some items in your bag have been updated.
-              </p>
-            )}
-            {hasStockIssues && (
-              <p className="text-muted-foreground">
-                Vault availability changed for an item in your bag. Please adjust or remove
-                unavailable pieces before checkout.
-              </p>
-            )}
+            {hasPriceUpdates && <p className="font-medium text-foreground">{p.pricesUpdated}</p>}
+            {hasStockIssues && <p className="text-muted-foreground">{p.stockChanged}</p>}
           </div>
         </div>
       )}
@@ -272,7 +266,7 @@ export function CartPageClient({
                         </Link>
                       </h2>
                       <p className="truncate text-xs text-muted-foreground">
-                        {item.variantTitle} · SKU {item.variantSku}
+                        {item.variantTitle} · {fill(p.sku, { sku: item.variantSku })}
                       </p>
                       {item.isCustomized ? (
                         <CustomizedSpecsBadge
@@ -283,12 +277,10 @@ export function CartPageClient({
                       ) : null}
                       <Price amount={item.unitPrice} currency={cart.currency} size="sm" />
                       {item.availableStock <= 0 ? (
-                        <p className="pt-0.5 text-xs font-medium text-destructive">
-                          Sold out — remove it to continue
-                        </p>
+                        <p className="pt-0.5 text-xs font-medium text-destructive">{p.soldOut}</p>
                       ) : item.hasStockIssue ? (
                         <p className="pt-0.5 text-xs font-medium text-destructive">
-                          Only {item.availableStock} left — reduce the quantity to continue
+                          {fill(p.onlyLeft, { count: item.availableStock })}
                         </p>
                       ) : null}
                     </div>
@@ -297,7 +289,7 @@ export function CartPageClient({
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 sm:justify-end sm:gap-4 sm:border-t-0 sm:pt-0">
                     {item.isCustomized ? (
                       <span className="text-xs font-medium text-muted-foreground">
-                        Custom piece · Qty 1
+                        {p.customQty}
                       </span>
                     ) : (
                       <QuantityStepper
@@ -323,7 +315,7 @@ export function CartPageClient({
                           className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-medium text-text-muted transition-colors duration-150 ease-out hover:text-accent-text focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <Bookmark className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                          <span>Save for later</span>
+                          <span>{p.saveForLater}</span>
                         </button>
                         <button
                           type="button"
@@ -332,7 +324,7 @@ export function CartPageClient({
                           className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-medium text-text-muted transition-colors duration-150 ease-out hover:text-destructive focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <Trash2 className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                          <span>Remove</span>
+                          <span>{p.remove}</span>
                         </button>
                       </div>
                     </div>
@@ -346,7 +338,7 @@ export function CartPageClient({
         <aside className="lg:col-span-4">
           <div className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-6 lg:sticky lg:top-24">
             <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
-              Order Summary
+              {p.summaryHeading}
             </h2>
 
             {activeQuote?.freeShippingThreshold && (
@@ -358,11 +350,11 @@ export function CartPageClient({
                         className="size-5 shrink-0 stroke-[1.5] text-success"
                         aria-hidden="true"
                       />
-                      <span>You qualify for complimentary insured shipping</span>
+                      <span>{p.freeShippingQualified}</span>
                     </>
                   ) : (
                     <span>
-                      Add{" "}
+                      {p.freeShippingAddBefore}{" "}
                       <strong className="tabular-nums-price font-semibold">
                         {formatMoneyExact(
                           activeQuote.amountToFreeShipping ?? "0.00",
@@ -371,7 +363,7 @@ export function CartPageClient({
                           activeQuote.currencyDecimals,
                         )}
                       </strong>{" "}
-                      more for complimentary insured express shipping
+                      {p.freeShippingAddAfter}
                     </span>
                   )}
                 </div>
@@ -392,7 +384,7 @@ export function CartPageClient({
                 htmlFor="cart-estimate-country"
                 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase"
               >
-                Estimate Shipping Destination
+                {p.estimateDestination}
               </label>
               <Select value={selectedCountry} onValueChange={handleCountryChange}>
                 <SelectTrigger id="cart-estimate-country" className="h-12 bg-background md:h-11">
@@ -410,7 +402,9 @@ export function CartPageClient({
 
             <dl className="mt-5 space-y-3 border-t border-border pt-4 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted-foreground">Items ({cart.itemCount})</dt>
+                <dt className="text-muted-foreground">
+                  {fill(p.itemsLabel, { count: cart.itemCount })}
+                </dt>
                 <dd className="tabular-nums-price font-medium text-foreground">
                   <AnimatedCounter
                     value={
@@ -428,28 +422,28 @@ export function CartPageClient({
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-muted-foreground">
-                  {activeQuote ? activeQuote.selectedZone.name : "Insured Delivery"}
+                  {activeQuote ? activeQuote.selectedZone.name : p.deliveryLabel}
                 </dt>
                 <dd className="tabular-nums-price font-medium text-foreground">
                   {isEstimating
-                    ? "Calculating…"
+                    ? p.calculating
                     : activeQuote
                       ? activeQuote.isFreeShipping
-                        ? "Complimentary"
+                        ? p.complimentary
                         : formatMoneyExact(
                             activeQuote.shippingCost,
                             activeQuote.currency,
                             "en-US",
                             activeQuote.currencyDecimals,
                           )
-                      : "Calculated at checkout"}
+                      : p.calculatedAtCheckout}
                 </dd>
               </div>
               {activeQuote && (
                 <div className="flex items-center justify-between gap-3">
                   <dt className="text-muted-foreground">
                     {activeQuote.taxLabel}
-                    {activeQuote.taxInclusive ? " (Included)" : ""}
+                    {activeQuote.taxInclusive ? p.taxIncluded : ""}
                   </dt>
                   <dd className="tabular-nums-price font-medium text-foreground">
                     {formatMoneyExact(
@@ -462,7 +456,7 @@ export function CartPageClient({
                 </div>
               )}
               <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
-                <dt className="text-base font-semibold text-foreground">Estimated Total</dt>
+                <dt className="text-base font-semibold text-foreground">{p.estimatedTotal}</dt>
                 <dd className="tabular-nums-price text-xl font-semibold text-foreground">
                   <AnimatedCounter
                     value={
@@ -486,33 +480,30 @@ export function CartPageClient({
                   className="mt-0.5 size-5 shrink-0 stroke-[1.5] text-accent-text"
                   aria-hidden="true"
                 />
-                <span>
-                  Adult signature verification is included automatically for insured security on
-                  this order.
-                </span>
+                <span>{p.signatureNote}</span>
               </p>
             )}
 
             <div className="mt-6 space-y-2.5">
               {outOfStockItems || hasStockIssues ? (
                 <Button type="button" size="lg" className="w-full" disabled>
-                  Resolve Stock Notice to Checkout
+                  {p.resolveStock}
                 </Button>
               ) : (
                 <Button asChild size="lg" className="w-full">
-                  <Link href="/checkout">Proceed to Checkout</Link>
+                  <Link href="/checkout">{p.proceed}</Link>
                 </Button>
               )}
               <Button asChild variant="outline" size="lg" className="w-full">
-                <Link href="/collections">Continue Exploring</Link>
+                <Link href="/collections">{p.continueExploring}</Link>
               </Button>
               <p className="pt-1 text-center text-xs text-muted-foreground">
-                Need help choosing?{" "}
+                {p.needHelp}{" "}
                 <Link
                   href="/contact?type=PRODUCT"
                   className="inline-flex min-h-11 items-center font-medium text-accent-text underline underline-offset-4"
                 >
-                  Contact us
+                  {p.contactUs}
                 </Link>
               </p>
             </div>

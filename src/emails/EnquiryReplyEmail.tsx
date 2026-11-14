@@ -22,14 +22,14 @@ export function EnquiryReplyEmail({
   return (
     <EmailLayout
       siteName={siteName}
-      previewText={`Concierge response regarding your ${enquiryType.toLowerCase()} enquiry`}
-      heading="Private Concierge Response"
+      previewText={`A reply to your ${enquiryType.toLowerCase()} inquiry`}
+      heading="A reply from our team"
       contactEmail={contactEmail}
     >
-      <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {recipientName},</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {recipientName},</Text>
       {productName && (
         <Text style={EMAIL_PARAGRAPH_STYLE}>
-          <strong>Piece referenced:</strong> {productName}
+          <strong>Item:</strong> {productName}
         </Text>
       )}
       {replyMessage

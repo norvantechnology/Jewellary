@@ -21,7 +21,13 @@ import { formatDate } from "@/lib/dates";
 import { formatMoneyExact } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { OrderConfirmationDTO } from "@/modules/orders/order.service";
-import { ORDER_STATUS_META, isCancellableBeforeSettlement } from "@/modules/orders/state-machine";
+import {
+  getOrderStatusMeta,
+  isCancellableBeforeSettlement,
+  type OrderStatusTexts,
+} from "@/modules/orders/state-machine";
+import type { UiText } from "@/components/providers/UiTextProvider";
+import { fill } from "@/lib/fill-text";
 
 interface OrderDetailViewProps {
   order: OrderConfirmationDTO;
@@ -30,7 +36,11 @@ interface OrderDetailViewProps {
     href: string;
     label: string;
   };
+  /** ui.orders from site-content.json (live, admin-editable text). */
+  text: OrdersText;
 }
+
+type OrdersText = UiText["orders"];
 
 interface MilestoneStage {
   key: string;
@@ -40,7 +50,10 @@ interface MilestoneStage {
   timestamp: string | null;
 }
 
-function buildOrderMilestones(order: OrderConfirmationDTO): MilestoneStage[] {
+function buildOrderMilestones(
+  order: OrderConfirmationDTO,
+  labels: OrdersText["detail"]["milestones"],
+): MilestoneStage[] {
   const isDelivered = order.status === "DELIVERED" || Boolean(order.deliveredAt);
   const isShipped = isDelivered || order.status === "SHIPPED" || Boolean(order.shippedAt);
   const isConfirmed =
@@ -49,28 +62,28 @@ function buildOrderMilestones(order: OrderConfirmationDTO): MilestoneStage[] {
   return [
     {
       key: "placed",
-      label: "Placed",
+      label: labels.placed,
       reached: true,
       active: order.status === "PENDING_PAYMENT",
       timestamp: order.createdAt,
     },
     {
       key: "confirmed",
-      label: "Confirmed",
+      label: labels.confirmed,
       reached: isConfirmed,
       active: order.status === "PAID" || order.status === "PROCESSING",
       timestamp: order.paidAt,
     },
     {
       key: "shipped",
-      label: "Shipped",
+      label: labels.shipped,
       reached: isShipped,
       active: order.status === "SHIPPED",
       timestamp: order.shippedAt,
     },
     {
       key: "delivered",
-      label: "Delivered",
+      label: labels.delivered,
       reached: isDelivered,
       active: order.status === "DELIVERED",
       timestamp: order.deliveredAt,
@@ -78,40 +91,51 @@ function buildOrderMilestones(order: OrderConfirmationDTO): MilestoneStage[] {
   ];
 }
 
-function formatPaymentMethodLabel(provider: OrderConfirmationDTO["paymentProvider"]): string {
-  if (provider === "STRIPE") return "Card / Digital Wallet (Stripe)";
-  if (provider === "RAZORPAY") return "UPI / Card (Razorpay)";
-  return "Card / Express Payment";
+function formatPaymentMethodLabel(
+  provider: OrderConfirmationDTO["paymentProvider"],
+  labels: OrdersText["detail"]["paymentMethods"],
+): string {
+  if (provider === "STRIPE") return labels.stripe;
+  if (provider === "RAZORPAY") return labels.razorpay;
+  return labels.other;
 }
 
 function formatPaymentStatusLabel(
   status: OrderConfirmationDTO["paymentStatus"],
   paidAt: string | null,
+  labels: OrdersText["detail"]["paymentStatuses"],
 ): {
   label: string;
   variant: "default" | "success" | "destructive" | "outline" | "warning" | "primary";
 } {
   switch (status) {
     case "SUCCEEDED":
-      return { label: "Paid", variant: "success" };
+      return { label: labels.paid, variant: "success" };
     case "AUTHORIZED":
-      return { label: "Authorized", variant: "primary" };
+      return { label: labels.authorized, variant: "primary" };
     case "PENDING":
-      return { label: "Pending", variant: "warning" };
+      return { label: labels.pending, variant: "warning" };
     case "FAILED":
-      return { label: "Failed", variant: "destructive" };
+      return { label: labels.failed, variant: "destructive" };
     case "REFUNDED":
     case "PARTIALLY_REFUNDED":
-      return { label: "Refunded", variant: "outline" };
+      return { label: labels.refunded, variant: "outline" };
     default:
       return paidAt
-        ? { label: "Paid", variant: "success" }
-        : { label: "Awaiting Payment", variant: "outline" };
+        ? { label: labels.paid, variant: "success" }
+        : { label: labels.awaiting, variant: "outline" };
   }
 }
 
-export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDetailViewProps) {
-  const meta = ORDER_STATUS_META[order.status];
+export function OrderDetailView({
+  order,
+  guestToken,
+  secondaryAction,
+  text,
+}: OrderDetailViewProps) {
+  const t = text.detail;
+  const statusMeta = getOrderStatusMeta(text.statuses as OrderStatusTexts);
+  const meta = statusMeta[order.status];
   const needsRetry =
     isCancellableBeforeSettlement(order.status) &&
     (!order.reservedUntil || new Date(order.reservedUntil) > new Date());
@@ -128,8 +152,12 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
   const hasDifferentCharged = Boolean(
     order.chargedCurrency && order.chargedAmount && order.chargedCurrency !== order.currency,
   );
-  const paymentBadge = formatPaymentStatusLabel(order.paymentStatus, order.paidAt);
-  const milestones = buildOrderMilestones(order);
+  const paymentBadge = formatPaymentStatusLabel(
+    order.paymentStatus,
+    order.paidAt,
+    t.paymentStatuses,
+  );
+  const milestones = buildOrderMilestones(order, t.milestones);
   const addressKey = (a: typeof order.shippingAddress) =>
     [a.fullName, a.line1, a.line2 ?? "", a.city, a.state, a.postalCode, a.country]
       .map((v) => (v ?? "").trim().toLowerCase())
@@ -142,20 +170,25 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
             <Badge variant={meta.badgeVariant}>{meta.label}</Badge>
-            <Badge variant={paymentBadge.variant}>Payment: {paymentBadge.label}</Badge>
+            <Badge variant={paymentBadge.variant}>
+              {fill(t.paymentBadge, { status: paymentBadge.label })}
+            </Badge>
           </div>
           <h2 className="tabular-nums-price mt-2 text-2xl leading-[1.2] font-semibold tracking-[-0.015em] break-words text-foreground sm:text-3xl">
-            Order {order.orderNumber}
+            {fill(t.orderHeading, { orderNumber: order.orderNumber })}
           </h2>
           <p className="tabular-nums-price mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            Placed {formatDate(order.createdAt)} · {meta.description}
+            {fill(t.placedLine, {
+              date: formatDate(order.createdAt),
+              description: meta.description,
+            })}
           </p>
         </div>
 
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center print:hidden">
           {needsRetry && (
             <Button asChild className="col-span-2 min-h-11 w-full sm:min-h-10 sm:w-auto">
-              <Link href={retryHref}>Complete Payment</Link>
+              <Link href={retryHref}>{t.completePayment}</Link>
             </Button>
           )}
           <div className="col-span-2 sm:contents">
@@ -169,14 +202,14 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
           >
             <a href={invoiceHref} download={`invoice-${order.orderNumber}.pdf`}>
               <Download className="size-4 stroke-[1.5]" aria-hidden="true" />
-              <span>Invoice</span>
+              <span>{t.invoice}</span>
             </a>
           </Button>
           <OpenAtelierChatButton
             contextType="ORDER"
             contextRefId={order.id}
-            title={`Order ${order.orderNumber}`}
-            label="Get help"
+            title={fill(t.orderHeading, { orderNumber: order.orderNumber })}
+            label={t.getHelp}
             variant="outline"
             size="sm"
             className="w-full sm:w-auto"
@@ -197,12 +230,12 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
 
       {/* Milestone Timeline: Placed -> Confirmed -> Shipped -> Delivered */}
       <section
-        aria-label="Order fulfillment milestones"
+        aria-label={t.milestonesAria}
         className="mt-6 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-            Progress
+            {t.progress}
           </h3>
           {(order.status === "CANCELLED" || order.status === "REFUNDED") && (
             <Badge variant={meta.badgeVariant}>{meta.label}</Badge>
@@ -253,8 +286,8 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
                 {stage.timestamp
                   ? formatDate(stage.timestamp, "en-US", { month: "short", day: "numeric" })
                   : stage.active
-                    ? "In progress"
-                    : "Pending"}
+                    ? t.inProgress
+                    : t.pending}
               </span>
             </li>
           ))}
@@ -270,9 +303,9 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
                 aria-hidden="true"
               />
               <div className="min-w-0">
-                <h3 className="text-base font-semibold text-foreground">Shipping</h3>
+                <h3 className="text-base font-semibold text-foreground">{t.shipping}</h3>
                 <p className="tabular-nums-price mt-0.5 text-sm break-words text-muted-foreground">
-                  {order.carrier ?? "Insured courier"}
+                  {order.carrier ?? t.defaultCarrier}
                   {order.trackingNumber ? ` · ${order.trackingNumber}` : ""}
                 </p>
               </div>
@@ -285,7 +318,7 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
                 className="min-h-11 w-full sm:min-h-10 sm:w-auto print:hidden"
               >
                 <a href={order.trackingUrl} target="_blank" rel="noopener noreferrer">
-                  <span>Track Shipment</span>
+                  <span>{t.trackShipment}</span>
                   <ExternalLink className="size-4 stroke-[1.5]" aria-hidden="true" />
                 </a>
               </Button>
@@ -298,7 +331,7 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
         <div className="min-w-0 space-y-6 lg:col-span-8">
           <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
             <h3 className="text-lg font-semibold tracking-[-0.01em] text-foreground sm:text-xl">
-              Items
+              {t.items}
             </h3>
             <ul className="mt-4 divide-y divide-border">
               {order.items.map((item, itemIndex) => {
@@ -358,7 +391,7 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
                         </p>
                       )}
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {item.variantTitleSnapshot} · SKU {item.skuSnapshot}
+                        {item.variantTitleSnapshot} · {fill(t.sku, { sku: item.skuSnapshot })}
                       </p>
                       <CustomizedSpecsBadge
                         requestId={item.customizationRequestId}
@@ -389,7 +422,7 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
             </ul>
             {order.giftNote && (
               <div className="mt-4 rounded-md border border-border bg-surface-2 p-3.5 text-xs leading-relaxed break-words text-muted-foreground">
-                <span className="font-semibold text-foreground">Gift Note: </span>
+                <span className="font-semibold text-foreground">{t.giftNote}</span>
                 {order.giftNote}
               </div>
             )}
@@ -397,17 +430,17 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
 
           <details className="group rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-base font-semibold text-foreground [&::-webkit-details-marker]:hidden">
-              <span>Order history</span>
+              <span>{t.history}</span>
               <span className="text-sm font-normal text-muted-foreground group-open:hidden">
-                Show
+                {t.show}
               </span>
               <span className="hidden text-sm font-normal text-muted-foreground group-open:inline">
-                Hide
+                {t.hide}
               </span>
             </summary>
             <ol className="relative mt-4 space-y-4 border-l border-border pl-5 sm:border-l-0 sm:pl-0">
               {order.events.map((evt) => {
-                const evtMeta = ORDER_STATUS_META[evt.toStatus];
+                const evtMeta = statusMeta[evt.toStatus];
                 return (
                   <li key={evt.id} className="flex items-start gap-3">
                     {evt.toStatus === "PAID" || evt.toStatus === "DELIVERED" ? (
@@ -440,17 +473,17 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
         <aside className="min-w-0 space-y-6 lg:col-span-4">
           <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
             <h3 className="text-lg font-semibold tracking-[-0.01em] text-foreground sm:text-xl">
-              Payment
+              {t.payment}
             </h3>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-xs">
               <span className="text-muted-foreground">
-                {formatPaymentMethodLabel(order.paymentProvider)}
+                {formatPaymentMethodLabel(order.paymentProvider, t.paymentMethods)}
               </span>
               <Badge variant={paymentBadge.variant}>{paymentBadge.label}</Badge>
             </div>
             <dl className="mt-4 space-y-2.5 border-t border-border pt-4 text-sm">
               <div className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">Subtotal</dt>
+                <dt className="text-muted-foreground">{t.subtotal}</dt>
                 <dd className="tabular-nums-price font-medium text-foreground">
                   {formatMoneyExact(
                     order.subtotal,
@@ -462,7 +495,7 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
               </div>
               {hasDiscount && (
                 <div className="flex justify-between gap-3">
-                  <dt className="text-muted-foreground">Discount</dt>
+                  <dt className="text-muted-foreground">{t.discount}</dt>
                   <dd className="tabular-nums-price font-medium text-accent-text">
                     -
                     {formatMoneyExact(
@@ -478,7 +511,7 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
                 <dt className="text-muted-foreground">{order.shippingMethodName}</dt>
                 <dd className="tabular-nums-price font-medium text-foreground">
                   {Number(order.shippingCost) === 0
-                    ? "Complimentary"
+                    ? t.complimentary
                     : formatMoneyExact(
                         order.shippingCost,
                         order.currency,
@@ -488,7 +521,7 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
                 </dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">Tax</dt>
+                <dt className="text-muted-foreground">{t.tax}</dt>
                 <dd className="tabular-nums-price font-medium text-foreground">
                   {formatMoneyExact(
                     order.taxAmount,
@@ -500,7 +533,7 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
               </div>
               <div className="flex justify-between gap-3 border-t border-border pt-3">
                 <dt className="text-base font-semibold text-foreground">
-                  Total ({order.currency})
+                  {fill(t.total, { currency: order.currency })}
                 </dt>
                 <dd className="tabular-nums-price text-xl font-semibold text-foreground">
                   {formatMoneyExact(order.total, order.currency, "en-US", order.currencyDecimals)}
@@ -510,22 +543,36 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
                 <div className="space-y-1 border-t border-border pt-2.5 text-xs text-muted-foreground">
                   {hasDifferentBase && (
                     <p className="tabular-nums-price">
-                      Rate snapshot: 1 {order.baseCurrency} ={" "}
-                      {Number(order.exchangeRate).toFixed(4)} {order.currency} · Base total{" "}
-                      {formatMoneyExact(order.baseTotal, order.baseCurrency, "en-US", 2)}
+                      {fill(t.rateSnapshot, {
+                        base: order.baseCurrency,
+                        rate: Number(order.exchangeRate).toFixed(4),
+                        currency: order.currency,
+                        baseTotal: formatMoneyExact(
+                          order.baseTotal,
+                          order.baseCurrency,
+                          "en-US",
+                          2,
+                        ),
+                      })}
                     </p>
                   )}
                   {hasDifferentCharged && (
                     <p className="tabular-nums-price">
-                      Charged in base currency:{" "}
-                      {formatMoneyExact(order.chargedAmount!, order.chargedCurrency, "en-US", 2)}
+                      {fill(t.chargedInBase, {
+                        amount: formatMoneyExact(
+                          order.chargedAmount!,
+                          order.chargedCurrency,
+                          "en-US",
+                          2,
+                        ),
+                      })}
                     </p>
                   )}
                 </div>
               )}
               {hasRefund && (
                 <div className="flex justify-between gap-3 border-t border-border pt-2.5 text-xs font-medium text-accent-text">
-                  <dt>Refunded</dt>
+                  <dt>{t.refunded}</dt>
                   <dd className="tabular-nums-price">
                     -
                     {formatMoneyExact(
@@ -544,7 +591,7 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
             <div className="flex items-center gap-2">
               <Truck className="size-5 shrink-0 stroke-[1.5] text-accent-text" aria-hidden="true" />
               <h3 className="text-lg font-semibold tracking-[-0.01em] text-foreground">
-                {sameAddress ? "Delivery & Billing" : "Delivery Address"}
+                {sameAddress ? t.deliveryAndBilling : t.deliveryAddress}
               </h3>
             </div>
             <address className="mt-3 space-y-0.5 text-sm leading-relaxed break-words text-muted-foreground not-italic">
@@ -568,7 +615,7 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
                   className="mt-0.5 size-5 shrink-0 stroke-[1.5] text-accent-text"
                   aria-hidden="true"
                 />
-                <span>Signature required on delivery.</span>
+                <span>{t.signatureRequired}</span>
               </div>
             )}
           </section>
@@ -576,7 +623,7 @@ export function OrderDetailView({ order, guestToken, secondaryAction }: OrderDet
           {!sameAddress && (
             <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
               <h3 className="text-lg font-semibold tracking-[-0.01em] text-foreground">
-                Billing Address
+                {t.billingAddress}
               </h3>
               <address className="mt-3 space-y-0.5 text-sm leading-relaxed break-words text-muted-foreground not-italic">
                 <p className="font-semibold text-foreground">{order.billingAddress.fullName}</p>

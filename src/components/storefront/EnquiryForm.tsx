@@ -1,4 +1,5 @@
 "use client";
+import { fill, fillNodes, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,18 +29,14 @@ interface EnquiryFormProps {
   onSuccess?: () => void;
 }
 
-const ENQUIRY_LABELS: Record<CreateEnquiryInput["type"], string> = {
-  BESPOKE: "Bespoke Commission / Custom Stone",
-  PRODUCT: "Piece Specifications & Private Salon Viewing",
-  GENERAL: "Client Care & Resizing Advice",
-};
-
 export function EnquiryForm({
   defaultType = "GENERAL",
   productId = null,
   productName = null,
   onSuccess,
 }: EnquiryFormProps) {
+  const ui = useUiText();
+  const ENQUIRY_LABELS: Record<CreateEnquiryInput["type"], string> = ui.contactForm.topics;
   const [submittedRef, setSubmittedRef] = React.useState<string | null>(null);
   const [serverError, setServerError] = React.useState<string | null>(null);
   const abuse = useAbuseProtection();
@@ -51,7 +48,7 @@ export function EnquiryForm({
       name: "",
       email: "",
       phone: "",
-      message: productName ? `I would like further details regarding ${productName}.` : "",
+      message: productName ? fill(ui.contactForm.productMessage, { product: productName }) : "",
       productId: productId ?? "",
       website: "",
     },
@@ -75,7 +72,7 @@ export function EnquiryForm({
     }
 
     setSubmittedRef(result.data.id);
-    void notifySuccess("Your concierge note has been received.");
+    void notifySuccess(ui.contactForm.successToast);
     abuse.refreshToken();
     form.reset({
       type: defaultType,
@@ -113,14 +110,16 @@ export function EnquiryForm({
             </svg>
           </span>
           <h3 className="mt-3 text-xl font-semibold tracking-[-0.015em] text-foreground sm:text-2xl">
-            Thank You for Reaching Out
+            {ui.contactForm.successTitle}
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            A senior gemologist from our private concierge has received your enquiry (Reference:{" "}
-            <span className="font-mono text-foreground">
-              {submittedRef.slice(-8).toUpperCase()}
-            </span>
-            ) and will respond within one business day.
+            {fillNodes(ui.contactForm.successText, {
+              reference: (
+                <span className="font-mono text-foreground">
+                  {submittedRef.slice(-8).toUpperCase()}
+                </span>
+              ),
+            })}
           </p>
           <Button
             type="button"
@@ -128,7 +127,7 @@ export function EnquiryForm({
             className="mt-5"
             onClick={() => setSubmittedRef(null)}
           >
-            Send Another Note
+            {ui.contactForm.sendAnother}
           </Button>
         </div>
       </FadeIn>
@@ -148,14 +147,14 @@ export function EnquiryForm({
 
       {productName && (
         <div className="rounded-md border border-border bg-surface-2 px-4 py-3 text-xs text-muted-foreground">
-          Regarding creation:{" "}
+          {ui.contactForm.regarding}{" "}
           <strong className="font-semibold text-foreground">{productName}</strong>
         </div>
       )}
 
       <FormField
         id="enquiry-type"
-        label="Enquiry Topic"
+        label={ui.contactForm.topicLabel}
         required
         error={form.formState.errors.type?.message}
       >
@@ -184,7 +183,7 @@ export function EnquiryForm({
       <div className="grid gap-4 min-[480px]:grid-cols-2">
         <FormField
           id="enquiry-name"
-          label="Full Name"
+          label={ui.contactForm.nameLabel}
           required
           error={form.formState.errors.name?.message}
         >
@@ -192,7 +191,7 @@ export function EnquiryForm({
             <Input
               {...aria}
               autoComplete="name"
-              placeholder="Claire Beaumont"
+              placeholder={ui.contactForm.namePlaceholder}
               {...form.register("name")}
             />
           )}
@@ -200,7 +199,7 @@ export function EnquiryForm({
 
         <FormField
           id="enquiry-email"
-          label="Email Address"
+          label={ui.contactForm.emailLabel}
           required
           error={form.formState.errors.email?.message}
         >
@@ -210,7 +209,7 @@ export function EnquiryForm({
               type="email"
               inputMode="email"
               autoComplete="email"
-              placeholder="you@example.com"
+              placeholder={ui.contactForm.emailPlaceholder}
               {...form.register("email")}
             />
           )}
@@ -219,8 +218,8 @@ export function EnquiryForm({
 
       <FormField
         id="enquiry-phone"
-        label="Telephone (optional)"
-        hint="Useful if you prefer a WhatsApp or studio voice consultation."
+        label={ui.contactForm.phoneLabel}
+        hint={ui.contactForm.phoneHint}
         error={form.formState.errors.phone?.message}
       >
         {(aria) => (
@@ -237,7 +236,7 @@ export function EnquiryForm({
 
       <FormField
         id="enquiry-message"
-        label="How Can We Assist?"
+        label={ui.contactForm.messageLabel}
         required
         error={form.formState.errors.message?.message}
       >
@@ -245,7 +244,7 @@ export function EnquiryForm({
           <Textarea
             {...aria}
             rows={4}
-            placeholder="Share preferred ring size, stone preferences, or timeline..."
+            placeholder={ui.contactForm.messagePlaceholder}
             {...form.register("message")}
           />
         )}
@@ -264,7 +263,7 @@ export function EnquiryForm({
         className="w-full sm:w-auto"
         disabled={form.formState.isSubmitting}
       >
-        {form.formState.isSubmitting ? "Submitting…" : "Submit Concierge Enquiry"}
+        {form.formState.isSubmitting ? ui.contactForm.submitting : ui.contactForm.submit}
       </Button>
     </form>
   );

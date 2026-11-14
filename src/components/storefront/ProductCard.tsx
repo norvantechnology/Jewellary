@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import Image from "next/image";
@@ -25,15 +26,18 @@ interface CardBadgeMeta {
   variant: "primary" | "new" | "signature";
 }
 
-function getCardBadge(product: PublicProductCardDTO): CardBadgeMeta | null {
+function getCardBadge(
+  product: PublicProductCardDTO,
+  labels: { badgeOnRequest: string; badgeNew: string; badgeSignature: string },
+): CardBadgeMeta | null {
   if (product.priceMode === "PRICE_ON_REQUEST") {
-    return { label: "On request", variant: "primary" };
+    return { label: labels.badgeOnRequest, variant: "primary" };
   }
   if (product.isNewArrival) {
-    return { label: "New", variant: "new" };
+    return { label: labels.badgeNew, variant: "new" };
   }
   if (product.isBestseller || product.isFeatured) {
-    return { label: "Signature", variant: "signature" };
+    return { label: labels.badgeSignature, variant: "signature" };
   }
   return null;
 }
@@ -48,6 +52,7 @@ export const ProductCard = React.memo(function ProductCard({
   preload = false,
   className,
 }: ProductCardProps) {
+  const ui = useUiText();
   const href = `/products/${product.slug}`;
   const primary = product.primaryImage;
   const secondary = product.secondaryImage;
@@ -58,7 +63,7 @@ export const ProductCard = React.memo(function ProductCard({
   const primaryMeta = primaryMetaParts.join(" · ");
   const fullMetaTitle = [primaryMeta, product.certificationLab].filter(Boolean).join(" · ");
 
-  const badge = getCardBadge(product);
+  const badge = getCardBadge(product, ui.productCard);
   const isPriceOnRequest = product.priceMode === "PRICE_ON_REQUEST";
   const isOutOfStock =
     !isPriceOnRequest &&
@@ -102,7 +107,9 @@ export const ProductCard = React.memo(function ProductCard({
             {!isOutOfStock && secondary && (
               <Image
                 src={secondary.mediumUrl ?? secondary.url}
-                alt={secondary.altText ?? `${product.name} alternate view`}
+                alt={
+                  secondary.altText ?? fill(ui.productCard.alternateViewAlt, { name: product.name })
+                }
                 fill
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className="ma-product-secondary-img object-cover object-center dark:brightness-90"

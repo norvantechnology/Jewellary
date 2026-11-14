@@ -1,3 +1,4 @@
+import { getSiteContent } from "@/modules/site-content/site-content.service";
 import { Suspense } from "react";
 import Link from "next/link";
 import { User } from "lucide-react";
@@ -63,9 +64,10 @@ async function AsyncCurrencySlot() {
 }
 
 export async function StorefrontShell({ children }: { children: React.ReactNode }) {
-  const [headerConfig, currencyCatalog] = await Promise.all([
+  const [headerConfig, currencyCatalog, siteContent] = await Promise.all([
     getSiteHeaderConfig(),
     getCurrencyCatalogContext(),
+    getSiteContent(),
   ]);
 
   return (
@@ -81,6 +83,7 @@ export async function StorefrontShell({ children }: { children: React.ReactNode 
       <div className="flex min-h-dvh flex-col bg-background">
         <Header
           config={headerConfig}
+          navLabels={siteContent.site.header}
           searchSlot={<HeaderSearchBar />}
           wishlistCountSlot={
             <Suspense fallback={<HeaderWishlistAction initialCount={0} />}>
@@ -97,7 +100,7 @@ export async function StorefrontShell({ children }: { children: React.ReactNode 
               fallback={
                 <Link
                   href="/login"
-                  aria-label="Account"
+                  aria-label={siteContent.ui.layout.account}
                   className="transition-ui hidden size-11 items-center justify-center rounded-md text-foreground hover:bg-muted sm:inline-flex lg:size-10"
                 >
                   <User className="size-5" strokeWidth={1.5} aria-hidden="true" />
@@ -115,7 +118,7 @@ export async function StorefrontShell({ children }: { children: React.ReactNode 
           <PageTransition>{children}</PageTransition>
         </main>
 
-        <Footer config={headerConfig} />
+        <Footer config={headerConfig} content={siteContent.site.footer} />
         <BackToTop />
         <StorefrontFeatureOverlays />
       </div>

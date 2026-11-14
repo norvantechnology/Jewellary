@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { NOINDEX_NOFOLLOW_ROBOTS } from "@/lib/seo/metadata";
+import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
 import Image from "next/image";
 import Link from "next/link";
 import { Gem, Package } from "lucide-react";
@@ -16,12 +18,15 @@ import {
   listCustomerOrders,
   type CustomerOrderSummaryDTO,
 } from "@/modules/account/account.service";
-import { ORDER_STATUS_META } from "@/modules/orders/state-machine";
+import { getOrderStatusMeta, type OrderStatusTexts } from "@/modules/orders/state-machine";
 import { requirePageUser } from "@/server/dal";
 
-export const metadata: Metadata = {
-  title: "My Orders",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildPageMetadata((c) => c.pages.account.orders.seo, {
+    pathname: "/account/orders",
+    robots: NOINDEX_NOFOLLOW_ROBOTS,
+  });
+}
 
 function OrderThumbnailStrip({ order }: { order: CustomerOrderSummaryDTO }) {
   const thumbs = order.itemThumbnails;
@@ -78,12 +83,18 @@ export default async function AccountOrdersPage({
 }) {
   const [{ user }, sp] = await Promise.all([requirePageUser("/account/orders"), searchParams]);
   const page = Math.max(1, Number(sp.page) || 1);
-  const data = await listCustomerOrders(user.id, { page, pageSize: 10 });
+  const [data, content] = await Promise.all([
+    listCustomerOrders(user.id, { page, pageSize: 10 }),
+    getSiteContent(),
+  ]);
+  // Visible text: site-content.json → pages.account.orders
+  const ORDER_STATUS_META = getOrderStatusMeta(content.ui.orders.statuses as OrderStatusTexts);
+  const t = content.pages.account.orders;
 
   const columns: ResponsiveColumn<CustomerOrderSummaryDTO>[] = [
     {
       key: "orderNumber",
-      header: "Order",
+      header: t.columns.order,
       cell: (row) => (
         <Link
           href={`/account/orders/${encodeURIComponent(row.orderNumber)}`}
@@ -95,7 +106,7 @@ export default async function AccountOrdersPage({
     },
     {
       key: "date",
-      header: "Date",
+      header: t.columns.date,
       cell: (row) => (
         <span className="tabular-nums-price text-muted-foreground">
           {formatDate(row.createdAt)}
@@ -104,12 +115,12 @@ export default async function AccountOrdersPage({
     },
     {
       key: "summary",
-      header: "Pieces",
+      header: t.columns.pieces,
       cell: (row) => <OrderThumbnailStrip order={row} />,
     },
     {
       key: "status",
-      header: "Status",
+      header: t.columns.status,
       cell: (row) => {
         const meta = ORDER_STATUS_META[row.status];
         return <Badge variant={meta.badgeVariant}>{meta.label}</Badge>;
@@ -117,7 +128,7 @@ export default async function AccountOrdersPage({
     },
     {
       key: "total",
-      header: "Total",
+      header: t.columns.total,
       className: "text-right",
       cell: (row) => (
         <div className="text-right">
@@ -139,7 +150,9 @@ export default async function AccountOrdersPage({
       className: "text-right",
       cell: (row) => (
         <Button asChild variant="outline" size="sm" className="min-h-11 md:min-h-10">
-          <Link href={`/account/orders/${encodeURIComponent(row.orderNumber)}`}>View details</Link>
+          <Link href={`/account/orders/${encodeURIComponent(row.orderNumber)}`}>
+            {t.viewDetails}
+          </Link>
         </Button>
       ),
     },
@@ -148,11 +161,9 @@ export default async function AccountOrdersPage({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-[-0.015em] text-foreground">
-          Commission History
-        </h2>
+        <h2 className="text-2xl font-semibold tracking-[-0.015em] text-foreground">{t.heading}</h2>
         <p className="tabular-nums-price mt-1 text-sm text-muted-foreground">
-          {data.total} {data.total === 1 ? "order" : "orders"} recorded in your account.
+          {data.total} {data.total === 1 ? t.countSingular : t.countPlural}
         </p>
       </div>
 
@@ -176,16 +187,16 @@ export default async function AccountOrdersPage({
         mobileFooter={(row) => (
           <Button asChild variant="outline" className="min-h-11 w-full">
             <Link href={`/account/orders/${encodeURIComponent(row.orderNumber)}`}>
-              View details
+              {t.viewDetails}
             </Link>
           </Button>
         )}
         emptyState={
           <EmptyState
             icon={Package}
-            title="You have no orders yet"
-            description="Your confirmed reservations, courier tracking numbers, and invoices will appear here."
-            actionLabel="Start shopping"
+            title={t.emptyTitle}
+            description={t.emptyText}
+            actionLabel={t.emptyAction}
             actionHref="/collections"
           />
         }

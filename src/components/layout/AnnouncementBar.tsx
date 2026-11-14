@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
@@ -44,6 +46,7 @@ export function AnnouncementBar({
   freeShippingThreshold,
   baseCurrency = "USD",
 }: AnnouncementBarProps) {
+  const ui = useUiText();
   const dismissed = React.useSyncExternalStore(subscribe, getClientSnapshot, () => false);
   const currencyCtx = useOptionalCurrency();
 
@@ -120,7 +123,7 @@ export function AnnouncementBar({
               <button
                 type="button"
                 onClick={dismiss}
-                aria-label="Dismiss announcement"
+                aria-label={ui.layout.dismissAnnouncement}
                 className="transition-ui absolute right-0 inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-current hover:opacity-80 focus-visible:outline-2 focus-visible:outline-accent"
               >
                 <X className="size-4" strokeWidth={1.5} aria-hidden="true" />

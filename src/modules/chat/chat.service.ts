@@ -231,7 +231,7 @@ export function isAtelierSupportOnline(supportHours: string | null): {
   isOnline: boolean;
   hoursLabel: string;
 } {
-  const hoursLabel = supportHours?.trim() || "Mon–Sat · 09:00–19:00 UTC (Atelier Concierge)";
+  const hoursLabel = supportHours?.trim() || "Mon–Sat, 9 am–7 pm UTC";
   // Parse simple HH:MM-HH:MM time window when present; otherwise assume online during business hours Mon-Sat
   const now = new Date();
   const day = now.getUTCDay(); // 0=Sun..6=Sat
@@ -351,13 +351,13 @@ function buildConversationSubjectLabel(conv: {
 }): string {
   switch (conv.contextType) {
     case "CUSTOMIZATION_REQUEST":
-      return "Bespoke Commission Consultation";
+      return "Custom design help";
     case "PRODUCT":
       return "Product Inquiry";
     case "ORDER":
-      return "Order Concierge Support";
+      return "Order help";
     default:
-      return "Maison Aurelia Concierge";
+      return "Customer Care";
   }
 }
 
@@ -479,7 +479,7 @@ async function resolveReferenceSnapshot(
     return {
       canonicalRefId: reqRow.id,
       snapshot,
-      previewLabel: `Shared commission ${reqRow.requestNumber}`,
+      previewLabel: `Shared custom request ${reqRow.requestNumber}`,
     };
   }
 
@@ -1104,7 +1104,7 @@ export async function sendChatMessage(
       const isAdminSender = Boolean(actor.role && hasPermission(actor.role, "chat:manage"));
       const senderRole = isAdminSender ? "ADMIN" : "CUSTOMER";
       const senderName = isAdminSender
-        ? (actor.userName ?? "Atelier Concierge")
+        ? (actor.userName ?? "Customer Care")
         : (actor.userName ?? conv.guestName ?? "Guest Collector");
 
       const now = new Date();

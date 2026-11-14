@@ -124,6 +124,21 @@ export const confirmSandboxPaymentSchema = z
   })
   .strict();
 
+export const confirmRazorpayPaymentSchema = z
+  .object({
+    orderNumber: z.string().trim().min(6).max(32),
+    guestToken: z.string().trim().min(8).max(128).optional().nullable(),
+    razorpayOrderId: z.string().trim().min(6).max(64),
+    razorpayPaymentId: z.string().trim().min(6).max(64),
+    razorpaySignature: z
+      .string()
+      .trim()
+      .regex(/^[a-f0-9]{64}$/i),
+  })
+  .strict();
+
+export type ConfirmRazorpayPaymentInput = z.infer<typeof confirmRazorpayPaymentSchema>;
+
 export type CheckoutAddressInput = z.infer<typeof checkoutAddressSchema>;
 export type QuoteCheckoutInput = z.infer<typeof quoteCheckoutSchema>;
 export type CreateCheckoutOrderInput = z.infer<typeof createCheckoutOrderSchema>;

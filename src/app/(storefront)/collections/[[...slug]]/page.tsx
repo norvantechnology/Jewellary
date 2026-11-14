@@ -1,5 +1,8 @@
+import { getCategoryShortcuts } from "@/modules/catalog/catalog.public";
+import { fill as fillText } from "@/lib/fill-text";
 import { Suspense, cache } from "react";
 import type { Metadata } from "next";
+import { getSiteContent } from "@/modules/site-content/site-content.service";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { connection } from "next/server";
@@ -200,7 +203,7 @@ export async function generateMetadata({
     });
     const priceRange = formatPriceRangeLabel(defaultResult.items, settings.currency);
     const titleBase = formatCollectionMetaTitle({
-      name: "All Fine Jewellery Collections",
+      name: (await getSiteContent()).pages.collections.seo.title,
       brandName: settings.storeName,
       pageNumber: pageNum,
       templates: settings.seoTemplates,
@@ -217,8 +220,7 @@ export async function generateMetadata({
       absoluteTitle: titleBase,
       description: formatCollectionMetaDescription({
         name: "Fine Jewellery",
-        description:
-          "Browse GIA and IGI certified engagement rings, wedding bands, diamond pendants, earrings, and tennis bracelets crafted in 18K recycled gold and platinum.",
+        description: (await getSiteContent()).pages.collections.seo.description,
         count: defaultResult.total,
         priceRange,
         brandName: settings.storeName,
@@ -350,7 +352,7 @@ export async function generateMetadata({
 
 type CollectionQueryResult = Awaited<ReturnType<typeof queryCollectionProducts>>;
 
-function CollectionsProductGrid({
+async function CollectionsProductGrid({
   result,
   resolvedCategoryName,
   rawSearch,
@@ -364,30 +366,25 @@ function CollectionsProductGrid({
   currency: string;
 }) {
   const hasFilters = Object.keys(rawSearch).length > 0;
+  const copy = (await getSiteContent()).pages.collections;
   if (result.items.length === 0) {
     return (
       <EmptyState
         icon={Gem}
         title={
-          resolvedCategoryName && result.total === 0
-            ? "No pieces in this collection yet"
-            : "No pieces match"
+          resolvedCategoryName && result.total === 0 ? copy.emptyCategoryTitle : copy.emptyTitle
         }
-        description="Adjust your carat, metal, or price filters, or view the full catalogue."
-        actionLabel={hasFilters ? "Clear filters" : "All jewellery"}
+        description={copy.emptyDescription}
+        actionLabel={hasFilters ? copy.clearFiltersLabel : copy.shopAllLabel}
         actionHref={hasFilters ? basePath : "/collections"}
-        suggestions={[
-          { label: "All Jewellery", href: "/collections" },
-          { label: "Rings", href: "/collections/rings" },
-          { label: "Necklaces", href: "/collections/necklaces" },
-        ]}
+        suggestions={await getCategoryShortcuts(4)}
       />
     );
   }
 
   return (
     <>
-      <h2 className="sr-only">Collection Creations</h2>
+      <h2 className="sr-only">{copy.gridSrHeading}</h2>
       <RevealStagger className={getProductGridClassName("catalog")}>
         {result.items.map((product, idx) => (
           <ProductCard
@@ -509,7 +506,11 @@ async function CollectionsFilteredView({
 }
 
 async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
-  const [{ slug }, settings] = await Promise.all([params, getPublicStoreSettings()]);
+  const [{ slug }, settings, siteContent] = await Promise.all([
+    params,
+    getPublicStoreSettings(),
+    getSiteContent(),
+  ]);
 
   const pathStr = slug?.join("/") ?? "";
   const target = await resolveCollectionOrFacet(pathStr);
@@ -579,12 +580,11 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
 
   const collectionTitle = activeFacet
     ? activeFacet.h1 || activeFacet.name
-    : (resolvedCategory?.name ?? "All Fine Jewellery Collections");
+    : (resolvedCategory?.name ?? siteContent.pages.collections.heading);
   const collectionDescription = activeFacet
     ? (activeFacet.introCopy ??
       `Explore curated ${activeFacet.name} pieces from ${settings.storeName}, crafted in hallmarked precious metals.`)
-    : (resolvedCategory?.description ??
-      "Explore certified diamond solitaires, 18K gold bands, pendants, studs, and bracelets crafted for heirloom permanence.");
+    : (resolvedCategory?.description ?? siteContent.pages.collections.intro);
 
   const jsonLdBreadcrumbs = [{ name: "Home", path: "/" }];
   if (resolvedCategory) {
@@ -662,7 +662,7 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
           <h1 className="type-h1 line-clamp-2 font-display font-semibold break-words text-foreground">
             {activeFacet
               ? activeFacet.h1 || activeFacet.name
-              : (resolvedCategory?.name ?? "All Jewellery")}
+              : (resolvedCategory?.name ?? siteContent.pages.collections.heading)}
           </h1>
           <p className="prose-limit mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground sm:mt-3 sm:line-clamp-none sm:text-base">
             {showTopIntro ? resolvedCategory.seoIntroCopy : collectionDescription}
@@ -674,11 +674,11 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
                 {!resolvedCategory && (
                   <Link
                     href="/collections"
-                    title="All Jewellery"
+                    title={siteContent.pages.collections.allChipTitle}
                     aria-current="page"
                     className="transition-ui inline-flex min-h-11 max-w-[180px] shrink-0 items-center gap-1.5 rounded-full border border-primary bg-primary px-3.5 py-1.5 text-xs font-medium text-on-primary shadow-sm sm:min-h-9"
                   >
-                    <span className="truncate">All</span>
+                    <span className="truncate">{siteContent.pages.collections.allChipLabel}</span>
                     <span className="tabular-nums-price shrink-0 opacity-80">
                       ({defaultResult.total})
                     </span>
@@ -800,26 +800,30 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
                 id="collection-guidance-heading"
                 className="text-base font-semibold text-foreground hover:no-underline"
               >
-                About this collection
+                {siteContent.pages.collections.aboutHeading}
               </AccordionTrigger>
               <AccordionContent className="pt-2">
                 <div className="grid gap-8 lg:grid-cols-12">
                   <div className="min-w-0 lg:col-span-6">
                     <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-foreground">
-                      Selecting your{" "}
-                      {resolvedCategory?.name.toLowerCase() ?? "fine jewellery piece"}
+                      {fillText(siteContent.pages.collections.aboutTitle, {
+                        category:
+                          resolvedCategory?.name.toLowerCase() ??
+                          siteContent.pages.collections.aboutFallbackCategory,
+                      })}
                     </h2>
                     <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
-                      Every {resolvedCategory ? resolvedCategory.name.toLowerCase() : "creation"} in
-                      the {settings.storeName} collection is hallmarked for 18K recycled gold or 950
-                      platinum purity, independently graded where applicable by GIA or IGI
-                      laboratories, and dispatched with signature-required courier insurance and a{" "}
-                      {settings.returnWindowDays}-day return guarantee.
+                      {fillText(siteContent.pages.collections.aboutText, {
+                        storeName: settings.storeName,
+                        days: settings.returnWindowDays,
+                      })}
                     </p>
                   </div>
                   {displayArticles.length > 0 && (
                     <div className="min-w-0 lg:col-span-6">
-                      <p className="text-sm font-semibold text-foreground">Buying guides</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {siteContent.pages.collections.guidesHeading}
+                      </p>
                       <ul className="mt-2.5 space-y-2.5 text-sm">
                         {displayArticles.map((guide) => (
                           <li key={guide.id} className="min-w-0">

@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { Heart } from "lucide-react";
@@ -23,6 +24,7 @@ export function WishlistToggleButton({
   mode = "icon",
   className,
 }: WishlistToggleButtonProps) {
+  const ui = useUiText();
   const isSaved = useIsWishlisted(variantId);
   const [pending, setPending] = React.useState(false);
   const [pulseKey, setPulseKey] = React.useState(0);
@@ -52,8 +54,8 @@ export function WishlistToggleButton({
     visitorStore.setWishlistVariantIds(result.data.variantIds);
     void notifySuccess(
       optimisticSaved
-        ? `${productName} added to your saved pieces.`
-        : `${productName} removed from your saved pieces.`,
+        ? fill(ui.productCard.savedToast, { name: productName })
+        : fill(ui.productCard.removedToast, { name: productName }),
     );
   }
 
@@ -86,7 +88,7 @@ export function WishlistToggleButton({
             aria-hidden="true"
           />
         </m.span>
-        <span>{isSaved ? "Saved in Wishlist" : "Save to Wishlist"}</span>
+        <span>{isSaved ? ui.productCard.savedInWishlist : ui.productCard.saveToWishlist}</span>
       </Button>
     );
   }
@@ -98,7 +100,9 @@ export function WishlistToggleButton({
       disabled={pending}
       aria-pressed={isSaved}
       aria-label={
-        isSaved ? `Remove ${productName} from wishlist` : `Save ${productName} to wishlist`
+        isSaved
+          ? fill(ui.productCard.removeWishlistAria, { name: productName })
+          : fill(ui.productCard.saveWishlistAria, { name: productName })
       }
       className={cn(
         "group/wish inline-flex size-11 cursor-pointer items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",

@@ -1,5 +1,7 @@
 "use client";
 
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -51,6 +53,7 @@ import { cn } from "@/lib/utils";
 import { fadeInVariants, slideStepVariants, useReducedMotionSafe } from "@/lib/motion";
 import type { CheckoutQuoteDTO } from "@/modules/orders/checkout-quote";
 import {
+  confirmRazorpayPaymentAction,
   confirmSandboxPaymentAction,
   createCheckoutOrderAction,
   quoteCheckoutAction,
@@ -69,7 +72,10 @@ import type {
 import { visitorStore } from "@/modules/storefront/visitor-store";
 
 interface RazorpayWindow extends Window {
-  Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+  Razorpay?: new (options: Record<string, unknown>) => {
+    open: () => void;
+    on: (event: "payment.failed", cb: (res: { error?: { description?: string } }) => void) => void;
+  };
 }
 
 interface CheckoutClientProps {
@@ -81,6 +87,7 @@ interface CheckoutClientProps {
 }
 
 export function CheckoutClient({ bootstrap, initialRetryOrder = null }: CheckoutClientProps) {
+  const t = useUiText().checkout;
   const router = useRouter();
   const { currency, baseCurrency, isBaseCurrency, formatPrice } = useCurrency();
   const reducedMotion = useReducedMotionSafe();
@@ -132,9 +139,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
 
   const [createdOrder, setCreatedOrder] = React.useState<CreatedOrderResultDTO | null>(null);
   const [paymentFailureNotice, setPaymentFailureNotice] = React.useState<string | null>(
-    initialRetryOrder?.order.status === "PAYMENT_FAILED"
-      ? "The previous authorization attempt did not complete. Retry payment below while your 30-minute vault hold remains active."
-      : null,
+    initialRetryOrder?.order.status === "PAYMENT_FAILED" ? t.retryNotice : null,
   );
   const [sandboxBusy, setSandboxBusy] = React.useState(false);
 
@@ -359,7 +364,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
           res.data.guestToken ??
           (prev?.orderNumber === res.data.orderNumber ? prev.guestToken : null),
       }));
-      void notifySuccess(`Order ${res.data.orderNumber} reserved cleanly in our vault.`);
+      void notifySuccess(fill(t.toasts.orderReserved, { orderNumber: res.data.orderNumber }));
     })(event);
 
   async function handleRetryOrderPayment() {
@@ -379,7 +384,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
     }
 
     setCreatedOrder(res.data);
-    void notifyInfo("New authorization session initialized.");
+    void notifyInfo(t.toasts.newSession);
   }
 
   async function handleSandboxOutcome(outcome: "succeed" | "fail") {
@@ -401,7 +406,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
     }
 
     if (res.data.status === "PAID") {
-      void notifySuccess(`Payment settled for ${res.data.orderNumber}.`);
+      void notifySuccess(fill(t.toasts.paymentSettled, { orderNumber: res.data.orderNumber }));
       const tokenQuery = createdOrder.guestToken
         ? `?token=${encodeURIComponent(createdOrder.guestToken)}`
         : "";
@@ -412,10 +417,8 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
     }
 
     setCreatedOrder({ ...createdOrder, status: res.data.status });
-    setPaymentFailureNotice(
-      "Card authorization was declined in sandbox. Your 30-minute vault hold remains active—retry payment below.",
-    );
-    void notifyError("Card authorization declined.");
+    setPaymentFailureNotice(t.sandboxDeclined);
+    void notifyError(t.toasts.declined);
   }
 
   async function handleOpenRazorpayModal() {
@@ -428,7 +431,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
         script.src = "https://checkout.razorpay.com/v1/checkout.js";
         script.async = true;
         script.onload = () => resolve();
-        script.onerror = () => reject(new Error("Unable to load Razorpay gateway script."));
+        script.onerror = () => reject(new Error(t.toasts.razorpayLoadFailed));
         document.body.appendChild(script);
       });
     }
@@ -439,20 +442,52 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
       ? `?token=${encodeURIComponent(createdOrder.guestToken)}`
       : "";
 
+    const orderNumber = createdOrder.orderNumber;
+    const confirmationUrl = `/orders/${encodeURIComponent(orderNumber)}/confirmation${tokenQuery}`;
+    const shipping = form.getValues("shippingAddress");
+
     const instance = new win.Razorpay!({
       key: createdOrder.payment.keyId,
       order_id: createdOrder.payment.razorpayOrderId,
       name: bootstrap.settings.storeName,
-      description: `Order ${createdOrder.orderNumber}`,
+      description: fill(t.payment.razorpayDescription, { orderNumber }),
       prefill: {
-        email: form.getValues("email") || initialRetryOrder?.order.shippingAddress.fullName,
+        name: shipping?.fullName || undefined,
+        email: form.getValues("email") || undefined,
+        contact: shipping?.phone || undefined,
       },
+      notes: { orderNumber },
       theme: accentColor ? { color: accentColor } : undefined,
-      handler: () => {
-        router.replace(
-          `/orders/${encodeURIComponent(createdOrder.orderNumber)}/confirmation${tokenQuery}`,
-        );
+      retry: { enabled: true, max_count: 3 },
+      modal: {
+        // Closed without paying: the order stays reserved and the customer can try again.
+        ondismiss: () => void notifyInfo(t.toasts.razorpayClosed),
       },
+      handler: async (response: {
+        razorpay_order_id: string;
+        razorpay_payment_id: string;
+        razorpay_signature: string;
+      }) => {
+        // Verify on the server straight away (the webhook is a backup), then show the receipt.
+        void notifyInfo(t.toasts.razorpayVerifying);
+        const res = await confirmRazorpayPaymentAction({
+          orderNumber,
+          guestToken: createdOrder.guestToken ?? null,
+          razorpayOrderId: response.razorpay_order_id,
+          razorpayPaymentId: response.razorpay_payment_id,
+          razorpaySignature: response.razorpay_signature,
+        });
+        if (!res.ok) {
+          // Payment may still settle via webhook; the confirmation page shows the live status.
+          void notifyError(t.toasts.razorpayVerifyDelayed);
+        } else {
+          void notifySuccess(fill(t.toasts.paymentSettled, { orderNumber }));
+        }
+        router.replace(confirmationUrl);
+      },
+    });
+    instance.on("payment.failed", (res) => {
+      void notifyError(res.error?.description || t.toasts.razorpayFailed);
     });
     instance.open();
   }
@@ -461,9 +496,9 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
     return (
       <EmptyState
         icon={ShoppingBag}
-        title="Your Shopping Bag Is Empty"
-        description="Add a creation to your shopping bag before starting an insured checkout."
-        actionLabel="Explore Collections"
+        title={t.emptyTitle}
+        description={t.emptyDescription}
+        actionLabel={t.emptyAction}
         actionHref="/collections"
       />
     );
@@ -524,6 +559,16 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
   };
 
   const isPaymentPhase = Boolean(createdOrder || initialRetryOrder);
+  const chargedLabel = createdOrder
+    ? formatMoneyExact(
+        createdOrder.chargedAmount,
+        createdOrder.chargedCurrency,
+        "en-US",
+        createdOrder.chargeInBaseFallback
+          ? baseCurrency.decimalPlaces
+          : createdOrder.currencyDecimals,
+      )
+    : "";
   const summaryItems = initialRetryOrder?.order.items ?? bootstrap.cart.items;
   const summaryItemCount = summaryItems.reduce((sum, item) => sum + item.quantity, 0);
   const hasSignatureNotice = Boolean(
@@ -535,25 +580,25 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
   const steps = [
     {
       number: 1,
-      label: "Contact",
+      label: t.steps.contact,
       done: isPaymentPhase || Boolean(watchedEmail && watchedEmail.includes("@")),
       active: !isPaymentPhase,
     },
     {
       number: 2,
-      label: "Shipping",
+      label: t.steps.shipping,
       done: isPaymentPhase || Boolean(watchedLine1 && watchedLine1.trim().length > 2),
       active: !isPaymentPhase && Boolean(watchedEmail && watchedEmail.includes("@")),
     },
     {
       number: 3,
-      label: "Delivery",
+      label: t.steps.delivery,
       done: isPaymentPhase,
       active: !isPaymentPhase && Boolean(watchedLine1 && watchedLine1.trim().length > 2),
     },
     {
       number: 4,
-      label: "Payment",
+      label: t.steps.payment,
       done: createdOrder?.status === "PAID",
       active: isPaymentPhase,
     },
@@ -593,7 +638,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-foreground">{title}</p>
                 <p className="tabular-nums-price mt-0.5 truncate text-xs text-muted-foreground">
-                  {variantLabel} · Qty {item.quantity}
+                  {fill(t.summary.qty, { variant: variantLabel, quantity: item.quantity })}
                 </p>
                 <CustomizedSpecsBadge
                   compact
@@ -614,7 +659,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
 
       <dl className="mt-4 space-y-2.5 text-sm">
         <div className="flex items-center justify-between gap-3">
-          <dt className="text-muted-foreground">Subtotal</dt>
+          <dt className="text-muted-foreground">{t.summary.subtotal}</dt>
           <dd className="tabular-nums-price font-medium text-foreground">
             <AnimatedCounter value={fmtSummaryAmount(displaySubtotal, true)} />
           </dd>
@@ -623,22 +668,22 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
           <dt className="text-muted-foreground">
             {activeQuote?.selectedZone.name ??
               initialRetryOrder?.order.shippingMethodName ??
-              "Insured Shipping"}
+              t.summary.shippingFallback}
           </dt>
           <dd className="tabular-nums-price font-medium text-foreground">
             {isQuoting || isBaseQuotePending
-              ? "Calculating…"
+              ? t.summary.calculating
               : displayShipping === null
-                ? "Select country"
+                ? t.summary.selectCountry
                 : Number(displayShipping) === 0
-                  ? "Complimentary"
+                  ? t.summary.complimentary
                   : formatMoneyExact(displayShipping, displayCurrency, "en-US", displayDecimals)}
           </dd>
         </div>
         <div className="flex items-center justify-between gap-3">
           <dt className="text-muted-foreground">
             {activeQuote?.taxLabel ?? bootstrap.settings.taxLabel}
-            {bootstrap.settings.taxInclusive ? " (Included)" : ""}
+            {bootstrap.settings.taxInclusive ? t.summary.taxIncluded : ""}
           </dt>
           <dd className="tabular-nums-price font-medium text-foreground">
             {displayTax === null || isBaseQuotePending
@@ -647,7 +692,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
           </dd>
         </div>
         <div className="flex items-center justify-between gap-3 border-t border-border pt-3.5">
-          <dt className="text-base font-semibold text-foreground">Total</dt>
+          <dt className="text-base font-semibold text-foreground">{t.summary.total}</dt>
           <dd className="tabular-nums-price text-xl font-semibold text-foreground">
             <AnimatedCounter value={fmtSummaryAmount(displayTotal, true)} />
           </dd>
@@ -655,9 +700,13 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
       </dl>
 
       <p className="tabular-nums-price mt-3 text-xs text-muted-foreground">
-        Prices shown in {displayCurrency}
+        {fill(t.summary.pricesShownIn, { currency: displayCurrency })}
         {displayCurrency !== baseCurrency.code
-          ? ` (1 ${baseCurrency.code} = ${Number(effectiveExchangeRate).toFixed(4)} ${displayCurrency})`
+          ? fill(t.summary.rateSuffix, {
+              base: baseCurrency.code,
+              rate: Number(effectiveExchangeRate).toFixed(4),
+              currency: displayCurrency,
+            })
           : "."}
       </p>
 
@@ -666,7 +715,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
           role="note"
           className="mt-3 rounded-md border border-warning/40 bg-warning/10 p-3 text-xs leading-relaxed text-foreground"
         >
-          Your payment provider processes settlement in {baseCurrency.code}. You will be charged{" "}
+          {fill(t.summary.baseChargeBefore, { base: baseCurrency.code })}{" "}
           <strong className="tabular-nums-price font-semibold">
             {formatMoneyExact(
               createdOrder?.chargedAmount ?? activeBaseTotal,
@@ -676,7 +725,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
             )}{" "}
             ({createdOrder?.chargedCurrency ?? baseCurrency.code})
           </strong>
-          ; amounts shown in {displayCurrency} are indicative conversions.
+          {fill(t.summary.baseChargeAfter, { currency: displayCurrency })}
         </div>
       )}
 
@@ -689,10 +738,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
             className="mt-0.5 size-5 shrink-0 stroke-[1.5] text-accent-text"
             aria-hidden="true"
           />
-          <span>
-            Insured hand-delivery with adult signature verification and tamper-evident packaging
-            included.
-          </span>
+          <span>{t.summary.signatureNote}</span>
         </div>
       )}
     </>
@@ -703,14 +749,14 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
     1,
   );
   const currentStep = steps[highestActiveStep - 1] ??
-    steps[0] ?? { number: 1, label: "Contact", done: false, active: true };
+    steps[0] ?? { number: 1, label: t.steps.contact, done: false, active: true };
   const stepProgressRatio = Math.min(1, Math.max(0.25, highestActiveStep / 4));
 
   const renderShippingAddressFields = (inSheet: boolean) => (
     <div className="grid gap-4 min-[480px]:grid-cols-2">
       <FormField
         id="shipping-full-name"
-        label="Full Name"
+        label={t.address.fullName}
         required
         error={form.formState.errors.shippingAddress?.fullName?.message}
       >
@@ -725,7 +771,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
 
       <FormField
         id="shipping-country"
-        label="Country"
+        label={t.address.country}
         required
         error={form.formState.errors.shippingAddress?.country?.message}
       >
@@ -756,9 +802,9 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
       <div className="min-[480px]:col-span-2">
         <FormField
           id="shipping-phone"
-          label="Phone"
+          label={t.address.phone}
           required
-          hint="For delivery updates"
+          hint={t.address.phoneHint}
           error={form.formState.errors.shippingAddress?.phone?.message}
         >
           {(aria) => (
@@ -786,7 +832,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
       <div className="min-[480px]:col-span-2">
         <FormField
           id="shipping-line1"
-          label="Street Address"
+          label={t.address.street}
           required
           error={form.formState.errors.shippingAddress?.line1?.message}
         >
@@ -803,7 +849,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
       <div className="min-[480px]:col-span-2">
         <FormField
           id="shipping-line2"
-          label="Apartment, Suite, or Floor (Optional)"
+          label={t.address.apartment}
           error={form.formState.errors.shippingAddress?.line2?.message}
         >
           {(aria) => (
@@ -819,7 +865,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
       <div className="min-[480px]:col-span-2">
         <FormField
           id="shipping-state"
-          label={shippingCountryMeta?.stateLabel ?? "State / Province"}
+          label={shippingCountryMeta?.stateLabel ?? t.address.state}
           required
           error={form.formState.errors.shippingAddress?.state?.message}
         >
@@ -848,7 +894,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
 
       <FormField
         id="shipping-city"
-        label="City"
+        label={t.address.city}
         required
         error={form.formState.errors.shippingAddress?.city?.message}
       >
@@ -863,10 +909,12 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
 
       <FormField
         id="shipping-postal"
-        label="Postal / ZIP Code"
+        label={t.address.postal}
         required
         hint={
-          shippingCountryMeta ? `Format example: ${shippingCountryMeta.postalExample}` : undefined
+          shippingCountryMeta
+            ? fill(t.address.postalHint, { example: shippingCountryMeta.postalExample })
+            : undefined
         }
         error={form.formState.errors.shippingAddress?.postalCode?.message}
       >
@@ -885,15 +933,15 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
     <div className={!isPaymentPhase ? "space-y-6 pb-24 sm:pb-0" : "space-y-6"}>
       {/* 4-Step Progress Indicator */}
       <nav
-        aria-label="Checkout steps"
+        aria-label={t.steps.ariaLabel}
         className="rounded-xl border border-border bg-card px-4 py-3.5 shadow-sm md:px-6"
       >
         <div className="flex items-center justify-between gap-3 md:hidden">
           <p className="text-sm font-semibold text-foreground">
-            Step {currentStep.number} of 4 · {currentStep.label}
+            {fill(t.steps.stepOf, { number: currentStep.number, label: currentStep.label })}
           </p>
           <span className="tabular-nums-price text-xs text-muted-foreground">
-            {steps.filter((s) => s.done).length}/4 complete
+            {fill(t.steps.complete, { done: steps.filter((s) => s.done).length })}
           </span>
         </div>
         <ol className="hidden md:grid md:grid-cols-4 md:gap-4">
@@ -949,7 +997,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
           className="flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 px-4 py-3.5 text-left text-sm font-semibold text-foreground select-none focus-visible:outline-2 focus-visible:outline-foreground/45 sm:px-6"
         >
           <span className="flex items-center gap-2">
-            <span>Order summary ({summaryItemCount})</span>
+            <span>{fill(t.summary.mobileToggle, { count: summaryItemCount })}</span>
             <ChevronDown
               className={`size-5 stroke-[1.5] text-muted-foreground transition-transform duration-200 ease-out ${mobileSummaryOpen ? "rotate-180" : ""}`}
               aria-hidden="true"
@@ -994,17 +1042,17 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-4">
                     <div>
                       <h2 className="text-lg font-semibold tracking-[-0.01em] text-foreground sm:text-xl">
-                        Contact
+                        {t.contact.heading}
                       </h2>
                     </div>
                     {!bootstrap.userEmail && (
                       <p className="text-xs text-muted-foreground">
-                        Have an account?{" "}
+                        {t.contact.haveAccount}{" "}
                         <Link
                           href="/login?next=/checkout"
                           className="inline-flex min-h-11 items-center rounded-sm px-1 font-medium text-accent-text underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground/45 md:min-h-8"
                         >
-                          Sign in
+                          {t.contact.signIn}
                         </Link>
                       </p>
                     )}
@@ -1013,9 +1061,9 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                   <div className="mt-4">
                     <FormField
                       id="checkout-email"
-                      label="Email Address"
+                      label={t.contact.emailLabel}
                       required
-                      hint="We'll send your receipt and tracking here."
+                      hint={t.contact.emailHint}
                       error={form.formState.errors.email?.message}
                     >
                       {(aria) => (
@@ -1024,7 +1072,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                           type="email"
                           inputMode="email"
                           autoComplete="email"
-                          placeholder="you@example.com"
+                          placeholder={t.contact.emailPlaceholder}
                           {...form.register("email")}
                         />
                       )}
@@ -1036,18 +1084,18 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                 <section className="border-b border-border pb-6 last:border-b-0 sm:rounded-xl sm:border sm:bg-card sm:p-5 sm:shadow-sm md:p-6">
                   <div className="border-b border-border pb-4">
                     <h2 className="text-lg font-semibold tracking-[-0.01em] text-foreground sm:text-xl">
-                      Delivery Address
+                      {t.delivery.heading}
                     </h2>
                   </div>
 
                   {bootstrap.savedAddresses.length > 0 && (
                     <div className="mt-4 space-y-2.5">
                       <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                        Saved addresses
+                        {t.delivery.savedAddresses}
                       </p>
                       <div
                         role="radiogroup"
-                        aria-label="Saved shipping addresses"
+                        aria-label={t.delivery.savedAria}
                         className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
                       >
                         {bootstrap.savedAddresses.map((addr) => {
@@ -1067,11 +1115,11 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                             >
                               <div className="flex w-full items-center justify-between gap-2">
                                 <span className="truncate font-semibold text-foreground">
-                                  {addr.label ?? "Saved"} — {addr.fullName}
+                                  {addr.label ?? t.delivery.savedFallback} — {addr.fullName}
                                 </span>
                                 <div className="flex shrink-0 items-center gap-1.5">
                                   {addr.isDefaultShipping && (
-                                    <Badge variant="primary">Default</Badge>
+                                    <Badge variant="primary">{t.delivery.defaultBadge}</Badge>
                                   )}
                                   {selected && (
                                     <Check className="size-4 text-accent-text" aria-hidden="true" />
@@ -1100,7 +1148,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                           }`}
                         >
                           <Plus className="size-4 stroke-[1.5]" aria-hidden="true" />
-                          <span>Add new address</span>
+                          <span>{t.delivery.addNew}</span>
                         </button>
                       </div>
                     </div>
@@ -1117,7 +1165,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                         onClick={() => setEditingSavedAddress(true)}
                         className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-accent-text underline underline-offset-4"
                       >
-                        Edit this address
+                        {t.delivery.edit}
                       </button>
                     ))}
 
@@ -1128,8 +1176,8 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                       className="flex max-h-[90dvh] flex-col p-0"
                     >
                       <SheetHeader className="border-b border-border px-4 py-3.5 text-left">
-                        <SheetTitle>New Delivery Address</SheetTitle>
-                        <SheetDescription>Where should we deliver your order?</SheetDescription>
+                        <SheetTitle>{t.delivery.sheetTitle}</SheetTitle>
+                        <SheetDescription>{t.delivery.sheetDescription}</SheetDescription>
                       </SheetHeader>
                       <div className="flex-1 overflow-y-auto px-4 py-4">
                         {addressSheetOpen ? renderShippingAddressFields(true) : null}
@@ -1141,7 +1189,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                           className="w-full"
                           onClick={() => setAddressSheetOpen(false)}
                         >
-                          Use This Address
+                          {t.delivery.useAddress}
                         </Button>
                       </div>
                     </SheetContent>
@@ -1168,7 +1216,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                             htmlFor="checkout-save-address"
                             className="cursor-pointer leading-snug"
                           >
-                            Save this address for next time
+                            {t.delivery.saveForNext}
                           </label>
                         </div>
                       )}
@@ -1183,7 +1231,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                         htmlFor="checkout-billing-same"
                         className="cursor-pointer leading-snug"
                       >
-                        Billing address matches my shipping address
+                        {t.delivery.billingSame}
                       </label>
                     </div>
                   </div>
@@ -1191,11 +1239,11 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                   {!watchedBillingSame && (
                     <div className="mt-5 grid gap-4 border-t border-border pt-5 min-[480px]:grid-cols-2">
                       <p className="text-sm font-semibold text-foreground min-[480px]:col-span-2">
-                        Billing Address
+                        {t.delivery.billingHeading}
                       </p>
                       <FormField
                         id="billing-full-name"
-                        label="Full Name"
+                        label={t.address.fullName}
                         required
                         error={form.formState.errors.billingAddress?.fullName?.message}
                       >
@@ -1209,7 +1257,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                       </FormField>
                       <FormField
                         id="billing-country"
-                        label="Country"
+                        label={t.address.country}
                         required
                         error={form.formState.errors.billingAddress?.country?.message}
                       >
@@ -1239,7 +1287,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                       <div className="min-[480px]:col-span-2">
                         <FormField
                           id="billing-phone"
-                          label="Phone"
+                          label={t.address.phone}
                           required
                           error={form.formState.errors.billingAddress?.phone?.message}
                         >
@@ -1269,7 +1317,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                       <div className="min-[480px]:col-span-2">
                         <FormField
                           id="billing-line1"
-                          label="Street Address"
+                          label={t.address.street}
                           required
                           error={form.formState.errors.billingAddress?.line1?.message}
                         >
@@ -1284,7 +1332,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                       </div>
                       <FormField
                         id="billing-city"
-                        label="City"
+                        label={t.address.city}
                         required
                         error={form.formState.errors.billingAddress?.city?.message}
                       >
@@ -1298,7 +1346,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                       </FormField>
                       <FormField
                         id="billing-state"
-                        label={billingCountryMeta?.stateLabel ?? "State / Province"}
+                        label={billingCountryMeta?.stateLabel ?? t.address.state}
                         required
                         error={form.formState.errors.billingAddress?.state?.message}
                       >
@@ -1324,11 +1372,13 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                       </FormField>
                       <FormField
                         id="billing-postal"
-                        label="Postal Code"
+                        label={t.address.billingPostal}
                         required
                         hint={
                           billingCountryMeta
-                            ? `Format example: ${billingCountryMeta.postalExample}`
+                            ? fill(t.address.postalHint, {
+                                example: billingCountryMeta.postalExample,
+                              })
                             : undefined
                         }
                         error={form.formState.errors.billingAddress?.postalCode?.message}
@@ -1349,7 +1399,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                 <section className="border-b border-border pb-6 last:border-b-0 sm:rounded-xl sm:border sm:bg-card sm:p-5 sm:shadow-sm md:p-6">
                   <div className="border-b border-border pb-4">
                     <h2 className="text-lg font-semibold tracking-[-0.01em] text-foreground sm:text-xl">
-                      Shipping Method
+                      {t.shippingMethod.heading}
                     </h2>
                   </div>
 
@@ -1366,7 +1416,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                     <div
                       className="mt-4 space-y-2.5"
                       role="radiogroup"
-                      aria-label="Shipping method"
+                      aria-label={t.shippingMethod.ariaLabel}
                     >
                       {quote.availableZones.map((zone) => {
                         const selected = (watchedZoneId ?? quote.selectedZone.id) === zone.id;
@@ -1390,16 +1440,20 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                                   aria-hidden="true"
                                 />
                                 <span className="font-semibold text-foreground">{zone.name}</span>
-                                {zone.isInsured && <Badge variant="outline">Insured</Badge>}
+                                {zone.isInsured && (
+                                  <Badge variant="outline">{t.shippingMethod.insured}</Badge>
+                                )}
                               </div>
                               <p className="tabular-nums-price text-xs text-muted-foreground">
-                                Estimated dispatch window: {zone.estimatedDaysMin}–
-                                {zone.estimatedDaysMax} business days
+                                {fill(t.shippingMethod.dispatchWindow, {
+                                  min: zone.estimatedDaysMin,
+                                  max: zone.estimatedDaysMax,
+                                })}
                               </p>
                             </div>
                             <span className="tabular-nums-price shrink-0 text-sm font-semibold text-foreground">
                               {zone.isFreeShipping
-                                ? "Complimentary"
+                                ? t.shippingMethod.complimentary
                                 : activeQuote
                                   ? formatMoneyExact(
                                       zone.effectiveRate,
@@ -1424,36 +1478,34 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                     }
                   >
                     <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-accent-text underline-offset-4 hover:underline [&::-webkit-details-marker]:hidden">
-                      <span className="group-open:hidden">
-                        + Add a gift note or delivery instructions
-                      </span>
-                      <span className="hidden group-open:inline">− Hide notes</span>
+                      <span className="group-open:hidden">{t.shippingMethod.showNotes}</span>
+                      <span className="hidden group-open:inline">{t.shippingMethod.hideNotes}</span>
                     </summary>
                     <div className="mt-2 grid gap-4 sm:grid-cols-2">
                       <FormField
                         id="checkout-gift-note"
-                        label="Gift card note"
+                        label={t.shippingMethod.giftNote}
                         error={form.formState.errors.giftNote?.message}
                       >
                         {(aria) => (
                           <Textarea
                             {...aria}
                             rows={2}
-                            placeholder="Calligraphed note sealed with your velvet presentation box"
+                            placeholder={t.shippingMethod.giftNotePlaceholder}
                             {...form.register("giftNote")}
                           />
                         )}
                       </FormField>
                       <FormField
                         id="checkout-customer-note"
-                        label="Delivery instructions"
+                        label={t.shippingMethod.instructions}
                         error={form.formState.errors.customerNote?.message}
                       >
                         {(aria) => (
                           <Textarea
                             {...aria}
                             rows={2}
-                            placeholder="Preferred courier reception hours or sizing comments"
+                            placeholder={t.shippingMethod.instructionsPlaceholder}
                             {...form.register("customerNote")}
                           />
                         )}
@@ -1466,7 +1518,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                 <section className="border-b border-border pb-6 last:border-b-0 sm:rounded-xl sm:border sm:bg-card sm:p-5 sm:shadow-sm md:p-6">
                   <div className="hidden border-b border-border pb-4 sm:block">
                     <h2 className="text-lg font-semibold tracking-[-0.01em] text-foreground sm:text-xl">
-                      Reserve &amp; Proceed to Payment
+                      {t.reserve.heading}
                     </h2>
                   </div>
 
@@ -1478,7 +1530,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                       className="mt-0.5 size-4 shrink-0 stroke-[1.5] text-accent-text sm:size-5"
                       aria-hidden="true"
                     />
-                    <span>Your items are held for 30 minutes while you pay.</span>
+                    <span>{t.reserve.holdNote}</span>
                   </div>
 
                   <div className="mt-5 hidden sm:block">
@@ -1491,8 +1543,10 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                       <Lock className="size-5 stroke-[1.5]" aria-hidden="true" />
                       <span>
                         {form.formState.isSubmitting
-                          ? "Placing order…"
-                          : `Reserve & Continue to Payment (${fmtSummaryAmount(displayTotal, true)})`}
+                          ? t.reserve.placing
+                          : fill(t.reserve.button, {
+                              amount: fmtSummaryAmount(displayTotal, true),
+                            })}
                       </span>
                     </Button>
                   </div>
@@ -1513,11 +1567,13 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                   <div>
                     <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground sm:text-2xl">
                       {createdOrder
-                        ? `Order ${createdOrder.orderNumber}`
-                        : `Order ${initialRetryOrder?.order.orderNumber}`}
+                        ? fill(t.payment.orderHeading, { orderNumber: createdOrder.orderNumber })
+                        : fill(t.payment.orderHeading, {
+                            orderNumber: initialRetryOrder?.order.orderNumber ?? "",
+                          })}
                     </h2>
                   </div>
-                  <Badge variant="warning">Vault Hold Active</Badge>
+                  <Badge variant="warning">{t.payment.holdBadge}</Badge>
                 </div>
 
                 {createdOrder?.reservedUntil &&
@@ -1536,14 +1592,14 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                         aria-hidden="true"
                       />
                       <span>
-                        Your pieces are held for{" "}
+                        {t.payment.heldFor}{" "}
                         <strong
                           className="tabular-nums-price font-semibold text-foreground"
                           aria-live="off"
                         >
                           {formatCountdown(reservationMsLeft)}
                         </strong>
-                        . Complete payment before the hold ends.
+                        {t.payment.heldForAfter}
                       </span>
                     </div>
                   )}
@@ -1553,13 +1609,14 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                     role="alert"
                     className="space-y-3 rounded-md border border-border bg-surface-2 p-4 text-sm"
                   >
-                    <p className="font-medium text-foreground">Your reservation has ended</p>
+                    <p className="font-medium text-foreground">{t.payment.expiredTitle}</p>
                     <p className="text-muted-foreground">
-                      The 30-minute hold on order {createdOrder?.orderNumber} expired, so the pieces
-                      were returned to the vault. You have not been charged.
+                      {fill(t.payment.expiredText, {
+                        orderNumber: createdOrder?.orderNumber ?? "",
+                      })}
                     </p>
                     <Button asChild size="md" className="w-full sm:w-auto">
-                      <Link href="/collections">Continue shopping</Link>
+                      <Link href="/collections">{t.payment.continueShopping}</Link>
                     </Button>
                   </div>
                 ) : null}
@@ -1585,9 +1642,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                 </AnimatePresence>
 
                 {reservationExpired ? null : !createdOrder ? (
-                  <p className="text-sm text-muted-foreground">
-                    Initializing payment authorization session…
-                  </p>
+                  <p className="text-sm text-muted-foreground">{t.payment.initializing}</p>
                 ) : createdOrder.payment.mode === "sandbox" ? (
                   <div className="space-y-4 rounded-md border border-border bg-background p-5">
                     <div className="flex items-center gap-2.5">
@@ -1597,14 +1652,14 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                       />
                       <h3 className="text-base font-semibold text-foreground">
                         {createdOrder.payment.provider === "RAZORPAY"
-                          ? "Razorpay Test Sandbox"
-                          : "Stripe Test Sandbox"}
+                          ? t.payment.razorpaySandbox
+                          : t.payment.stripeSandbox}
                       </h3>
                     </div>
                     <p className="text-xs leading-relaxed text-muted-foreground">
-                      Running in provider sandbox mode ({createdOrder.payment.providerIntentId}).
-                      Choose an outcome to exercise signed webhook verification, stock settlement,
-                      and confirmation dispatch.
+                      {fill(t.payment.sandboxText, {
+                        intentId: createdOrder.payment.providerIntentId,
+                      })}
                     </p>
 
                     {createdOrder.status === "PAYMENT_FAILED" ? (
@@ -1615,7 +1670,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                         disabled={sandboxBusy}
                         onClick={handleRetryOrderPayment}
                       >
-                        {sandboxBusy ? "Preparing Retry…" : "Retry Payment Authorization"}
+                        {sandboxBusy ? t.payment.preparingRetry : t.payment.retry}
                       </Button>
                     ) : (
                       <div className="flex flex-col gap-3 sm:flex-row">
@@ -1629,15 +1684,8 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                           <CheckCircle2 className="size-5 stroke-[1.5]" aria-hidden="true" />
                           <span>
                             {sandboxBusy
-                              ? "Authorizing…"
-                              : `Authorize & Complete Order (${formatMoneyExact(
-                                  createdOrder.chargedAmount,
-                                  createdOrder.chargedCurrency,
-                                  "en-US",
-                                  createdOrder.chargeInBaseFallback
-                                    ? baseCurrency.decimalPlaces
-                                    : createdOrder.currencyDecimals,
-                                )})`}
+                              ? t.payment.authorizing
+                              : fill(t.payment.authorizeComplete, { amount: chargedLabel })}
                           </span>
                         </Button>
                         <Button
@@ -1647,7 +1695,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                           disabled={sandboxBusy}
                           onClick={() => handleSandboxOutcome("fail")}
                         >
-                          Simulate Card Decline
+                          {t.payment.simulateDecline}
                         </Button>
                       </div>
                     )}
@@ -1666,16 +1714,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                 ) : createdOrder.payment.provider === "RAZORPAY" ? (
                   <div className="space-y-4">
                     <p className="tabular-nums-price text-sm text-muted-foreground">
-                      Proceed via encrypted Razorpay Checkout to settle{" "}
-                      {formatMoneyExact(
-                        createdOrder.chargedAmount,
-                        createdOrder.chargedCurrency,
-                        "en-US",
-                        createdOrder.chargeInBaseFallback
-                          ? baseCurrency.decimalPlaces
-                          : createdOrder.currencyDecimals,
-                      )}
-                      .
+                      {fill(t.payment.razorpayText, { amount: chargedLabel })}
                     </p>
                     <Button
                       type="button"
@@ -1684,24 +1723,12 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
                       onClick={handleOpenRazorpayModal}
                     >
                       <Lock className="size-5 stroke-[1.5]" aria-hidden="true" />
-                      <span>
-                        Pay{" "}
-                        {formatMoneyExact(
-                          createdOrder.chargedAmount,
-                          createdOrder.chargedCurrency,
-                          "en-US",
-                          createdOrder.chargeInBaseFallback
-                            ? baseCurrency.decimalPlaces
-                            : createdOrder.currencyDecimals,
-                        )}{" "}
-                        with Razorpay
-                      </span>
+                      <span>{fill(t.payment.razorpayButton, { amount: chargedLabel })}</span>
                     </Button>
                   </div>
                 ) : (
                   <p role="alert" className="text-sm text-destructive">
-                    Payment gateway client keys are incomplete. Please verify environment
-                    configuration.
+                    {t.payment.keysMissing}
                   </p>
                 )}
               </m.section>
@@ -1713,7 +1740,7 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
         <aside className="hidden min-w-0 lg:col-span-5 lg:block">
           <div className="rounded-xl border border-border bg-surface p-6 shadow-sm lg:sticky lg:top-24">
             <h2 className="mb-4 text-xl font-semibold tracking-[-0.015em] text-text">
-              Order Summary
+              {t.summary.heading}
             </h2>
             {orderSummaryContent}
           </div>
@@ -1735,10 +1762,10 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
           >
             <Lock className="size-5 shrink-0 stroke-[1.5]" aria-hidden="true" />
             {form.formState.isSubmitting ? (
-              <span className="truncate">Placing order…</span>
+              <span className="truncate">{t.reserve.placing}</span>
             ) : (
               <>
-                <span className="truncate">Continue to Payment</span>
+                <span className="truncate">{t.reserve.mobileButton}</span>
                 <span className="ml-auto shrink-0 pl-2">
                   {fmtSummaryAmount(displayTotal, true)}
                 </span>

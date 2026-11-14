@@ -1,4 +1,5 @@
 "use client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import dynamic from "next/dynamic";
@@ -11,6 +12,7 @@ const DynamicSearchDialog = dynamic(
 );
 
 export function HeaderSearchBar() {
+  const ui = useUiText();
   const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -32,14 +34,14 @@ export function HeaderSearchBar() {
             <button
               type="button"
               onClick={() => setOpen(true)}
-              aria-label="Search jewellery catalogue"
+              aria-label={ui.search.openAria}
               aria-haspopup="dialog"
               className="transition-ui inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-text-2 hover:bg-surface-3 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               <Search className="size-6" strokeWidth={1.5} aria-hidden="true" />
             </button>
           </TooltipTrigger>
-          <TooltipContent className="hidden lg:block">Search</TooltipContent>
+          <TooltipContent className="hidden lg:block">{ui.search.tooltip}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
 

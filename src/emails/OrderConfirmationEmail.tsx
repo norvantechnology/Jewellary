@@ -41,13 +41,13 @@ export function OrderConfirmationEmail({
     <EmailLayout
       siteName={siteName}
       previewText={`Order ${orderNumber} confirmed — ${siteName}`}
-      heading={`Order ${orderNumber} Confirmed`}
+      heading={`Thank you! Order ${orderNumber} is confirmed`}
       contactEmail={contactEmail}
     >
-      <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {recipientName},</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {recipientName},</Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        Thank you for your acquisition with {siteName}. Our atelier is preparing your insured
-        shipment and accompanying certification dossier.
+        Thank you for your order with {siteName}. We’re preparing your jewelry, its certificate and
+        your insured shipment.
       </Text>
 
       <Section
@@ -71,20 +71,20 @@ export function OrderConfirmationEmail({
           {taxFormatted}
         </Text>
         <Text style={{ ...EMAIL_PARAGRAPH_STYLE, margin: "4px 0 0 0", fontWeight: "700" }}>
-          Total Paid: {totalFormatted}
+          Total paid: {totalFormatted}
         </Text>
       </Section>
 
       {signatureRequired && (
         <Text style={EMAIL_PARAGRAPH_STYLE}>
-          <strong>Insured Delivery Notice:</strong> An adult signature will be required upon courier
-          arrival.
+          <strong>Signature required:</strong> An adult will need to sign for this package when it
+          arrives.
         </Text>
       )}
 
       <Section style={{ margin: "24px 0" }}>
         <Button href={trackingUrl} style={EMAIL_BUTTON_STYLE}>
-          View Order Status
+          View order status
         </Button>
       </Section>
     </EmailLayout>

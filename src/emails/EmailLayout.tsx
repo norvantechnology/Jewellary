@@ -69,7 +69,7 @@ export function EmailLayout({
   previewText,
   heading,
   children,
-  contactEmail = "concierge@example.com",
+  contactEmail = "help@example.com",
 }: EmailLayoutProps) {
   return (
     <Html lang="en">
@@ -85,7 +85,7 @@ export function EmailLayout({
           <Hr style={STYLES.hr} />
           <Section>
             <Text style={STYLES.footer}>
-              {siteName} Private Concierge &bull; Need assistance? Reply to{" "}
+              {siteName} Customer Care &bull; Questions? Email us at{" "}
               <a href={`mailto:${contactEmail}`} style={{ color: BRAND_PALETTE.light.accentText }}>
                 {contactEmail}
               </a>

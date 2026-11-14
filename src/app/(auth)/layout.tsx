@@ -4,12 +4,15 @@ import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
 import { Logo } from "@/components/shared/Logo";
 import { Container } from "@/components/shared/primitives";
 import { env } from "@/lib/env";
+import { getSiteContent } from "@/modules/site-content/site-content.service";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  // Header link label shared by all sign-in pages: site-content.json → pages.auth.login.returnToStore
+  const { returnToStore } = (await getSiteContent()).pages.auth.login;
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="safe-area-pt border-b border-border bg-background/95 backdrop-blur-md">
@@ -20,7 +23,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               href="/collections"
               className="inline-flex min-h-11 items-center rounded-md px-2 text-xs font-medium tracking-wider whitespace-nowrap text-muted-foreground uppercase transition-colors duration-150 ease-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground/45 sm:px-3"
             >
-              Return to Store
+              {returnToStore}
             </Link>
             <ThemeSwitcher compact />
           </div>

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { getSiteContent } from "@/modules/site-content/site-content.service";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Sparkles } from "lucide-react";
@@ -20,8 +21,8 @@ export async function generateMetadata({ params }: CustomizeProductPageProps): P
   const resolved = await getPublicProductBySlug(slug).catch(() => null);
   if (!resolved || resolved.kind !== "product" || !resolved.product.isCustomizable) {
     return buildMetadata({
-      title: "Bespoke Customization",
-      description: "Design a personalized Maison Aurelia piece with our master jewellers.",
+      title: (await getSiteContent()).pages.customize.seo.title,
+      description: (await getSiteContent()).pages.customize.seo.description,
       pathname: `/products/${slug}/customize`,
       storeName: settings.storeName,
       robots: NOINDEX_FOLLOW_ROBOTS,
@@ -39,7 +40,8 @@ export async function generateMetadata({ params }: CustomizeProductPageProps): P
 }
 
 async function CustomizeProductContent({ params }: CustomizeProductPageProps) {
-  const { slug } = await params;
+  const [{ slug }, siteContent] = await Promise.all([params, getSiteContent()]);
+  const copy = siteContent.pages.customize;
   const schema = await getProductCustomizationSchema(slug, { includeInactive: false }).catch(
     () => null,
   );
@@ -53,15 +55,14 @@ async function CustomizeProductContent({ params }: CustomizeProductPageProps) {
       <div className="mx-auto max-w-xl rounded-xl border border-border bg-card p-6 text-center shadow-sm sm:p-8">
         <Sparkles className="mx-auto size-8 stroke-[1.5] text-accent-text" aria-hidden="true" />
         <h1 className="mt-3 font-sans text-2xl font-semibold text-foreground">
-          Customization unavailable
+          {copy.unavailableHeading}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Direct online customization is currently paused for {schema.productName}. Please reach out
-          via our concierge chat for private assistance.
+          {copy.unavailableText.replace("{{productName}}", schema.productName)}
         </p>
         <div className="mt-5">
           <Button asChild>
-            <Link href={`/products/${schema.productSlug}`}>Return to piece</Link>
+            <Link href={`/products/${schema.productSlug}`}>{copy.backLabel}</Link>
           </Button>
         </div>
       </div>

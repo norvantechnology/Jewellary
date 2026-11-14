@@ -144,7 +144,7 @@ export const reorderOrderAction = createAction(
   async (input, { auth }) => {
     const cartOwner = await resolveCurrentCartOwner(true);
     if (!cartOwner) {
-      throw new Error("Could not initialize bag session.");
+      throw new Error("We couldn't load your cart. Please refresh the page.");
     }
     const result = await reorderCustomerOrder({
       orderNumber: input.orderNumber,

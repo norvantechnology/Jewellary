@@ -1,13 +1,18 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { NOINDEX_NOFOLLOW_ROBOTS } from "@/lib/seo/metadata";
+import { buildPageMetadata } from "@/modules/site-content/site-content.service";
 import { AccountSettingsClient } from "@/components/storefront/AccountSettingsClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAccountProfile } from "@/modules/account/account.service";
 import { requirePageUser } from "@/server/dal";
 
-export const metadata: Metadata = {
-  title: "Account Settings",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildPageMetadata((c) => c.pages.account.settings.seo, {
+    pathname: "/account/settings",
+    robots: NOINDEX_NOFOLLOW_ROBOTS,
+  });
+}
 
 async function AccountSettingsBody({
   searchParams,

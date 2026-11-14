@@ -1,5 +1,7 @@
 "use client";
 
+import { useUiText } from "@/components/providers/UiTextProvider";
+
 import dynamic from "next/dynamic";
 import { useOptionalCurrency } from "@/components/providers/CurrencyProvider";
 import { getCurrencyExponent } from "@/lib/money";
@@ -43,6 +45,7 @@ export function Price({
   className,
   size = "md",
 }: PriceProps) {
+  const ui = useUiText();
   const currencyCtx = useOptionalCurrency();
 
   if (isPriceOnRequest || amount === null || amount === undefined) {
@@ -53,7 +56,7 @@ export function Price({
           className,
         )}
       >
-        Price upon request
+        {ui.common.priceOnRequest}
       </span>
     );
   }

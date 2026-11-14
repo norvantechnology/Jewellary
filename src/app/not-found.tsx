@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getSiteContent } from "@/modules/site-content/site-content.service";
 import { Gem } from "lucide-react";
 import { NotFoundBeacon } from "@/components/layout/NotFoundBeacon";
 import { Float } from "@/components/motion/Float";
@@ -6,7 +7,8 @@ import { FadeIn } from "@/components/motion/Reveal";
 import { Container, Section } from "@/components/shared/primitives";
 import { Button } from "@/components/ui/button";
 
-export default function NotFound() {
+export default async function NotFound() {
+  const page = (await getSiteContent()).pages.notFound;
   return (
     <main id="main-content" className="min-h-[75dvh] bg-background">
       <NotFoundBeacon />
@@ -18,19 +20,19 @@ export default function NotFound() {
             </div>
           </Float>
           <FadeIn>
-            <h1 className="type-h1 font-semibold text-foreground">This Piece Could Not Be Found</h1>
+            <h1 className="type-h1 font-semibold text-foreground">{page.heading}</h1>
             <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
-              The creation or page you requested is unavailable or has moved.
+              {page.text}
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Button asChild>
-                <Link href="/collections">Browse collections</Link>
+                <Link href="/collections">{page.primaryLabel}</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/search">Search catalogue</Link>
+                <Link href="/search">{page.secondaryLabel}</Link>
               </Button>
               <Button asChild variant="ghost">
-                <Link href="/contact">Concierge assistance</Link>
+                <Link href="/contact">{page.tertiaryLabel}</Link>
               </Button>
             </div>
           </FadeIn>

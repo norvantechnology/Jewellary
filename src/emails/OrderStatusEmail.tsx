@@ -32,17 +32,17 @@ export function OrderStatusEmail({
       heading={`Order ${orderNumber}: ${statusLabel}`}
       contactEmail={contactEmail}
     >
-      <Text style={EMAIL_PARAGRAPH_STYLE}>Dear {recipientName},</Text>
+      <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {recipientName},</Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>{message}</Text>
       {(carrier || trackingNumber) && (
         <Text style={EMAIL_PARAGRAPH_STYLE}>
-          <strong>Courier:</strong> {carrier ?? "Insured Express"} &bull;{" "}
-          <strong>Tracking Number:</strong> {trackingNumber ?? "Pending assignment"}
+          <strong>Carrier:</strong> {carrier ?? "Insured shipping"} &bull;{" "}
+          <strong>Tracking number:</strong> {trackingNumber ?? "Coming soon"}
         </Text>
       )}
       <Section style={{ margin: "24px 0" }}>
         <Button href={orderUrl} style={EMAIL_BUTTON_STYLE}>
-          Track Order
+          Track your order
         </Button>
       </Section>
     </EmailLayout>

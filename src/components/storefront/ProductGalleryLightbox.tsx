@@ -1,4 +1,5 @@
 "use client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import Image from "next/image";
@@ -30,6 +31,7 @@ export function ProductGalleryLightbox({
   onSelectIndex,
   productName,
 }: ProductGalleryLightboxProps) {
+  const ui = useUiText();
   const zoomKey = `${open}:${selectedIndex}`;
   const [zoomedKey, setZoomedKey] = React.useState<string | null>(null);
   const zoomed = open && zoomedKey === zoomKey;
@@ -95,7 +97,7 @@ export function ProductGalleryLightbox({
               className="transition-ui inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3.5 text-sm font-medium text-text hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent sm:px-4"
             >
               <ChevronLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
-              <span>Previous</span>
+              <span>{ui.product.gallery.lightboxPrevious}</span>
             </button>
             <span className="tabular-nums-price text-sm text-text-muted">
               {selectedIndex + 1} of {images.length}
@@ -105,7 +107,7 @@ export function ProductGalleryLightbox({
               onClick={() => onSelectIndex((selectedIndex + 1) % images.length)}
               className="transition-ui inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3.5 text-sm font-medium text-text hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent sm:px-4"
             >
-              <span>Next</span>
+              <span>{ui.product.gallery.lightboxNext}</span>
               <ChevronRight className="size-5" strokeWidth={1.5} aria-hidden="true" />
             </button>
           </div>

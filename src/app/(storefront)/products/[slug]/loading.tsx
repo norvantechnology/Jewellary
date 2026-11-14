@@ -5,7 +5,7 @@ export default function Loading() {
   return (
     <Section spacing="md" className="pt-8 pb-10 sm:pt-10">
       <Container>
-        <PageSkeleton label="Loading piece" variant="detail" />
+        <PageSkeleton label="Loading product" variant="detail" />
       </Container>
     </Section>
   );

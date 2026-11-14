@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import dynamic from "next/dynamic";
@@ -26,6 +27,7 @@ interface ProductGalleryProps {
 }
 
 export function ProductGallery({ images, productName }: ProductGalleryProps) {
+  const ui = useUiText();
   const reducedMotion = useReducedMotionSafe();
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [lightboxOpen, setLightboxOpen] = React.useState(false);
@@ -213,13 +215,13 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
               exit="exit"
               className="pointer-events-none absolute top-3 right-3 z-20 rounded-full border border-border bg-card/90 px-2.5 py-1 text-xs font-medium text-foreground/85 shadow-sm backdrop-blur-sm sm:hidden"
             >
-              {count > 1 ? "Swipe · Tap zoom" : "Tap to inspect"}
+              {count > 1 ? ui.product.gallery.swipeHint : ui.product.gallery.tapHint}
             </m.span>
           ) : null}
         </AnimatePresence>
 
         <span className="pointer-events-none absolute right-16 bottom-3 z-20 hidden rounded-full border border-border bg-card/90 px-2.5 py-1 text-[11px] font-medium text-foreground/85 opacity-0 shadow-sm backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100 sm:inline-flex">
-          Click to zoom
+          {ui.product.gallery.clickToZoom}
         </span>
 
         <button
@@ -228,7 +230,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
             e.stopPropagation();
             handleOpenLightbox();
           }}
-          aria-label="Open high-resolution image viewer"
+          aria-label={ui.product.gallery.openViewer}
           className="transition-ui absolute right-3 bottom-3 z-20 inline-flex size-11 cursor-pointer items-center justify-center rounded-full border border-border-strong bg-surface/95 text-text shadow-sm backdrop-blur-sm hover:border-accent hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           <Expand className="size-5" strokeWidth={1.5} aria-hidden="true" />
@@ -242,7 +244,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 e.stopPropagation();
                 selectSlide(selectedIndex - 1);
               }}
-              aria-label="Previous image"
+              aria-label={ui.product.gallery.previous}
               className="transition-ui absolute top-1/2 left-2.5 z-20 inline-flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-border-strong bg-surface/90 text-text shadow-sm backdrop-blur-sm hover:border-accent hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:left-3"
             >
               <ChevronLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
@@ -253,7 +255,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 e.stopPropagation();
                 selectSlide(selectedIndex + 1);
               }}
-              aria-label="Next image"
+              aria-label={ui.product.gallery.next}
               className="transition-ui absolute top-1/2 right-2.5 z-20 inline-flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-border-strong bg-surface/90 text-text shadow-sm backdrop-blur-sm hover:border-accent hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:right-3"
             >
               <ChevronRight className="size-5" strokeWidth={1.5} aria-hidden="true" />
@@ -292,7 +294,10 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 key={image.id}
                 type="button"
                 onClick={() => selectSlide(idx)}
-                aria-label={`View image ${idx + 1}: ${image.altText}`}
+                aria-label={fill(ui.product.gallery.viewImage, {
+                  number: idx + 1,
+                  alt: image.altText,
+                })}
                 aria-current={active ? "true" : undefined}
                 className={cn(
                   "ma-media-placeholder transition-ui relative aspect-square size-16 shrink-0 cursor-pointer overflow-hidden rounded-lg border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:size-auto sm:w-full",

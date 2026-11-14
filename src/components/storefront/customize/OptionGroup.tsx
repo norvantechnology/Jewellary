@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import Decimal from "decimal.js";
@@ -257,6 +258,7 @@ export function OptionGroupSearchSelect({
   inModal = false,
   onChange,
 }: OptionGroupSearchSelectProps) {
+  const ui = useUiText();
   const { formatPrice } = useCurrency();
   const isDesktop = useIsDesktopPopover();
   const isMulti = group.type === "MULTI_SELECT";
@@ -349,11 +351,15 @@ export function OptionGroupSearchSelect({
 
   const triggerText =
     selectedOptions.length === 0
-      ? group.placeholder || `Choose ${group.label.toLowerCase()}`
+      ? group.placeholder ||
+        fill(ui.customize.options.choosePlaceholder, { label: group.label.toLowerCase() })
       : isMulti
         ? selectedOptions.length <= 2
           ? selectedOptions.map((o) => o.label).join(", ")
-          : `${selectedOptions.length} selected (${selectedOptions[0]!.label}…)`
+          : fill(ui.customize.options.selectedSummary, {
+              count: selectedOptions.length,
+              first: selectedOptions[0]!.label,
+            })
         : selectedOptions[0]!.label;
 
   const showSwatchDot = group.type === "SWATCH" || options.some((opt) => Boolean(opt.swatchHex));
@@ -371,15 +377,17 @@ export function OptionGroupSearchSelect({
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
             onKeyDown={handleSearchKeyDown}
-            placeholder={`Search ${group.label.toLowerCase()}...`}
-            aria-label={`Search ${group.label}`}
+            placeholder={fill(ui.customize.options.searchPlaceholder, {
+              label: group.label.toLowerCase(),
+            })}
+            aria-label={fill(ui.customize.options.searchAria, { label: group.label })}
             className="h-11 pr-9 pl-9 text-base sm:h-9 sm:text-sm"
           />
           {query ? (
             <button
               type="button"
               onClick={() => handleQueryChange("")}
-              aria-label="Clear search"
+              aria-label={ui.customize.options.clearSearch}
               className="absolute right-1.5 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <X className="size-3.5" aria-hidden="true" />
@@ -396,7 +404,7 @@ export function OptionGroupSearchSelect({
       >
         {filteredOptions.length === 0 ? (
           <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-            No options match &ldquo;{query}&rdquo;.
+            {fill(ui.customize.options.noMatches, { query })}
           </p>
         ) : (
           filteredOptions.map((opt, idx) => {
@@ -449,14 +457,14 @@ export function OptionGroupSearchSelect({
               onClick={handleClear}
               className="min-h-9 text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
             >
-              Clear selection
+              {ui.customize.options.clearSelection}
             </button>
           ) : (
             <span />
           )}
           {isMulti || !isDesktop ? (
             <Button type="button" size="sm" onClick={() => handleOpenChange(false)}>
-              Done
+              {ui.customize.options.done}
             </Button>
           ) : null}
         </div>
@@ -568,6 +576,7 @@ export function OptionGroupNumeric({
   errorId,
   onChange,
 }: OptionGroupNumericProps) {
+  const ui = useUiText();
   const minVal = group.minValue !== null ? Number(group.minValue) : 0;
   const maxVal = group.maxValue !== null ? Number(group.maxValue) : 100;
   const stepVal =
@@ -671,7 +680,7 @@ export function OptionGroupNumeric({
             type="button"
             onClick={() => applyStep(-1)}
             disabled={parsedVal <= minVal}
-            aria-label={`Decrease ${group.label}`}
+            aria-label={fill(ui.customize.options.decreaseAria, { label: group.label })}
             className="flex size-11 shrink-0 items-center justify-center border-r border-input text-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-40"
           >
             <Minus className="size-4" aria-hidden="true" />
@@ -702,7 +711,7 @@ export function OptionGroupNumeric({
             type="button"
             onClick={() => applyStep(1)}
             disabled={parsedVal >= maxVal}
-            aria-label={`Increase ${group.label}`}
+            aria-label={fill(ui.customize.options.increaseAria, { label: group.label })}
             className="flex size-11 shrink-0 items-center justify-center border-l border-input text-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-40"
           >
             <Plus className="size-4" aria-hidden="true" />
@@ -721,8 +730,11 @@ export function OptionGroupNumeric({
 
       {isOutOfRange && !error ? (
         <p id={rangeHintId} role="status" className="text-[13px] font-medium text-destructive">
-          Enter a value between {minVal} and {maxVal}
-          {group.unit ? ` ${group.unit}` : ""} (clamped automatically when done)
+          {fill(ui.customize.options.rangeHint, {
+            min: minVal,
+            max: maxVal,
+            unit: group.unit ? ` ${group.unit}` : "",
+          })}
         </p>
       ) : null}
     </div>
@@ -752,6 +764,7 @@ export function OptionGroupText({
   errorId,
   onChange,
 }: OptionGroupTextProps) {
+  const ui = useUiText();
   const val = input?.textValue ?? input?.value ?? "";
   const maxLen = group.maxLength ?? (group.type === "TEXT" ? 40 : 400);
   const describedBy = buildDescribedBy([helperId, errorId]);
@@ -806,7 +819,7 @@ export function OptionGroupText({
       <div className="flex items-center justify-between gap-3">
         {val.trim() ? (
           <span className="inline-flex max-w-full items-center truncate rounded-full border border-border bg-surface-2 px-2.5 py-0.5 text-[13px] font-medium tracking-wide text-foreground">
-            Preview: {val.trim()}
+            {fill(ui.customize.options.preview, { text: val.trim() })}
           </span>
         ) : (
           <span />
@@ -854,6 +867,7 @@ export function OptionGroupImageUpload({
   onRetryPending,
   onOpenLightbox,
 }: OptionGroupImageUploadProps) {
+  const ui = useUiText();
   const [isDragging, setIsDragging] = React.useState(false);
   const maxCap = Math.min(5, group.maxFiles ?? 5);
   const activeUploadingCount = pendingUploads.filter((p) => p.status === "uploading").length;
@@ -889,10 +903,10 @@ export function OptionGroupImageUpload({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 space-y-1">
             <p className="text-[15px] font-medium text-foreground">
-              Add reference images ({images.length}/{maxCap})
+              {fill(ui.customize.options.uploadHeading, { count: images.length, max: maxCap })}
             </p>
             <p id={helperId} className="text-[13px] text-muted-foreground">
-              JPG, PNG or WebP, up to {maxCap} files, 5 MB each
+              {fill(ui.customize.options.uploadHelp, { max: maxCap })}
             </p>
           </div>
 
@@ -912,10 +926,10 @@ export function OptionGroupImageUpload({
             )}
             <span>
               {remainingSlots <= 0
-                ? "Maximum uploaded"
+                ? ui.customize.options.maxUploaded
                 : activeUploadingCount > 0
-                  ? "Add more"
-                  : "Choose files"}
+                  ? ui.customize.options.addMore
+                  : ui.customize.options.chooseFiles}
             </span>
           </Button>
         </div>
@@ -924,7 +938,7 @@ export function OptionGroupImageUpload({
           ref={inputRef}
           type="file"
           tabIndex={-1}
-          aria-label={`Upload reference images for ${group.label}`}
+          aria-label={fill(ui.customize.options.uploadAria, { label: group.label })}
           accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
           multiple
           className="sr-only"
@@ -939,8 +953,13 @@ export function OptionGroupImageUpload({
       <div aria-live="polite" className="space-y-1">
         {activeUploadingCount > 0 ? (
           <p className="sr-only">
-            Uploading {activeUploadingCount} reference{" "}
-            {activeUploadingCount === 1 ? "image" : "images"}.
+            {fill(ui.customize.options.uploadingStatus, {
+              count: activeUploadingCount,
+              noun:
+                activeUploadingCount === 1
+                  ? ui.customize.options.image
+                  : ui.customize.options.images,
+            })}
           </p>
         ) : null}
         {uploadError ? (
@@ -961,13 +980,20 @@ export function OptionGroupImageUpload({
               <button
                 type="button"
                 onClick={() => onOpenLightbox(idx)}
-                aria-label={`View ${img.originalName ?? `reference image ${idx + 1}`}`}
+                aria-label={fill(ui.customize.options.viewImageAria, {
+                  name:
+                    img.originalName ??
+                    fill(ui.customize.options.referenceImageName, { number: idx + 1 }),
+                })}
                 className="block size-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={img.thumbUrl}
-                  alt={img.originalName ?? `Reference image ${idx + 1}`}
+                  alt={
+                    img.originalName ??
+                    fill(ui.customize.form.referenceImageAlt, { number: idx + 1 })
+                  }
                   className="size-full object-cover"
                 />
               </button>
@@ -975,7 +1001,11 @@ export function OptionGroupImageUpload({
               <button
                 type="button"
                 onClick={() => onRemoveImage(img.storageKey)}
-                aria-label={`Remove ${img.originalName ?? `reference image ${idx + 1}`}`}
+                aria-label={fill(ui.customize.options.removeImageAria, {
+                  name:
+                    img.originalName ??
+                    fill(ui.customize.options.referenceImageName, { number: idx + 1 }),
+                })}
                 className="absolute top-1 right-1 inline-flex size-6 items-center justify-center rounded-full bg-footer-bg/85 text-footer-text shadow-sm transition-opacity before:absolute before:-inset-2 before:content-[''] hover:bg-danger hover:text-danger-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <X className="size-3.5" aria-hidden="true" />
@@ -1017,12 +1047,12 @@ export function OptionGroupImageUpload({
                     onClick={() => onRetryPending(item)}
                     className="rounded bg-footer-input-bg px-2 py-0.5 text-xs font-medium hover:bg-footer-border"
                   >
-                    Retry
+                    {ui.customize.options.retry}
                   </button>
                   <button
                     type="button"
                     onClick={() => onDismissPending(item.localId)}
-                    aria-label="Dismiss failed upload"
+                    aria-label={ui.customize.options.dismissUpload}
                     className="absolute top-1 right-1 inline-flex size-5 items-center justify-center rounded-full bg-footer-input-bg text-footer-text"
                   >
                     <X className="size-3" aria-hidden="true" />
@@ -1077,6 +1107,7 @@ export function OptionGroup({
   onRetryPending,
   onOpenLightbox,
 }: OptionGroupProps) {
+  const ui = useUiText();
   const labelId = `${baseUid}-${group.code}-label`;
   const hasSeparateHelper = group.type !== "IMAGE_UPLOAD" && Boolean(group.helperText);
   const helperId =
@@ -1120,7 +1151,7 @@ export function OptionGroup({
               {group.label}
             </span>
             <span className="text-[13px] font-normal text-muted-foreground">
-              {group.required ? "Required" : "Optional"}
+              {group.required ? ui.customize.options.required : ui.customize.options.optional}
             </span>
           </span>
         </legend>
@@ -1161,7 +1192,7 @@ export function OptionGroup({
             {group.label}
           </h2>
           <span className="text-[13px] font-normal text-muted-foreground">
-            {group.required ? "Required" : "Optional"}
+            {group.required ? ui.customize.options.required : ui.customize.options.optional}
           </span>
         </div>
 

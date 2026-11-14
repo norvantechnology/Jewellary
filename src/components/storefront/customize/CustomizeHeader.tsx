@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import Image from "next/image";
@@ -30,10 +31,13 @@ export function CustomizeHeader({
   onOpenFullPage,
   onClose,
 }: CustomizeHeaderProps) {
+  const ui = useUiText();
   const { formatPrice } = useCurrency();
   const isEdit = mode === "edit" && Boolean(requestNumber);
-  const titleText = isEdit ? `Edit ${requestNumber}` : "Customize";
-  const priceText = `From ${formatPrice(basePriceBase)}`;
+  const titleText = isEdit
+    ? fill(ui.customize.header.editTitle, { number: requestNumber ?? "" })
+    : ui.customize.header.title;
+  const priceText = fill(ui.customize.header.fromPrice, { price: formatPrice(basePriceBase) });
 
   if (variant === "drawer") {
     return (
@@ -92,13 +96,13 @@ export function CustomizeHeader({
                       variant="ghost"
                       size="icon"
                       onClick={onOpenFullPage}
-                      aria-label="Open full page"
+                      aria-label={ui.customize.header.openFullPage}
                       className="size-11 shrink-0 text-muted-foreground hover:text-foreground"
                     >
                       <ExternalLink className="size-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Open full page</TooltipContent>
+                  <TooltipContent>{ui.customize.header.openFullPage}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ) : null}
@@ -112,13 +116,13 @@ export function CustomizeHeader({
                       variant="ghost"
                       size="icon"
                       onClick={onClose}
-                      aria-label="Close customization drawer"
+                      aria-label={ui.customize.sheet.closeAria}
                       className="size-11 shrink-0 text-muted-foreground hover:text-foreground"
                     >
                       <X className="size-5" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Close</TooltipContent>
+                  <TooltipContent>{ui.customize.sheet.close}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ) : null}
@@ -128,7 +132,9 @@ export function CustomizeHeader({
     );
   }
 
-  const pageTitleText = isEdit ? `Edit ${requestNumber}` : `Customize ${productName}`;
+  const pageTitleText = isEdit
+    ? fill(ui.customize.header.editTitle, { number: requestNumber ?? "" })
+    : fill(ui.customize.header.productTitle, { name: productName });
 
   return (
     <div className="space-y-2 border-b border-border pb-5">
@@ -157,15 +163,13 @@ export function CustomizeHeader({
             {pageTitleText}
           </h1>
           <p className="tabular-nums-price text-sm text-muted-foreground">
-            From {formatPrice(basePriceBase)}
+            {fill(ui.customize.header.fromPrice, { price: formatPrice(basePriceBase) })}
           </p>
         </div>
       </div>
 
       {showHelper ? (
-        <p className="text-sm text-muted-foreground">
-          Choose your options and we&apos;ll send a quote within 24 hours.
-        </p>
+        <p className="text-sm text-muted-foreground">{ui.customize.header.subtitle}</p>
       ) : null}
     </div>
   );

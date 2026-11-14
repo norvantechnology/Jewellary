@@ -1,5 +1,7 @@
 "use client";
 
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import { Loader2, RotateCcw } from "lucide-react";
 import { notifyError, notifySuccess } from "@/lib/notify";
@@ -15,6 +17,7 @@ interface ReorderButtonProps {
 
 export function ReorderButton({ orderNumber, guestToken }: ReorderButtonProps) {
   const [busy, setBusy] = React.useState(false);
+  const t = useUiText().orders;
 
   const handleReorder = async () => {
     setBusy(true);
@@ -40,12 +43,16 @@ export function ReorderButton({ orderNumber, guestToken }: ReorderButtonProps) {
 
     if (payload.skippedItems.length > 0) {
       void notifySuccess(
-        `Added ${payload.addedCount} available ${payload.addedCount === 1 ? "piece" : "pieces"} to your bag. Unavailable: ${payload.skippedItems.join(", ")}.`,
+        fill(t.reorderPartial, {
+          count: payload.addedCount,
+          pieces: payload.addedCount === 1 ? t.piece : t.pieces,
+          items: payload.skippedItems.join(", "),
+        }),
       );
       return;
     }
 
-    void notifySuccess("Pieces from this order added to your bag.");
+    void notifySuccess(t.reorderDone);
   };
 
   return (
@@ -62,7 +69,7 @@ export function ReorderButton({ orderNumber, guestToken }: ReorderButtonProps) {
       ) : (
         <RotateCcw className="size-4 shrink-0 stroke-[1.5]" aria-hidden="true" />
       )}
-      <span>{busy ? "Adding…" : "Reorder"}</span>
+      <span>{busy ? t.reordering : t.reorder}</span>
     </Button>
   );
 }

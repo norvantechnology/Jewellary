@@ -1,4 +1,5 @@
 "use client";
+import { useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import { ArrowUpDown, SlidersHorizontal } from "lucide-react";
@@ -29,6 +30,7 @@ export function MobileFilterSheet({
   disabled = false,
   children,
 }: MobileFilterSheetProps) {
+  const ui = useUiText();
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -41,7 +43,7 @@ export function MobileFilterSheet({
           className="h-11 min-w-0 flex-1 justify-center gap-1.5 px-2.5 sm:gap-2 sm:px-3"
         >
           <SlidersHorizontal className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-          <span className="truncate">Filters</span>
+          <span className="truncate">{ui.collections.filters.heading}</span>
           {activeCount > 0 && (
             <span className="tabular-nums-price inline-flex min-w-5 items-center justify-center rounded-full bg-accent-tint px-1.5 py-0.5 text-[11px] font-semibold text-accent-text">
               {activeCount}
@@ -58,7 +60,7 @@ export function MobileFilterSheet({
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 pt-1 pr-14 pb-3 sm:px-5 sm:pr-14">
           <div className="flex items-center gap-2">
             <SheetTitle className="font-display text-base font-semibold text-text">
-              Filters
+              {ui.collections.filters.heading}
             </SheetTitle>
             {activeCount > 0 && (
               <span className="tabular-nums-price inline-flex min-w-5 items-center justify-center rounded-full bg-accent-tint px-2 py-0.5 text-xs font-semibold text-accent-text">
@@ -72,11 +74,11 @@ export function MobileFilterSheet({
               onClick={onClearAll}
               className="inline-flex min-h-11 cursor-pointer items-center px-2 text-xs font-medium text-accent-text hover:text-accent-hover hover:underline"
             >
-              Clear all
+              {ui.collections.filters.clearAll}
             </button>
           )}
           <SheetDescription className="sr-only">
-            Filter fine jewellery pieces by availability, price, carat, metal, and certification.
+            {ui.collections.filters.mobileDescription}
           </SheetDescription>
         </div>
 
@@ -90,12 +92,14 @@ export function MobileFilterSheet({
             disabled={activeCount === 0}
             className="h-12 flex-1"
           >
-            Clear
+            {ui.collections.filters.clear}
           </Button>
           <Button type="button" onClick={() => setOpen(false)} className="h-12 flex-[2] gap-1">
-            <span>Show</span>
+            <span>{ui.collections.filters.show}</span>
             <AnimatedCounter value={totalCount} />
-            <span>{totalCount === 1 ? "result" : "results"}</span>
+            <span>
+              {totalCount === 1 ? ui.collections.filters.result : ui.collections.filters.results}
+            </span>
           </Button>
         </div>
       </SheetContent>
@@ -116,6 +120,7 @@ export function MobileSortSheet({
   onSelectSort,
   disabled = false,
 }: MobileSortSheetProps) {
+  const ui = useUiText();
   const [open, setOpen] = React.useState(false);
   const currentSortLabel = sortOptions.find((opt) => opt.value === currentSort)?.label;
 
@@ -130,7 +135,9 @@ export function MobileSortSheet({
         >
           <ArrowUpDown className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
           <span className="truncate">
-            {currentSort !== "featured" && currentSortLabel ? currentSortLabel : "Sort"}
+            {currentSort !== "featured" && currentSortLabel
+              ? currentSortLabel
+              : ui.collections.filters.sort}
           </span>
         </Button>
       </SheetTrigger>
@@ -142,10 +149,10 @@ export function MobileSortSheet({
       >
         <div className="flex shrink-0 items-center border-b border-border px-4 pt-1 pr-14 pb-3 sm:px-5 sm:pr-14">
           <SheetTitle className="font-display text-base font-semibold text-text">
-            Sort by
+            {ui.collections.filters.sortBy}
           </SheetTitle>
           <SheetDescription className="sr-only">
-            Choose sort order for pieces shown.
+            {ui.collections.filters.sortDescription}
           </SheetDescription>
         </div>
 

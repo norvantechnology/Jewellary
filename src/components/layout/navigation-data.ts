@@ -17,20 +17,23 @@ export interface NavCollectionLink {
   href: string;
 }
 
-export const PRIMARY_NAV_ITEMS = [
-  { label: "All Jewellery", href: "/collections", exact: true },
-  { label: "Collections", href: "/collections", kind: "megamenu" as const },
-  { label: "Guides", href: "/guides" },
-  { label: "Atelier", href: "/about" },
-  { label: "Concierge", href: "/contact" },
-] as const;
-
-const GROUP_PRIORITY: Record<string, number> = {
-  rings: 1,
-  necklaces: 2,
-  earrings: 3,
-  bracelets: 4,
-};
+/** Menu labels from data/frontend/site-content.json → site.header (passed down from the server). */
+export interface NavLabels {
+  allJewellery: string;
+  collections: string;
+  guides: string;
+  atelier: string;
+  concierge: string;
+  shopByCategory: string;
+  mobileShopByCategory: string;
+  viewAllCollections: string;
+  mobileAbout: string;
+  mobileContact: string;
+  account: string;
+  orders: string;
+  trackOrder: string;
+  wishlist: string;
+}
 
 /**
  * Normalizes backend categories into uniform category groups and concise collection links
@@ -40,12 +43,8 @@ export function buildNavigationSections(categories: NavCategoryItem[]): {
   categoryGroups: NavCategoryGroup[];
   collections: NavCollectionLink[];
 } {
-  const sortedRoots = [...categories].sort((a, b) => {
-    const aOrder = GROUP_PRIORITY[a.slug.toLowerCase()] ?? 50;
-    const bOrder = GROUP_PRIORITY[b.slug.toLowerCase()] ?? 50;
-    if (aOrder !== bOrder) return aOrder - bOrder;
-    return a.name.localeCompare(b.name);
-  });
+  // Categories arrive in the order set in Admin > Categories (sortOrder).
+  const sortedRoots = categories;
 
   const categoryGroups: NavCategoryGroup[] = sortedRoots.slice(0, 4).map((root) => ({
     id: root.id,

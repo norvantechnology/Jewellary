@@ -51,7 +51,7 @@ export async function createCustomerEnquiry(
       select: { id: true, name: true },
     });
     if (!product) {
-      throw new NotFoundError("Referenced jewellery piece was not found.");
+      throw new NotFoundError("We couldn't find that item.");
     }
     productName = product.name;
   }
@@ -176,7 +176,7 @@ export async function updateAdminEnquiry(
 ) {
   const existing = await db.enquiry.findUnique({ where: { id: input.enquiryId } });
   if (!existing) {
-    throw new NotFoundError("Enquiry record not found.");
+    throw new NotFoundError("Inquiry not found.");
   }
 
   const updated = await db.enquiry.update({
@@ -216,7 +216,7 @@ export async function replyToAdminEnquiry(
   });
 
   if (!existing) {
-    throw new NotFoundError("Enquiry record not found.");
+    throw new NotFoundError("Inquiry not found.");
   }
 
   const timestamp = new Date().toISOString().slice(0, 16).replace("T", " ");

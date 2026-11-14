@@ -79,7 +79,7 @@ export function calculateCheckoutQuote(params: {
     return {
       ok: false,
       code: "UNSUPPORTED_COUNTRY",
-      message: `No insured courier zone is configured for ${country}. Please contact concierge for custom arrangements.`,
+      message: `We don't ship to ${country} yet. Please contact us and we'll help arrange delivery.`,
     };
   }
 

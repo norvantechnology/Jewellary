@@ -1,5 +1,7 @@
 "use client";
 
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
+
 import * as React from "react";
 import { AnimatePresence, m } from "motion/react";
 import Image from "next/image";
@@ -26,6 +28,7 @@ interface WishlistPageClientProps {
 
 export function WishlistPageClient({ initialItems }: WishlistPageClientProps) {
   const reducedMotion = useReducedMotionSafe();
+  const t = useUiText().wishlist;
   const [items, setItems] = React.useState(initialItems);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
   const [addedIds, setAddedIds] = React.useState<Record<string, boolean>>({});
@@ -34,7 +37,7 @@ export function WishlistPageClient({ initialItems }: WishlistPageClientProps) {
 
   function markAdded(variantId: string, name: string) {
     setAddedIds((prev) => ({ ...prev, [variantId]: true }));
-    setLiveStatus(`${name} added to bag.`);
+    setLiveStatus(fill(t.addedLive, { name }));
     window.setTimeout(() => {
       setAddedIds((prev) => {
         const copy = { ...prev };
@@ -56,7 +59,7 @@ export function WishlistPageClient({ initialItems }: WishlistPageClientProps) {
 
     visitorStore.setWishlistVariantIds(result.data.variantIds);
     setItems((prev) => prev.filter((item) => item.variantId !== variantId));
-    void notifySuccess("Piece removed from your wishlist.");
+    void notifySuccess(t.removedToast);
   }
 
   async function handleMoveToBag(item: WishlistItemDTO) {
@@ -75,16 +78,16 @@ export function WishlistPageClient({ initialItems }: WishlistPageClientProps) {
     visitorStore.setLatestCart(result.data);
     markAdded(item.variantId, item.productName);
     visitorStore.openCartDrawer();
-    void notifySuccess(`${item.productName} added to your bag.`);
+    void notifySuccess(fill(t.addedToBagToast, { name: item.productName }));
   }
 
   if (items.length === 0) {
     return (
       <EmptyState
         icon={Heart}
-        title="Your Saved Pieces Collection Is Empty"
-        description="Explore our rings, necklaces, earrings, and bracelets to bookmark pieces while you compare metals and grading certificates."
-        actionLabel="Explore Jewellery"
+        title={t.emptyTitle}
+        description={t.emptyDescription}
+        actionLabel={t.emptyAction}
         actionHref="/collections"
       />
     );
@@ -149,7 +152,7 @@ export function WishlistPageClient({ initialItems }: WishlistPageClientProps) {
                   <button
                     type="button"
                     disabled={busy}
-                    aria-label={`Remove ${item.productName} from wishlist`}
+                    aria-label={fill(t.removeAria, { name: item.productName })}
                     onClick={() => void handleRemove(item.variantId)}
                     className="group/remove absolute top-2 right-2 z-20 inline-flex size-11 cursor-pointer items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:pointer-events-none disabled:opacity-45"
                   >
@@ -200,7 +203,7 @@ export function WishlistPageClient({ initialItems }: WishlistPageClientProps) {
                           <Link
                             href={`/contact?type=BESPOKE&product=${encodeURIComponent(item.productName)}`}
                           >
-                            Enquire
+                            {t.enquire}
                           </Link>
                         </Button>
                       ) : !hasAnyStock ? (
@@ -211,7 +214,7 @@ export function WishlistPageClient({ initialItems }: WishlistPageClientProps) {
                           disabled
                           className="h-11 min-h-11 w-full rounded-[10px] px-3 text-sm font-medium md:text-[15px]"
                         >
-                          Sold Out
+                          {t.soldOut}
                         </Button>
                       ) : item.availableStock <= 0 && hasOtherOptions ? (
                         <Button
@@ -219,7 +222,7 @@ export function WishlistPageClient({ initialItems }: WishlistPageClientProps) {
                           variant="primary"
                           size="sm"
                           onClick={() => setQuickSelectItem(item)}
-                          aria-label={`Choose options for ${item.productName}`}
+                          aria-label={fill(t.chooseOptionsAria, { name: item.productName })}
                           className="h-11 min-h-11 w-full rounded-[10px] px-2 text-[13px] font-medium active:scale-[0.98] min-[1400px]:px-3 min-[1400px]:text-sm sm:px-2.5 sm:text-sm lg:px-2 lg:text-[13px]"
                         >
                           <SlidersHorizontal
@@ -227,8 +230,8 @@ export function WishlistPageClient({ initialItems }: WishlistPageClientProps) {
                             strokeWidth={1.5}
                             aria-hidden="true"
                           />
-                          <span className="min-[540px]:hidden">Options</span>
-                          <span className="hidden min-[540px]:inline">Choose Options</span>
+                          <span className="min-[540px]:hidden">{t.optionsShort}</span>
+                          <span className="hidden min-[540px]:inline">{t.chooseOptions}</span>
                         </Button>
                       ) : (
                         <Button
@@ -237,7 +240,7 @@ export function WishlistPageClient({ initialItems }: WishlistPageClientProps) {
                           size="sm"
                           disabled={busy}
                           onClick={() => void handleMoveToBag(item)}
-                          aria-label={`Add ${item.productName} to bag`}
+                          aria-label={fill(t.addAria, { name: item.productName })}
                           className="relative h-11 min-h-11 w-full rounded-[10px] px-2 text-[13px] font-medium active:scale-[0.98] min-[1400px]:px-3 min-[1400px]:text-sm sm:px-2.5 sm:text-sm lg:px-2 lg:text-[13px]"
                         >
                           {busy && (
@@ -260,7 +263,7 @@ export function WishlistPageClient({ initialItems }: WishlistPageClientProps) {
                                   strokeWidth={2}
                                   aria-hidden="true"
                                 />
-                                <span>Added &#10003;</span>
+                                <span>{t.added}</span>
                               </>
                             ) : (
                               <>
@@ -269,8 +272,8 @@ export function WishlistPageClient({ initialItems }: WishlistPageClientProps) {
                                   strokeWidth={1.5}
                                   aria-hidden="true"
                                 />
-                                <span className="min-[420px]:hidden">Add</span>
-                                <span className="hidden min-[420px]:inline">Add to Bag</span>
+                                <span className="min-[420px]:hidden">{t.addShort}</span>
+                                <span className="hidden min-[420px]:inline">{t.addToBag}</span>
                               </>
                             )}
                           </span>

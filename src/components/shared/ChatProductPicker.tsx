@@ -1,4 +1,5 @@
 "use client";
+import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
 import Image from "next/image";
@@ -32,6 +33,7 @@ export function ChatProductPicker({
   onSelectShare,
   onClose,
 }: ChatProductPickerProps) {
+  const ui = useUiText();
   const includeCustomer = viewerRole === "CUSTOMER";
   const defaultCacheKey = includeCustomer ? "default:1" : "default:0";
 
@@ -228,14 +230,14 @@ export function ChatProductPicker({
       {/* Dim message stream behind picker */}
       <button
         type="button"
-        aria-label="Dismiss product picker backdrop"
+        aria-label={ui.chat.picker.backdropAria}
         onClick={onClose}
         className="absolute inset-0 z-10 bg-foreground/25 transition-opacity"
       />
 
       <div
         role="region"
-        aria-label="Share a product"
+        aria-label={ui.chat.picker.title}
         className={
           isMobileSheet
             ? "absolute inset-x-0 bottom-0 z-20 flex max-h-[70dvh] flex-col rounded-t-2xl border-t border-border bg-card shadow-lg"
@@ -251,7 +253,7 @@ export function ChatProductPicker({
         {/* Sticky picker header */}
         <div className="flex items-center justify-between gap-2 px-3 pt-2.5 pb-1.5">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="text-sm font-semibold text-text">Share a product</span>
+            <span className="text-sm font-semibold text-text">{ui.chat.picker.title}</span>
             {viewerRole === "CUSTOMER" && (requests.length > 0 || orders.length > 0) ? (
               <div className="flex items-center gap-1">
                 <button
@@ -263,7 +265,7 @@ export function ChatProductPicker({
                       : "bg-surface-2 text-text-muted hover:text-text"
                   }`}
                 >
-                  Pieces
+                  {ui.chat.picker.tabPieces}
                 </button>
                 {requests.length > 0 ? (
                   <button
@@ -275,7 +277,7 @@ export function ChatProductPicker({
                         : "bg-surface-2 text-text-muted hover:text-text"
                     }`}
                   >
-                    Requests
+                    {ui.chat.picker.tabRequests}
                   </button>
                 ) : null}
                 {orders.length > 0 ? (
@@ -288,7 +290,7 @@ export function ChatProductPicker({
                         : "bg-surface-2 text-text-muted hover:text-text"
                     }`}
                   >
-                    Orders
+                    {ui.chat.picker.tabOrders}
                   </button>
                 ) : null}
               </div>
@@ -298,7 +300,7 @@ export function ChatProductPicker({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close share picker"
+            aria-label={ui.chat.picker.closeAria}
             className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <X className="size-4" aria-hidden="true" />
@@ -318,8 +320,8 @@ export function ChatProductPicker({
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search piece by name or SKU…"
-                aria-label="Search pieces to share"
+                placeholder={ui.chat.picker.searchPlaceholder}
+                aria-label={ui.chat.picker.searchAria}
                 className="h-9 w-full rounded-full border border-border-strong bg-surface pr-3 pl-9 text-[15px] text-text placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:text-[13px]"
               />
             </div>
@@ -348,8 +350,8 @@ export function ChatProductPicker({
             ) : displayedProducts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <ShoppingBag className="mb-1.5 size-5 text-text-muted" aria-hidden="true" />
-                <p className="text-sm font-medium text-text">No products found</p>
-                <p className="text-xs text-text-muted">Try another gemstone, metal, or SKU.</p>
+                <p className="text-sm font-medium text-text">{ui.chat.picker.noResultsTitle}</p>
+                <p className="text-xs text-text-muted">{ui.chat.picker.noResultsText}</p>
               </div>
             ) : (
               <div
@@ -372,13 +374,23 @@ export function ChatProductPicker({
                   {visibleProducts.map((p) => (
                     <div
                       key={p.productId}
-                      onClick={() => onSelectShare("PRODUCT", p.productId, `Sharing ${p.name}`)}
+                      onClick={() =>
+                        onSelectShare(
+                          "PRODUCT",
+                          p.productId,
+                          fill(ui.chat.picker.sharingProduct, { name: p.name }),
+                        )
+                      }
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          onSelectShare("PRODUCT", p.productId, `Sharing ${p.name}`);
+                          onSelectShare(
+                            "PRODUCT",
+                            p.productId,
+                            fill(ui.chat.picker.sharingProduct, { name: p.name }),
+                          );
                         }
                       }}
                       className="flex h-[60px] cursor-pointer items-center gap-3 rounded-xl px-2 transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
@@ -408,11 +420,15 @@ export function ChatProductPicker({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onSelectShare("PRODUCT", p.productId, `Sharing ${p.name}`);
+                          onSelectShare(
+                            "PRODUCT",
+                            p.productId,
+                            fill(ui.chat.picker.sharingProduct, { name: p.name }),
+                          );
                         }}
                         className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-border px-3 text-xs font-medium text-text hover:border-accent hover:bg-surface focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                       >
-                        Share
+                        {ui.chat.picker.share}
                       </button>
                     </div>
                   ))}
@@ -434,7 +450,7 @@ export function ChatProductPicker({
                     onSelectShare(
                       "REQUEST",
                       req.requestId,
-                      `Regarding bespoke request ${req.requestNumber}`,
+                      fill(ui.chat.picker.regardingRequest, { number: req.requestNumber }),
                     )
                   }
                   className="flex h-[58px] w-full items-center justify-between gap-3 rounded-xl px-2 text-left hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
@@ -446,7 +462,7 @@ export function ChatProductPicker({
                     <p className="truncate text-xs text-text-muted">{req.status}</p>
                   </div>
                   <span className="inline-flex h-8 shrink-0 items-center rounded-full border border-border px-3 text-xs font-medium text-text">
-                    Share
+                    {ui.chat.picker.share}
                   </span>
                 </button>
               ))}
@@ -458,7 +474,11 @@ export function ChatProductPicker({
                   key={ord.orderId}
                   type="button"
                   onClick={() =>
-                    onSelectShare("ORDER", ord.orderId, `Regarding order ${ord.orderNumber}`)
+                    onSelectShare(
+                      "ORDER",
+                      ord.orderId,
+                      fill(ui.chat.picker.regardingOrder, { number: ord.orderNumber }),
+                    )
                   }
                   className="flex h-[58px] w-full items-center justify-between gap-3 rounded-xl px-2 text-left hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
@@ -471,7 +491,7 @@ export function ChatProductPicker({
                     </p>
                   </div>
                   <span className="inline-flex h-8 shrink-0 items-center rounded-full border border-border px-3 text-xs font-medium text-text">
-                    Share
+                    {ui.chat.picker.share}
                   </span>
                 </button>
               ))}

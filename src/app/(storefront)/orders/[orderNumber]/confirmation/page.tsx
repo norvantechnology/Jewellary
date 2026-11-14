@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
 import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle2, Clock, ShieldAlert, ShieldCheck, Truck } from "lucide-react";
@@ -15,19 +16,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCountryName } from "@/lib/countries";
 import { formatDate } from "@/lib/dates";
 import { formatMoneyExact } from "@/lib/money";
-import { NOINDEX_NOFOLLOW_ROBOTS, buildMetadata } from "@/lib/seo/metadata";
+import { NOINDEX_NOFOLLOW_ROBOTS } from "@/lib/seo/metadata";
 import { getOrderConfirmation, type OrderConfirmationDTO } from "@/modules/orders/order.service";
-import { ORDER_STATUS_META, isCancellableBeforeSettlement } from "@/modules/orders/state-machine";
+import {
+  getOrderStatusMeta,
+  isCancellableBeforeSettlement,
+  type OrderStatusTexts,
+} from "@/modules/orders/state-machine";
 import { getOptionalSession } from "@/server/dal";
 import { AppError } from "@/server/errors";
 
-export const metadata: Metadata = buildMetadata({
-  title: "Order Confirmation",
-  description: "Your order confirmation and status.",
-  pathname: "/orders",
-  canonical: "/orders",
-  robots: NOINDEX_NOFOLLOW_ROBOTS,
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return buildPageMetadata((c) => c.pages.confirmation.seo, {
+    pathname: "/orders",
+    canonical: "/orders",
+    robots: NOINDEX_NOFOLLOW_ROBOTS,
+  });
+}
 
 async function ConfirmationBody({
   params,
@@ -36,7 +41,13 @@ async function ConfirmationBody({
   params: Promise<{ orderNumber: string }>;
   searchParams: Promise<{ token?: string }>;
 }) {
-  const [{ orderNumber }, { token }] = await Promise.all([params, searchParams]);
+  const [{ orderNumber }, { token }, siteContent] = await Promise.all([
+    params,
+    searchParams,
+    getSiteContent(),
+  ]);
+  const page = siteContent.pages.confirmation;
+  const missing = page.unavailable;
 
   const normalizedOrderNumber = decodeURIComponent(orderNumber).trim().toUpperCase();
   let order: OrderConfirmationDTO | null = null;
@@ -46,8 +57,7 @@ async function ConfirmationBody({
   try {
     order = await getOrderConfirmation(normalizedOrderNumber, token ?? null);
   } catch (err) {
-    errorMessage =
-      err instanceof AppError ? err.message : "Unable to load this order confirmation record.";
+    errorMessage = err instanceof AppError ? err.message : missing.loadError;
   }
 
   if (!order) {
@@ -59,33 +69,32 @@ async function ConfirmationBody({
               <ShieldAlert className="size-5 stroke-[1.5]" aria-hidden="true" />
             </div>
             <h1 className="type-h2 mt-4 font-semibold text-foreground">
-              {session ? "We Couldn't Open This Order" : "Sign In to View Your Order"}
+              {session ? missing.wrongAccountHeading : missing.signedOutHeading}
             </h1>
             <p className="mt-2 text-base leading-relaxed text-muted-foreground sm:text-sm">
               {session
-                ? `This order isn't linked to the account you're signed in with (${session.user.email}). Your recent purchases are always listed under My Orders.`
-                : (errorMessage ??
-                  "Sign in to the account you checked out with, or use the private link from your confirmation email.")}
+                ? missing.wrongAccountText.replace("{email}", session.user.email)
+                : (errorMessage ?? missing.signedOutText)}
             </p>
             <div className="mt-6 flex flex-col justify-center gap-3 min-[480px]:flex-row min-[480px]:flex-wrap">
               {session ? (
                 <Button asChild className="w-full min-[480px]:w-auto">
-                  <Link href="/account/orders">View My Orders</Link>
+                  <Link href="/account/orders">{missing.viewOrders}</Link>
                 </Button>
               ) : (
                 <Button asChild className="w-full min-[480px]:w-auto">
                   <Link
                     href={`/login?next=${encodeURIComponent(`/orders/${encodeURIComponent(normalizedOrderNumber)}/confirmation`)}`}
                   >
-                    Sign In to Account
+                    {missing.signIn}
                   </Link>
                 </Button>
               )}
               <Button asChild variant="outline" className="w-full min-[480px]:w-auto">
-                <Link href="/orders/track">Track an Order</Link>
+                <Link href="/orders/track">{missing.trackOrder}</Link>
               </Button>
               <Button asChild variant="ghost" className="w-full min-[480px]:w-auto">
-                <Link href="/contact?type=GENERAL">Contact Us</Link>
+                <Link href="/contact?type=GENERAL">{missing.contact}</Link>
               </Button>
             </div>
           </div>
@@ -94,7 +103,9 @@ async function ConfirmationBody({
     );
   }
 
-  const meta = ORDER_STATUS_META[order.status];
+  // Status names come from site-content.json → ui.orders.statuses (admin-editable).
+  const statusMeta = getOrderStatusMeta(siteContent.ui.orders.statuses as OrderStatusTexts);
+  const meta = statusMeta[order.status];
   const needsRetry =
     isCancellableBeforeSettlement(order.status) &&
     (!order.reservedUntil || new Date(order.reservedUntil) > new Date());
@@ -106,7 +117,10 @@ async function ConfirmationBody({
     <Section spacing="md" className="pt-4 pb-10 sm:pt-6 sm:pb-16 md:pt-6 lg:pt-8 lg:pb-24">
       <Container>
         <Breadcrumbs
-          items={[{ label: "Home", href: "/" }, { label: `Order ${order.orderNumber}` }]}
+          items={[
+            { label: "Home", href: "/" },
+            { label: `${page.orderLabel} ${order.orderNumber}` },
+          ]}
         />
 
         <div className="mt-3 flex flex-col items-start justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:flex-wrap sm:items-start">
@@ -139,7 +153,7 @@ async function ConfirmationBody({
               <div className="mt-2 flex flex-wrap items-center gap-2.5">
                 <h1 className="tabular-nums-price text-2xl leading-tight font-semibold break-words text-foreground sm:text-4xl">
                   <span className="block text-base font-medium text-muted-foreground sm:inline sm:text-4xl sm:font-semibold sm:text-foreground">
-                    Order{" "}
+                    {page.orderLabel}{" "}
                   </span>
                   {order.orderNumber}
                 </h1>
@@ -154,16 +168,16 @@ async function ConfirmationBody({
           <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center print:hidden">
             {needsRetry && (
               <Button asChild className="col-span-2 w-full sm:w-auto">
-                <Link href={retryHref}>Complete Payment</Link>
+                <Link href={retryHref}>{page.completePayment}</Link>
               </Button>
             )}
             <Button asChild variant="secondary" className="w-full sm:w-auto">
               <Link href={`/orders/track?orderNumber=${encodeURIComponent(order.orderNumber)}`}>
-                Track Order
+                {page.trackOrder}
               </Link>
             </Button>
             <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href="/collections">Keep Shopping</Link>
+              <Link href="/collections">{page.keepShopping}</Link>
             </Button>
             <ConfirmationPrintButton className="hidden sm:inline-flex" />
           </div>
@@ -173,7 +187,9 @@ async function ConfirmationBody({
           <div className="min-w-0 space-y-6 lg:col-span-8">
             {/* Items Snapshot */}
             <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
-              <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">Items</h2>
+              <h2 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
+                {page.itemsHeading}
+              </h2>
               <ul className="mt-4 divide-y divide-border">
                 {order.items.map((item) => {
                   const isSeedImage = item.imageUrlSnapshot?.startsWith("/images/seed/") ?? false;
@@ -239,12 +255,12 @@ async function ConfirmationBody({
               open={order.events.length <= 2}
             >
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-base font-semibold text-foreground [&::-webkit-details-marker]:hidden">
-                <h2>Order history</h2>
+                <h2>{page.historyHeading}</h2>
                 <span className="text-sm font-normal text-muted-foreground group-open:hidden">
-                  Show
+                  {page.showLabel}
                 </span>
                 <span className="hidden text-sm font-normal text-muted-foreground group-open:inline">
-                  Hide
+                  {page.hideLabel}
                 </span>
               </summary>
               <RevealStagger
@@ -252,7 +268,7 @@ async function ConfirmationBody({
                 className="relative mt-4 space-y-4 border-l border-border pl-5 sm:border-l-0 sm:pl-0"
               >
                 {order.events.map((evt) => {
-                  const evtMeta = ORDER_STATUS_META[evt.toStatus];
+                  const evtMeta = statusMeta[evt.toStatus];
                   return (
                     <li key={evt.id} className="flex items-start gap-3">
                       {evt.toStatus === "PAID" || evt.toStatus === "DELIVERED" ? (
@@ -285,11 +301,11 @@ async function ConfirmationBody({
           <aside className="min-w-0 space-y-6 lg:col-span-4">
             <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
               <h2 className="text-lg font-semibold tracking-[-0.01em] text-foreground sm:text-xl">
-                Payment
+                {page.paymentHeading}
               </h2>
               <dl className="mt-4 space-y-2.5 border-t border-border pt-4 text-sm">
                 <div className="flex justify-between gap-3">
-                  <dt className="text-muted-foreground">Subtotal</dt>
+                  <dt className="text-muted-foreground">{page.subtotalLabel}</dt>
                   <dd className="tabular-nums-price font-medium text-foreground">
                     {formatMoneyExact(
                       order.subtotal,
@@ -303,7 +319,7 @@ async function ConfirmationBody({
                   <dt className="text-muted-foreground">{order.shippingMethodName}</dt>
                   <dd className="tabular-nums-price font-medium text-foreground">
                     {Number(order.shippingCost) === 0
-                      ? "Complimentary"
+                      ? page.freeShippingLabel
                       : formatMoneyExact(
                           order.shippingCost,
                           order.currency,
@@ -313,7 +329,7 @@ async function ConfirmationBody({
                   </dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-muted-foreground">Tax</dt>
+                  <dt className="text-muted-foreground">{page.taxLabel}</dt>
                   <dd className="tabular-nums-price font-medium text-foreground">
                     {formatMoneyExact(
                       order.taxAmount,
@@ -324,7 +340,7 @@ async function ConfirmationBody({
                   </dd>
                 </div>
                 <div className="flex justify-between gap-3 border-t border-border pt-3">
-                  <dt className="text-base font-semibold text-foreground">Total</dt>
+                  <dt className="text-base font-semibold text-foreground">{page.totalLabel}</dt>
                   <dd className="tabular-nums-price text-xl font-semibold text-foreground">
                     {formatMoneyExact(order.total, order.currency, "en-US", order.currencyDecimals)}
                   </dd>
@@ -339,7 +355,7 @@ async function ConfirmationBody({
                   aria-hidden="true"
                 />
                 <h2 className="text-lg font-semibold tracking-[-0.01em] text-foreground">
-                  Delivery Address
+                  {page.deliveryHeading}
                 </h2>
               </div>
               <address className="mt-3 space-y-0.5 text-sm leading-relaxed break-words text-muted-foreground not-italic">
@@ -363,7 +379,7 @@ async function ConfirmationBody({
                     className="mt-0.5 size-5 shrink-0 stroke-[1.5] text-accent-text"
                     aria-hidden="true"
                   />
-                  <span>Signature required on delivery.</span>
+                  <span>{page.signatureNote}</span>
                 </div>
               )}
             </section>
