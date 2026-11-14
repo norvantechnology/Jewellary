@@ -300,7 +300,9 @@ export function OptionGroupSearchSelect({
   }
 
   React.useEffect(() => {
-    if (!open) return;
+    // Only auto-focus the search box with a mouse/keyboard; on touch screens it would open the
+    // keyboard over the options. People can still tap the search box to type.
+    if (!open || window.matchMedia("(pointer: coarse)").matches) return;
     const id = window.requestAnimationFrame(() => {
       searchInputRef.current?.focus({ preventScroll: true });
     });
@@ -526,6 +528,9 @@ export function OptionGroupSearchSelect({
           portalled={!inModal}
           align="start"
           sideOffset={6}
+          onOpenAutoFocus={(event) => {
+            if (window.matchMedia("(pointer: coarse)").matches) event.preventDefault();
+          }}
           className="w-[var(--radix-popover-trigger-width)] max-w-[min(420px,calc(100vw-2rem))] min-w-[260px] p-0"
         >
           {listboxContent}

@@ -70,7 +70,10 @@ export function ChatProductPicker({
         setRequests(cached.requests);
         setOrders(cached.orders);
       }
-      searchInputRef.current?.focus({ preventScroll: true });
+      // Touch screens: don't pop the keyboard over the list; people can tap the search box.
+      if (!window.matchMedia("(pointer: coarse)").matches) {
+        searchInputRef.current?.focus({ preventScroll: true });
+      }
       if (listScrollRef.current) {
         setViewportH(listScrollRef.current.clientHeight || 240);
       }
