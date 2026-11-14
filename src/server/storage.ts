@@ -15,7 +15,6 @@ import sharp from "sharp";
 import { env } from "@/lib/env";
 import {
   IMAGE_QUALITY_BUDGETS,
-  IMAGE_RESPONSIVE_WIDTHS,
   type ResponsiveVariantSet,
   buildSeoImageStem,
 } from "@/lib/seo/images";
@@ -306,7 +305,7 @@ export async function processAndPersistImageUpload(input: {
     basePipeline
       .clone()
       .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
-      .avif({ quality: 58 })
+      .avif({ quality: 58, effort: 2 })
       .toBuffer(),
     basePipeline
       .clone()
@@ -321,8 +320,9 @@ export async function processAndPersistImageUpload(input: {
     );
   }
 
-  // Generate responsive breakpoint variants (320..2000px capped by source dimensions)
-  const targetWidths = IMAGE_RESPONSIVE_WIDTHS.filter((w) => w <= Math.max(origWidth, 800));
+  // Extra per-width copies (320..2000px) are not used by the storefront (images are resized on
+  // the fly), and encoding ~16 more files made each upload take many seconds. Kept off.
+  const targetWidths: number[] = [];
   const extraFiles: Array<{
     filename: string;
     key: string;
@@ -343,7 +343,7 @@ export async function processAndPersistImageUpload(input: {
         basePipeline
           .clone()
           .resize(targetW, targetW, { fit: "inside", withoutEnlargement: true })
-          .avif({ quality: 55 })
+          .avif({ quality: 55, effort: 2 })
           .toBuffer(),
       ]);
       extraFiles.push(
