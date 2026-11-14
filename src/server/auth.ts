@@ -10,8 +10,40 @@ import { assertHumanSubmission } from "@/server/abuse";
 import { db } from "@/server/db";
 import { sendResetPasswordEmail, sendVerificationEmail } from "@/server/email/send";
 
-const baseUrl = env.BETTER_AUTH_URL ?? env.NEXT_PUBLIC_SITE_URL;
+/** Addresses Vercel provides automatically (production domain, branch preview, this deployment). */
+const vercelOrigins = [
+  process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  process.env.VERCEL_BRANCH_URL,
+  process.env.VERCEL_URL,
+]
+  .filter((host): host is string => Boolean(host))
+  .map((host) => `https://${host}`);
+
+const baseUrl =
+  env.BETTER_AUTH_URL ?? process.env.SITE_URL ?? vercelOrigins[0] ?? env.NEXT_PUBLIC_SITE_URL;
 export const isGoogleAuthEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+
+const STAFF_ROLES = ["ADMIN", "STAFF"];
+
+async function isStaffAccount(email: string): Promise<boolean> {
+  const user = await db.user.findUnique({
+    where: { email: email.trim().toLowerCase() },
+    select: { role: true },
+  });
+  return Boolean(user && STAFF_ROLES.includes(user.role));
+}
+
+/** Staff accounts are created by the store owner, so their email needs no verification. */
+async function markStaffAccountVerified(email: string): Promise<void> {
+  await db.user.updateMany({
+    where: {
+      email: email.trim().toLowerCase(),
+      role: { in: STAFF_ROLES as Array<"ADMIN" | "STAFF"> },
+      emailVerified: false,
+    },
+    data: { emailVerified: true },
+  });
+}
 
 export const auth = betterAuth({
   appName: env.NEXT_PUBLIC_SITE_NAME,
@@ -22,6 +54,8 @@ export const auth = betterAuth({
     if (env.BETTER_AUTH_URL) {
       origins.add(env.BETTER_AUTH_URL);
     }
+    if (process.env.SITE_URL) origins.add(process.env.SITE_URL);
+    for (const origin of vercelOrigins) origins.add(origin);
     if (
       process.env.NODE_ENV !== "production" ||
       baseUrl.includes("localhost") ||
@@ -82,6 +116,8 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     expiresIn: 60 * 60 * 24,
     sendVerificationEmail: async ({ user, token }) => {
+      // Admin and staff accounts never get verification emails (see the sign-in hook below).
+      if (await isStaffAccount(user.email)) return;
       const verifyUrl = `${env.NEXT_PUBLIC_SITE_URL}/verify-email?token=${encodeURIComponent(token)}`;
       await sendVerificationEmail({
         to: user.email,
@@ -134,6 +170,13 @@ export const auth = betterAuth({
   ],
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      // Admin/staff sign in without any email verification step or email.
+      if (ctx.path === "/sign-in/email") {
+        const body =
+          ctx.body && typeof ctx.body === "object" ? (ctx.body as Record<string, unknown>) : {};
+        if (typeof body.email === "string") await markStaffAccountVerified(body.email);
+        return;
+      }
       if (ctx.path !== "/sign-up/email" || !ctx.request) {
         return;
       }

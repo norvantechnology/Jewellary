@@ -45,7 +45,13 @@ export function getSiteUrl(): string {
   // SITE_URL is read at runtime on the server, so one build can be deployed to any domain
   // (staging, preview, production) without rebuilding. NEXT_PUBLIC_SITE_URL is the build-time
   // fallback. Share previews (WhatsApp etc.) only work when this is the real public https domain.
-  const runtime = typeof window === "undefined" ? process.env.SITE_URL : undefined;
+  const runtime =
+    typeof window === "undefined"
+      ? process.env.SITE_URL ||
+        (process.env.VERCEL_PROJECT_PRODUCTION_URL
+          ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+          : undefined)
+      : undefined;
   return sanitizePublicOrigin(runtime || env.NEXT_PUBLIC_SITE_URL);
 }
 
