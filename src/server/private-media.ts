@@ -322,7 +322,7 @@ export async function processAndPersistCustomerImage(params: {
     await Promise.all([
       s3.send(
         new PutObjectCommand({
-          Bucket: env.S3_BUCKET,
+          Bucket: env.S3_PRIVATE_BUCKET ?? env.S3_BUCKET,
           Key: `private/${params.storageKey}`,
           Body: decodedFull.data,
           ContentType: "image/webp",
@@ -331,7 +331,7 @@ export async function processAndPersistCustomerImage(params: {
       ),
       s3.send(
         new PutObjectCommand({
-          Bucket: env.S3_BUCKET,
+          Bucket: env.S3_PRIVATE_BUCKET ?? env.S3_BUCKET,
           Key: `private/${thumbKey}`,
           Body: decodedThumb.data,
           ContentType: "image/webp",
@@ -391,7 +391,7 @@ export async function readPrivateMediaBuffer(storageKey: string): Promise<Buffer
       const s3 = s3Read;
       const response = await s3.send(
         new GetObjectCommand({
-          Bucket: env.S3_BUCKET,
+          Bucket: env.S3_PRIVATE_BUCKET ?? env.S3_BUCKET,
           Key: `private/${storageKey}`,
         }),
       );
@@ -422,8 +422,18 @@ export async function deletePrivateMediaObject(storageKey: string): Promise<void
   if (s3Del && (await isS3Reachable(s3Del))) {
     const s3 = s3Del;
     await Promise.allSettled([
-      s3.send(new DeleteObjectCommand({ Bucket: env.S3_BUCKET, Key: `private/${storageKey}` })),
-      s3.send(new DeleteObjectCommand({ Bucket: env.S3_BUCKET, Key: `private/${thumbKey}` })),
+      s3.send(
+        new DeleteObjectCommand({
+          Bucket: env.S3_PRIVATE_BUCKET ?? env.S3_BUCKET,
+          Key: `private/${storageKey}`,
+        }),
+      ),
+      s3.send(
+        new DeleteObjectCommand({
+          Bucket: env.S3_PRIVATE_BUCKET ?? env.S3_BUCKET,
+          Key: `private/${thumbKey}`,
+        }),
+      ),
     ]);
   }
 

@@ -12,6 +12,7 @@ next-env.d.ts
 
 # Environment
 .env
+.env.vercel
 .env*.local
 
 # Testing & Coverage

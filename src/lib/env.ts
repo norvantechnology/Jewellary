@@ -25,6 +25,8 @@ export const env = createEnv({
     S3_ENDPOINT: emptyToUndefined(z.string().url()),
     S3_REGION: z.string().default("us-east-1"),
     S3_BUCKET: z.string().default("jewellery-media"),
+    // Private customer uploads; defaults to S3_BUCKET (under private/). Use a private bucket in production.
+    S3_PRIVATE_BUCKET: emptyToUndefined(z.string().min(1)),
     S3_ACCESS_KEY_ID: emptyToUndefined(z.string().min(1)),
     S3_SECRET_ACCESS_KEY: emptyToUndefined(z.string().min(1)),
 
