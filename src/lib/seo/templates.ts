@@ -82,6 +82,8 @@ export function mergeSeoTemplates(raw?: Partial<SeoTemplatesConfig> | null): Seo
 export function stripMarkup(value: string): string {
   return value
     .replace(/<[^>]*>/g, " ")
+    .replace(/^\s*[-•]\s+/gm, "")
+    .replace(/^\s*#{1,6}\s+(.+)$/gm, "$1.")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/[`*_~#>]+/g, " ")
     .replace(/\s+/g, " ")

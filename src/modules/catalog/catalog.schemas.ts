@@ -131,7 +131,8 @@ export const productVariantInputSchema = z
     stoneSpec: optionalCleanText(120),
     priceOverride: optionalMoneyString,
     compareAtOverride: optionalMoneyString,
-    initialStockQty: z.coerce.number().int().min(0).max(100000).default(0),
+    // Made-to-order items use 1,000,000 as "unlimited" stock.
+    initialStockQty: z.coerce.number().int().min(0).max(1_000_000).default(0),
     lowStockThreshold: z.coerce.number().int().min(0).max(10000).default(2),
     isDefault: z.boolean().default(false),
     isActive: z.boolean().default(true),

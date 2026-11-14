@@ -218,7 +218,7 @@ export function ProductsManager({
       header: "Stock",
       cell: (p) =>
         // Made-to-order products carry effectively unlimited stock (1,000,000 per variant).
-        p.availableStock >= 1_000_000 ? (
+        p.availableStock >= 999_999 ? (
           <Badge variant="info">Made to order</Badge>
         ) : (
           <div className="flex items-center gap-2">

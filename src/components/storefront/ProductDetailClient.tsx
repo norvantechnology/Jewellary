@@ -2,6 +2,7 @@
 import { fill, useUiText } from "@/components/providers/UiTextProvider";
 
 import * as React from "react";
+import { ProductDescription } from "@/components/storefront/ProductDescription";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, m } from "motion/react";
@@ -620,11 +621,7 @@ export function ProductDetailClient({
       </div>
 
       <section className="space-y-4 border-t border-border pt-6">
-        {product.description && (
-          <p className="prose-limit text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
-            {product.description}
-          </p>
-        )}
+        {product.description && <ProductDescription text={product.description} />}
         <Accordion
           type="single"
           collapsible
