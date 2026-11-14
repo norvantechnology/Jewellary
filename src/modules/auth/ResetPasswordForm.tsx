@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { FormField } from "@/components/shared/FormField";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { AuthCard, AuthHelpLink } from "@/modules/auth/AuthCard";
 import { resetPasswordSchema, type ResetPasswordInput } from "@/modules/auth/auth.schemas";
 import { authClient } from "@/server/auth-client";
@@ -101,8 +101,7 @@ export function ResetPasswordForm({ token, copy }: ResetPasswordFormProps) {
             error={form.formState.errors.newPassword?.message}
           >
             {(aria) => (
-              <Input
-                type="password"
+              <PasswordInput
                 autoComplete="new-password"
                 {...form.register("newPassword")}
                 {...aria}
@@ -117,8 +116,7 @@ export function ResetPasswordForm({ token, copy }: ResetPasswordFormProps) {
             error={form.formState.errors.confirmPassword?.message}
           >
             {(aria) => (
-              <Input
-                type="password"
+              <PasswordInput
                 autoComplete="new-password"
                 {...form.register("confirmPassword")}
                 {...aria}

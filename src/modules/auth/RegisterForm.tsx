@@ -13,8 +13,9 @@ import { useAbuseProtection } from "@/hooks/use-abuse-protection";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { GoogleAuthButton, OrDivider } from "@/modules/auth/AuthSocial";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { AuthCard, AuthHelpLink } from "@/modules/auth/AuthCard";
 import { registerSchema, type RegisterInput } from "@/modules/auth/auth.schemas";
 import { syncGuestCartOnAuthAction } from "@/modules/cart/cart.actions";
@@ -146,6 +147,13 @@ export function RegisterForm({ nextUrl, googleEnabled, copy }: RegisterFormProps
         </div>
       )}
 
+      {googleEnabled && (
+        <div className="space-y-5">
+          <GoogleAuthButton label={t.google} pending={googlePending} onClick={handleGoogleSignUp} />
+          <OrDivider label={t.or} />
+        </div>
+      )}
+
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <FormField
           id="register-name"
@@ -208,8 +216,7 @@ export function RegisterForm({ nextUrl, googleEnabled, copy }: RegisterFormProps
           error={form.formState.errors.password?.message}
         >
           {(aria) => (
-            <Input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               placeholder={t.passwordPlaceholder}
               {...form.register("password")}
@@ -225,8 +232,7 @@ export function RegisterForm({ nextUrl, googleEnabled, copy }: RegisterFormProps
           error={form.formState.errors.confirmPassword?.message}
         >
           {(aria) => (
-            <Input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               placeholder={t.confirmPlaceholder}
               {...form.register("confirmPassword")}
@@ -283,25 +289,6 @@ export function RegisterForm({ nextUrl, googleEnabled, copy }: RegisterFormProps
           {t.submit}
         </Button>
       </form>
-
-      {googleEnabled && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Separator className="flex-1" />
-            <span className="text-xs tracking-wider text-muted-foreground uppercase">{t.or}</span>
-            <Separator className="flex-1" />
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            loading={googlePending}
-            onClick={handleGoogleSignUp}
-          >
-            {t.google}
-          </Button>
-        </div>
-      )}
     </AuthCard>
   );
 }

@@ -10,7 +10,8 @@ import { toast } from "sonner";
 import { FormField } from "@/components/shared/FormField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { PasswordInput } from "@/components/ui/password-input";
+import { GoogleAuthButton, OrDivider } from "@/modules/auth/AuthSocial";
 import { AuthCard, AuthHelpLink } from "@/modules/auth/AuthCard";
 import { loginSchema, type LoginInput } from "@/modules/auth/auth.schemas";
 import { syncGuestCartOnAuthAction } from "@/modules/cart/cart.actions";
@@ -142,6 +143,13 @@ export function LoginForm({ nextUrl, googleEnabled, copy }: LoginFormProps) {
         </div>
       )}
 
+      {googleEnabled && !twoFactorStep && (
+        <div className="space-y-5">
+          <GoogleAuthButton label={t.google} pending={googlePending} onClick={handleGoogleSignIn} />
+          <OrDivider label={t.or} />
+        </div>
+      )}
+
       {twoFactorStep ? (
         <form onSubmit={handleVerifySecondFactor} className="space-y-4" noValidate>
           <p className="text-sm text-muted-foreground">
@@ -222,8 +230,7 @@ export function LoginForm({ nextUrl, googleEnabled, copy }: LoginFormProps) {
             error={form.formState.errors.password?.message}
           >
             {(aria) => (
-              <Input
-                type="password"
+              <PasswordInput
                 autoComplete="current-password"
                 placeholder={t.passwordPlaceholder}
                 {...form.register("password")}
@@ -248,25 +255,6 @@ export function LoginForm({ nextUrl, googleEnabled, copy }: LoginFormProps) {
             {t.submit}
           </Button>
         </form>
-      )}
-
-      {googleEnabled && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Separator className="flex-1" />
-            <span className="text-xs tracking-wider text-muted-foreground uppercase">{t.or}</span>
-            <Separator className="flex-1" />
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            loading={googlePending}
-            onClick={handleGoogleSignIn}
-          >
-            {t.google}
-          </Button>
-        </div>
       )}
     </AuthCard>
   );
