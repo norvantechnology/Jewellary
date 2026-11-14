@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       title = resolved.category.name;
       subtitle = resolved.category.description || subtitle;
       highlight = fill(copy.shareCountLabel, { count: resolved.category.productCount });
-      photoSrc = resolved.category.imageUrl || photoSrc;
+      photoSrc = resolved.category.ogImageUrl || resolved.category.imageUrl || photoSrc;
     } else if (segments.length >= 2) {
       const facet = await getActiveLandingFacet(
         segments.slice(0, -1).join("/"),

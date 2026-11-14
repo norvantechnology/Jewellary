@@ -3,6 +3,7 @@ import { fill as fillText } from "@/lib/fill-text";
 import { Suspense, cache } from "react";
 import type { Metadata } from "next";
 import { getSiteContent } from "@/modules/site-content/site-content.service";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { connection } from "next/server";
@@ -313,7 +314,12 @@ export async function generateMetadata({
       ? buildCatalogPageHref(basePath, {}, pageNum + 1)
       : undefined;
 
-  const categoryOgFallback = `/api/og/collection?path=${encodeURIComponent(pathStr)}`;
+  // Version the generated card by the chosen image, so a new banner shows in shares (WhatsApp
+  // and others cache previews by URL).
+  const shareSource = cat.ogImageUrl ?? cat.imageUrl ?? "";
+  let shareVersion = 0;
+  for (const ch of shareSource) shareVersion = (shareVersion * 31 + ch.charCodeAt(0)) >>> 0;
+  const categoryOgFallback = `/api/og/collection?path=${encodeURIComponent(pathStr)}&v=${shareVersion.toString(36)}`;
 
   return buildMetadata({
     absoluteTitle: title,
@@ -333,6 +339,7 @@ export async function generateMetadata({
     canonical: cat.canonicalOverride ?? canonicalPath,
     storeName: settings.storeName,
     siteDefaultOgImage: settings.defaultOgImageUrl,
+    shareImage: categoryOgFallback,
     images:
       cat.ogImageUrl || cat.imageUrl
         ? [
@@ -611,6 +618,7 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
     path: basePath,
     products: defaultResult.items,
     currency: settings.currency,
+    image: activeFacet ? null : (resolvedCategory?.imageUrl ?? null),
   });
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(jsonLdBreadcrumbs);
 
@@ -659,6 +667,18 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
         <Breadcrumbs items={breadcrumbs} />
 
         <header className="mt-2 mb-6 border-b border-border pb-6">
+          {resolvedCategory?.imageUrl && !activeFacet ? (
+            <div className="relative mb-5 aspect-[16/7] w-full overflow-hidden rounded-xl bg-surface-2 sm:aspect-[16/5]">
+              <Image
+                src={resolvedCategory.imageUrl}
+                alt={`${resolvedCategory.name} collection`}
+                fill
+                priority
+                sizes="(min-width: 1440px) 1400px, 100vw"
+                className="object-cover"
+              />
+            </div>
+          ) : null}
           <h1 className="type-h1 line-clamp-2 font-display font-semibold break-words text-foreground">
             {activeFacet
               ? activeFacet.h1 || activeFacet.name

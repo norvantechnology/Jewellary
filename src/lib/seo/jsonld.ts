@@ -250,6 +250,7 @@ export function buildCollectionJsonLd(input: {
     totalAvailableStock?: number;
   }>;
   currency: string;
+  image?: string | null;
 }): WithContext<CollectionPage> {
   const listItems: ItemList = {
     "@type": "ItemList",
@@ -272,6 +273,7 @@ export function buildCollectionJsonLd(input: {
     name: input.name,
     description: stripMarkup(input.description),
     url: toAbsoluteUrl(input.path),
+    ...(input.image ? { image: toAbsoluteUrl(input.image) } : {}),
     mainEntity: listItems,
   };
 }

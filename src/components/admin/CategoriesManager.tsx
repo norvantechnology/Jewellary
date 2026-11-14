@@ -46,6 +46,10 @@ interface CategoryFormState {
   parentId: string;
   description: string;
   imageUrl: string;
+  ogImageUrl: string;
+  ogTitle: string;
+  ogDescription: string;
+  seoFaqs: AdminCategoryDTO["seoFaqs"];
   seoTitle: string;
   seoDescription: string;
   seoKeywords: string;
@@ -64,6 +68,10 @@ const emptyForm = (): CategoryFormState => ({
   parentId: "__none__",
   description: "",
   imageUrl: "",
+  ogImageUrl: "",
+  ogTitle: "",
+  ogDescription: "",
+  seoFaqs: [],
   seoTitle: "",
   seoDescription: "",
   seoKeywords: "",
@@ -115,6 +123,10 @@ export function CategoriesManager({
       parentId: cat.parentId ?? "__none__",
       description: cat.description ?? "",
       imageUrl: cat.imageUrl ?? "",
+      ogImageUrl: cat.ogImageUrl ?? "",
+      ogTitle: cat.ogTitle ?? "",
+      ogDescription: cat.ogDescription ?? "",
+      seoFaqs: cat.seoFaqs ?? [],
       seoTitle: cat.seoTitle ?? "",
       seoDescription: cat.seoDescription ?? "",
       seoKeywords: cat.seoKeywords ?? "",
@@ -144,6 +156,11 @@ export function CategoriesManager({
       parentId: form.parentId === "__none__" ? null : form.parentId,
       description: form.description || null,
       imageUrl: form.imageUrl || null,
+      // Sent back unchanged when not edited, so saving never wipes share settings or FAQs.
+      ogImageUrl: form.ogImageUrl || null,
+      ogTitle: form.ogTitle || null,
+      ogDescription: form.ogDescription || null,
+      seoFaqs: form.seoFaqs,
       seoTitle: form.seoTitle || null,
       seoDescription: form.seoDescription || null,
       seoKeywords: form.seoKeywords || null,
@@ -405,11 +422,28 @@ export function CategoriesManager({
             <ImageUploadField
               id="cat-image"
               folder="categories"
-              label="Category Banner Image"
+              label="Banner image"
               currentUrl={form.imageUrl}
               onUrlChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
               onUploaded={(asset) => setForm((f) => ({ ...f, imageUrl: asset.url }))}
             />
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Shown at the top of this category page. Also used for Google and link previews unless
+              a share image is set below. Wide images work best (about 1600 × 500 px).
+            </p>
+
+            <ImageUploadField
+              id="cat-og-image"
+              folder="categories"
+              label="Share image (optional)"
+              currentUrl={form.ogImageUrl}
+              onUrlChange={(url) => setForm((f) => ({ ...f, ogImageUrl: url }))}
+              onUploaded={(asset) => setForm((f) => ({ ...f, ogImageUrl: asset.url }))}
+            />
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Picture shown when the page is shared on WhatsApp, Facebook or X. Best size 1200 × 630
+              px. Leave empty to use the banner image.
+            </p>
 
             <div className="space-y-2 rounded-sm border border-border bg-muted/30 p-3.5">
               <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
