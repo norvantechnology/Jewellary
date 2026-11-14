@@ -135,7 +135,7 @@ export function buildMerchantFeedXml(
             ? "under-1ct"
             : "unspecified";
     const priceTier = baseNum >= 5000 ? "luxury" : baseNum >= 1500 ? "signature" : "essential";
-    const originLabel = product.stoneOrigin || "Certified Diamond";
+    const originLabel = product.stoneOrigin || "Moissanite";
 
     const variants = product.variants.length > 0 ? product.variants : [null];
     const isGrouped = product.variants.length > 1;

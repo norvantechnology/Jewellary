@@ -11,7 +11,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     short_name: name,
     description:
       settings?.tagline ??
-      "Certified diamond engagement rings and fine jewellery crafted in 18K gold and 950 platinum.",
+      "Moissanite and lab-grown diamond jewelry, handmade to order in 925 sterling silver and 10K–18K solid gold.",
     start_url: "/",
     display: "standalone",
     background_color: BRAND_PALETTE.light.bg,

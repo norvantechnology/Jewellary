@@ -121,9 +121,9 @@
     "_comment": "Text used on every page: default SEO, the header menu, the footer and the account area.",
     "seo": {
       "_comment": "Site-wide SEO defaults (src/app/layout.tsx), used when a page has no SEO of its own. titleTemplate wraps every page title: %s = the page title.",
-      "defaultTitle": "Diamond Engagement Rings & Fine Jewelry | {{siteName}}",
+      "defaultTitle": "Moissanite Engagement Rings & Fine Jewelry | {{siteName}}",
       "titleTemplate": "%s | {{siteName}}",
-      "description": "Shop GIA and IGI certified diamond engagement rings, wedding bands and fine jewelry in 18K recycled gold and platinum. Free insured shipping and easy returns."
+      "description": "Shop moissanite and lab-grown diamond engagement rings, wedding bands, earrings and bracelets, handmade to order in sterling silver or solid gold."
     },
     "header": {
       "_comment": "Main menu labels in the desktop header, the Collections drop-down and the mobile menu. Links are fixed; only the labels change.",
@@ -149,7 +149,7 @@
     },
     "footer": {
       "_comment": "Footer text. The Shop column also lists the top 4 categories from the database automatically.",
-      "blurb": "Certified diamond engagement rings and fine jewelry, handmade in 18K recycled gold and platinum.",
+      "blurb": "Moissanite and lab-grown diamond jewelry, handmade to order in 925 sterling silver and 10K–18K solid gold.",
       "copyright": "All rights reserved.",
       "columns": [
         {
@@ -233,36 +233,36 @@
     "seoTemplates": {
       "_comment": "FILE-ONLY. Automatic SEO wording for pages that don't have their own SEO text: products, categories, filtered category pages, guides, the Google Shopping feed, /llms.txt (a summary for AI search tools) and image alt text. Read straight from this file (src/lib/seo/templates.ts, metadata.ts, feeds.ts, images.ts, jsonld.ts and src/app/llms.txt/route.ts), so it is hidden in Admin > Page Content. To override the product and category templates without a redeploy, use Admin > SEO > Templates. Placeholders in {single braces} are filled in by the code; keep them. Titles are cut to 60 characters and descriptions to about 158.",
       "homeTitle": "{brand} | Diamond Engagement Rings & Fine Jewelry",
-      "homeDescription": "Shop GIA certified diamond engagement rings, wedding bands and fine jewelry, handmade in recycled 18K gold and platinum. Free insured shipping.",
+      "homeDescription": "Shop moissanite and lab-grown diamond engagement rings, wedding bands and fine jewelry, handmade to order in sterling silver or solid gold.",
       "_homeTitle": "Backup home page title. {brand} = store name. The home page normally uses Pages > Home > SEO.",
       "productTitle": "{name} – {metal}, {carat}ct {cert} | {brand}",
       "_productTitle": "Product page title when a product has no SEO title of its own, e.g. 'Oval Solitaire – 18K Gold, 1.5ct GIA Certified | Store'. {name} = product name, {metal} = metal, {carat} = total carat weight, {cert} = e.g. 'GIA Certified', {brand} = store name. Empty parts and leftover dashes/commas are removed automatically, so keep this dash-and-comma layout.",
-      "productDescription": "Shop the {name} in {metal} with a {carat}ct {cert} certified diamond ({price}). Free insured shipping and easy returns.",
+      "productDescription": "Shop the {name} in {metal} ({price}). Handmade to order with moissanite or lab-grown diamonds. Custom metals and sizes available.",
       "_productDescription": "Product description when the product has no SEO description. Also uses {price}. Used only when Admin > SEO > Templates is set; otherwise the product's own summary is used.",
-      "collectionTitle": "{collection} – Certified Diamond Jewelry | {brand}",
+      "collectionTitle": "{collection} – Moissanite & Lab-Grown Diamond | {brand}",
       "_collectionTitle": "Category page title, e.g. 'Engagement Rings – Certified Diamond Jewelry | Store'. {collection} = category name. Long titles are shortened to 60 characters by dropping the part after the dash first.",
-      "collectionDescription": "Shop {count} {collection} in 18K gold and platinum ({priceRange}). Certified diamonds, free insured shipping and easy returns.",
+      "collectionDescription": "Shop {count} {collection} ({priceRange}) with moissanite and lab-grown diamonds, handmade to order in sterling silver or 10K–18K solid gold.",
       "_collectionDescription": "Category page description. {count} = number of products, {priceRange} = lowest to highest price.",
       "facetTitle": "{name} – {collection} | {brand}",
       "_facetTitle": "Title for filtered category pages, e.g. 'Oval Engagement Rings'. {name} = the filter (e.g. Oval).",
-      "facetDescription": "Shop {count} {name} {collection} ({priceRange}). GIA and IGI certified diamonds, made to order by {brand}.",
+      "facetDescription": "Shop {count} {name} {collection} ({priceRange}). Moissanite and lab-grown diamond jewelry, handmade to order by {brand}.",
       "guideTitle": "{name} | {brand} Buying Guide",
       "_guideTitle": "Buying guide title when the article has no SEO title. {name} = article title.",
       "guideDescription": "{excerpt} Expert advice from {brand} on diamond certification, metals, ring sizing and jewelry care.",
       "_guideDescription": "{excerpt} = the article summary.",
       "pageTitle": "{name} | {brand}",
-      "pageDescription": "{excerpt} Helpful information from {brand}, sellers of certified diamond jewelry.",
+      "pageDescription": "{excerpt} Helpful information from {brand}, makers of moissanite and lab-grown diamond jewelry.",
       "fallbacks": {
         "_comment": "Words used when a product or category is missing a detail.",
         "price": "price on request",
         "priceRange": "prices on request",
-        "metal": "18K gold and platinum",
-        "cert": "GIA or IGI",
+        "metal": "925 sterling silver or solid gold",
+        "cert": "IGI (on request)",
         "certifiedLabel": "{lab} Certified",
         "_certifiedLabel": "Used in product titles. {lab} = GIA or IGI.",
         "certifiedLower": "{lab} certified",
-        "independentlyCertified": "Independently certified",
-        "productSpecsSuffix": "free insured shipping and {days}-day returns.",
+        "independentlyCertified": "Certificate available on request",
+        "productSpecsSuffix": "handmade to order in 7–10 business days, with {days}-day returns.",
         "_productSpecsSuffix": "End of the automatic product description. {days} = return window from Admin > Settings.",
         "legalName": "{brand} Fine Jewelry",
         "_legalName": "Company name for Google when Admin > Settings has no legal name."
@@ -279,19 +279,19 @@
       },
       "feed": {
         "_comment": "Google Shopping (Merchant Center) feed and the guides RSS feed.",
-        "insuredShipping": "Free insured shipping",
+        "insuredShipping": "Standard shipping",
         "standardShipping": "Standard shipping",
-        "channelDescription": "Certified diamond engagement rings and fine jewelry",
+        "channelDescription": "Moissanite and lab-grown diamond engagement rings and fine jewelry",
         "_channelDescription": "Used when Admin > Settings has no tagline.",
         "guidesTitle": "{brand} Diamond Buying Guides",
         "guidesDescription": "Diamond buying guides, ring size help and jewelry care tips from {brand}."
       },
       "llms": {
         "_comment": "/llms.txt: a plain summary of the store for AI search tools (ChatGPT, Perplexity, Google AI). Shown only when ENABLE_LLMS_TXT is on.",
-        "tagline": "Certified diamond engagement rings and fine jewelry, handmade in recycled 18K gold and platinum.",
+        "tagline": "Moissanite and lab-grown diamond jewelry, handmade to order in 925 sterling silver and 10K–18K solid gold.",
         "_tagline": "Used when Admin > Settings has no tagline.",
         "collectionsHeading": "Jewelry Collections",
-        "collectionFallback": "{name} handmade in 18K gold and platinum.",
+        "collectionFallback": "{name} handmade to order in sterling silver or solid gold.",
         "_collectionFallback": "Used when a category has no description. {name} = category name.",
         "specialtyHeading": "Popular Searches",
         "guidesHeading": "Diamond Buying Guides",
@@ -300,12 +300,12 @@
           {
             "label": "Shop All Jewelry",
             "href": "/collections",
-            "text": "Browse all GIA and IGI certified jewelry, with filters."
+            "text": "Browse all moissanite and lab-grown diamond jewelry, with filters."
           },
           {
             "label": "Shipping and Returns",
             "href": "/shipping-returns",
-            "text": "Free insured shipping, delivery signatures and how returns work."
+            "text": "Shipping times, delivery and how returns work."
           },
           {
             "label": "Ring Size Guide",
@@ -320,7 +320,7 @@
           {
             "label": "FAQ",
             "href": "/faq",
-            "text": "Diamond certification, custom ring timing and resizing."
+            "text": "Moissanite vs lab-grown diamonds, custom orders and ring sizing."
           },
           {
             "label": "About Us",
@@ -340,12 +340,12 @@
     "_comment": "One block per page. 'seo' is the browser-tab title and the Google search description (titles: about 35-45 characters, because ' | Store name' is added; descriptions: 140-160 characters). Other keys are the visible headings and text on that page.",
     "home": {
       "seo": {
-        "title": "Diamond Engagement Rings & Fine Jewelry | {{siteName}}",
-        "description": "Shop GIA certified diamond engagement rings, wedding bands, earrings and necklaces in 18K gold and platinum. Free insured shipping and easy returns."
+        "title": "Moissanite Engagement Rings & Fine Jewelry | {{siteName}}",
+        "description": "Shop moissanite and lab-grown diamond engagement rings, wedding bands, earrings and tennis bracelets, handmade to order in silver or solid gold."
       },
       "hero": {
-        "headline": "Diamond engagement rings, made to last",
-        "subtitle": "Certified diamonds, handmade in 18K recycled gold and platinum. Every ring comes with its GIA or IGI report.",
+        "headline": "Moissanite engagement rings, made for you",
+        "subtitle": "Moissanite and lab-grown diamond rings, handmade to order in 925 sterling silver or 10K, 14K and 18K solid gold.",
         "primaryCta": {
           "label": "Shop engagement rings",
           "href": "/collections"
@@ -361,22 +361,22 @@
           "linkLabel": "See all"
         },
         "featured": {
-          "heading": "Best sellers",
-          "linkLabel": "Shop best sellers"
+          "heading": "Featured pieces",
+          "linkLabel": "Shop featured"
         },
         "newArrivals": {
           "heading": "New arrivals",
           "linkLabel": "Shop new arrivals"
         },
         "guides": {
-          "heading": "Diamond buying guides",
+          "heading": "Buying guides",
           "linkLabel": "All guides",
           "readLabel": "Read the guide"
         }
       },
       "custom": {
         "heading": "Design a custom engagement ring",
-        "text": "Choose your diamond, metal and setting, and our jewelers will make your ring by hand. An expert helps you at every step, free of charge.",
+        "text": "Choose your stone, metal, size and engraving. Our jewelers make it by hand and send you a price before you pay.",
         "primaryCta": {
           "label": "Start your design",
           "href": "/contact?type=BESPOKE"
@@ -388,43 +388,43 @@
         "steps": [
           {
             "title": "1. Pick your diamond",
-            "text": "Choose a certified natural or lab-grown diamond. We check every stone by hand."
+            "text": "Pick moissanite or a lab-grown diamond in the shape and color you love."
           },
           {
             "title": "2. We make your ring",
-            "text": "Handmade in 18K recycled gold or platinum, with secure prong settings."
+            "text": "Handmade to order in 925 sterling silver or 10K, 14K or 18K solid gold in 7–10 business days."
           },
           {
-            "title": "3. Delivered with paperwork",
-            "text": "Your ring arrives with its GIA or IGI grading report and an appraisal for insurance."
+            "title": "3. Delivered to your door",
+            "text": "Your hallmarked piece ships in 7–14 business days, or choose express shipping at checkout."
           }
         ]
       },
       "guarantees": [
         {
-          "title": "Certified diamonds",
-          "text": "Every diamond is graded by GIA or IGI and set in stamped 18K gold or platinum."
+          "title": "Moissanite & lab-grown diamonds",
+          "text": "Conflict-free stones. Our moissanite passes a diamond tester, and every piece is hallmarked."
         },
         {
-          "title": "Free insured shipping",
-          "text": "Fully insured, tracked shipping. A signature is required on delivery."
+          "title": "Handmade to order",
+          "text": "Made for you in 7–10 business days, in sterling silver or solid gold."
         },
         {
           "title": "{{returnWindowDays}}-day returns",
-          "text": "Free resizing, and free returns on unworn pieces."
+          "text": "Return unworn pieces in their original condition within {{returnWindowDays}} days."
         }
       ],
       "_comment": "Home page (/). If an active banner exists in Admin > Banners, it replaces the hero text. Featured products, categories and articles come from the database."
     },
     "collections": {
       "seo": {
-        "title": "Engagement Rings, Earrings & Fine Jewelry",
-        "description": "Shop certified diamond engagement rings, wedding bands, earrings, necklaces and tennis bracelets in 18K gold and platinum. Free insured shipping."
+        "title": "Moissanite & Lab-Grown Diamond Jewelry",
+        "description": "Shop moissanite engagement rings, wedding bands, earrings, necklaces and tennis bracelets, handmade to order in sterling silver or 10K–18K solid gold."
       },
       "heading": "Shop all jewelry",
-      "intro": "Certified diamond engagement rings, wedding bands, earrings, necklaces and bracelets, handmade in 18K gold and platinum.",
+      "intro": "Moissanite and lab-grown diamond rings, earrings, necklaces and bracelets, handmade to order in 925 sterling silver or solid gold.",
       "_comment": "Collection pages (/collections and /collections/<category>). heading and intro show on the 'Shop all' page; category pages use the category's own name and description from the database.",
-      "emptyDescription": "Try changing your carat, metal or price filters, or shop all jewelry.",
+      "emptyDescription": "Try changing your shape, stone or price filters, or shop all jewelry.",
       "_emptyDescription": "Shown when the filters match no products.",
       "aboutHeading": "About this collection",
       "guidesHeading": "Buying guides",
@@ -440,33 +440,33 @@
       "aboutTitle": "How to choose your {category}",
       "aboutFallbackCategory": "fine jewelry",
       "_aboutTitle": "Heading inside 'About this collection'. {category} = the category name in lowercase, or aboutFallbackCategory on the Shop all page.",
-      "aboutText": "Every piece at {storeName} is made in 18K recycled gold or 950 platinum and stamped for metal purity. Diamonds are independently graded by GIA or IGI where applicable. Orders ship fully insured with signature on delivery, and you can return unworn pieces within {days} days.",
+      "aboutText": "Every piece at {storeName} is handmade to order in 925 sterling silver, or in 10K, 14K or 18K solid gold on request, and hallmarked. Our moissanite is conflict-free and passes a diamond tester. Production takes 7–10 business days, and you can return unworn pieces within {days} days.",
       "_aboutText": "Text inside 'About this collection'. {storeName} = store name, {days} = return window from Admin > Settings.",
       "shareCountLabel": "{count} pieces",
       "_shareCountLabel": "Shown on the image people see when a collection link is shared (WhatsApp, Facebook...). {count} = number of products."
     },
     "product": {
       "seo": {
-        "title": "Certified Diamond Jewelry",
-        "description": "Shop GIA and IGI certified diamond jewelry in 18K gold and platinum. Free insured shipping, free resizing and easy returns."
+        "title": "Moissanite & Lab-Grown Diamond Jewelry",
+        "description": "Moissanite and lab-grown diamond jewelry, handmade to order in 925 sterling silver or 10K–18K solid gold. Custom metal, stone, size and engraving."
       },
       "_comment": "Product page (/products/<slug>). Product names, prices, photos and descriptions come from the database. This block holds the fixed section titles and FAQ questions shown under every product.",
       "_seo": "Backup SEO, used only when a product has no SEO title or description of its own (set per product in Admin > Products).",
       "faqHeading": "Questions about this piece",
-      "faqVerifiedQuestion": "Is the diamond certified?",
-      "faqDeliveryQuestion": "How do shipping and returns work?",
-      "faqCustomizeQuestion": "Can I change the ring size or metal?",
+      "faqVerifiedQuestion": "What stone is used, and is there a certificate?",
+      "faqDeliveryQuestion": "How long do making and shipping take?",
+      "faqCustomizeQuestion": "Can I change the metal, stone or ring size?",
       "faqWarrantyQuestion": "What warranty and care do I get?",
       "_faqWarrantyQuestion": "Only shown when the product has warranty text. The answers to all questions are built from the product's own details.",
       "guidesHeading": "Buying guides",
-      "guidesEmptyText": "Read our diamond buying guides to compare the 4Cs (cut, color, clarity and carat) and choose the right metal.",
+      "guidesEmptyText": "Read our buying guides to compare moissanite and lab-grown diamonds, stone shapes and metals.",
       "_guidesEmptyText": "Shown when no guide is linked to this product's category.",
       "relatedHeading": "You may also like"
     },
     "customize": {
       "seo": {
         "title": "Customize Your Ring",
-        "description": "Customize your {{siteName}} ring: choose the metal, diamond and ring size, and our jewelers will make it for you by hand."
+        "description": "Customize your {{siteName}} piece: choose the metal, stone, ring size and engraving, and get a price before our jewelers make it by hand."
       },
       "_comment": "Customize page (/products/<slug>/customize). The options come from the product's customization settings in admin.",
       "unavailableHeading": "Customization isn't available",
@@ -486,7 +486,7 @@
       "_resultsHeading": "Heading shown after a search. Keep {query}.",
       "inputLabel": "Search jewelry",
       "_inputLabel": "Hidden label for screen readers on the search box.",
-      "placeholder": "Try oval ring, platinum or tennis bracelet",
+      "placeholder": "Try oval moissanite ring or tennis bracelet",
       "submitLabel": "Search",
       "suggestionsLabel": "Shop by category:",
       "resultsSrHeading": "Search results",
@@ -522,7 +522,7 @@
     "checkout": {
       "seo": {
         "title": "Checkout",
-        "description": "Secure checkout with free insured shipping."
+        "description": "Secure checkout for your handmade-to-order jewelry."
       },
       "heading": "Secure checkout",
       "_comment": "Checkout page (/checkout): the breadcrumb trail and the page heading.",
@@ -580,7 +580,7 @@
     "contact": {
       "seo": {
         "title": "Contact Our Jewelry Experts",
-        "description": "Questions about engagement rings, custom designs, ring sizing or an order? Contact our jewelry experts. We reply within one business day."
+        "description": "Questions about moissanite engagement rings, custom metals, ring sizing or an order? Contact our jewelers and we'll reply within one business day."
       },
       "heading": "Contact us",
       "intro": "Have a question about a custom ring, ring sizing or your order? Send us a message and our jewelers will reply within one business day.",
@@ -592,11 +592,11 @@
     },
     "guides": {
       "seo": {
-        "title": "Diamond & Engagement Ring Buying Guides",
-        "description": "Free diamond buying guides: the 4Cs, diamond shapes, gold vs. platinum, and how to find your ring size. Simple advice from our jewelers."
+        "title": "Moissanite & Engagement Ring Buying Guides",
+        "description": "Free buying guides: moissanite vs. lab-grown diamonds, stone shapes, sterling silver vs. solid gold, and how to find your ring size."
       },
-      "heading": "Diamond and engagement ring buying guides",
-      "intro": "Simple, expert advice to help you choose a diamond, compare metals and find the right ring size.",
+      "heading": "Moissanite and engagement ring buying guides",
+      "intro": "Simple advice to help you choose a stone, compare metals and find the right ring size.",
       "_comment": "Buying guides list (/guides). The articles come from Admin > Articles.",
       "emptyTitle": "Guides coming soon",
       "emptyDescription": "Our jewelers are writing our first buying guides. Please check back soon.",
@@ -605,14 +605,14 @@
     "guideArticle": {
       "seo": {
         "title": "Diamond Buying Guide",
-        "description": "Expert advice on choosing a diamond and fine jewelry, from the 4Cs (cut, color, clarity, carat) to metals and ring sizing."
+        "description": "Practical advice on moissanite and lab-grown diamonds, stone shapes, metals and ring sizing from our jewelers."
       },
       "_comment": "A single buying guide (/guides/<slug>). The article text comes from Admin > Articles; this block holds the fixed headings around it.",
       "_seo": "Backup SEO, used only when an article has no SEO title or description of its own.",
       "tocHeading": "In this guide",
       "faqHeading": "Common questions",
       "ctaHeading": "Shop the pieces in this guide",
-      "ctaText": "Compare GIA and IGI certified jewelry in our collection, or ask one of our jewelers for advice.",
+      "ctaText": "Browse our moissanite and lab-grown diamond jewelry, or ask one of our jewelers for advice.",
       "ctaPrimaryLabel": "Shop jewelry",
       "ctaSecondaryLabel": "Ask a jeweler",
       "relatedHeading": "Pieces from this guide",
@@ -849,53 +849,53 @@
     "_comment": "Info and legal pages (/about, /faq, ...). 'body' is Markdown: ## Heading, ### Question (FAQ), **bold**, [link](/page). updatedAt shows as 'Last updated'.",
     "about": {
       "seo": {
-        "title": "About Us: Certified Diamond Jewelry",
-        "description": "Meet {{siteName}}: GIA and IGI certified diamond engagement rings and fine jewelry, handmade in recycled 18K gold and platinum to last a lifetime."
+        "title": "About Us: Handmade Moissanite Jewelry",
+        "description": "Meet {{siteName}}: moissanite and lab-grown diamond engagement rings and fine jewelry, handmade to order in sterling silver and 10K–18K solid gold."
       },
       "eyebrow": "Our story",
       "title": "About {{siteName}}",
       "updatedAt": "November 2026",
-      "body": "{{siteName}} makes fine jewelry that is simple, built to last, and honest about what goes into it. Every engagement ring, wedding band, pendant and bracelet is designed so the diamond catches the light and the ring feels comfortable every day.\n\n## Designed with care, made to last\n\nWe take our time with every detail. Prongs, bezels and the setting under the stone are shaped for everyday comfort, and we add extra metal where rings wear the most.\n\n## Are your diamonds certified?\n\nYes. We offer natural, conflict-free diamonds and Type IIa lab-grown diamonds. Each one is graded by an independent lab: the **Gemological Institute of America (GIA)** or the **International Gemological Institute (IGI)**.\n\nYou won't see vague quality ranges. The page for every center stone lists its exact:\n\n- carat weight, color, clarity and cut\n- polish, symmetry and fluorescence\n- lab certificate number\n\n## Recycled 18K gold and platinum\n\nWe use only recycled precious metals: 18K yellow gold, 18K rose gold, 18K white gold and 950 platinum (95% pure platinum). We combine careful hand finishing with precise computer (CAD) design, so every setting is clean, strong and comfortable.\n\n## Expert help and lifetime care\n\nWhether you're buying a ready-to-ship ring or designing your own, our diamond experts are here to help. Email [{{contactEmail}}](mailto:{{contactEmail}}) for:\n\n- a one-on-one video call to see your diamond\n- help with ring sizing and resizing\n- a free yearly ultrasonic cleaning\n"
+      "body": "{{siteName}} makes moissanite and lab-grown diamond jewelry by hand, one order at a time. Every engagement ring, wedding band, pair of earrings, pendant and bracelet is made to order for you.\n\n## Handmade to order\n\nNothing sits on a shelf. Once you order, our jewelers make your piece in 7–10 business days. Every piece is hallmarked for metal purity.\n\n## Moissanite and lab-grown diamonds\n\nMost of our designs use moissanite: colorless (D-E-F) or in colors like champagne, green, blue, yellow and grey. Moissanite is conflict-free, has more fire than a diamond and passes a standard diamond tester. Some designs are also available with lab-grown diamonds.\n\nCertificates are available on request for an additional cost (IGI for lab-grown diamonds).\n\n## Sterling silver or solid gold\n\nEvery design is listed in 925 sterling silver. You can also have it made in 10K, 14K or 18K solid yellow, white or rose gold. Gold and other upgrades are priced on request; we send you a quote before you pay.\n\n## Make it yours\n\nChange the metal, stone color or ring size, or add an engraving. Tap **Customize** on any piece, or email [{{contactEmail}}](mailto:{{contactEmail}})."
     },
     "faq": {
       "seo": {
         "title": "FAQ: Diamonds, Ring Sizing & Returns",
-        "description": "Answers about our certified diamonds, lab-grown vs. natural diamonds, ring resizing, insured shipping and {{returnWindowDays}}-day returns at {{siteName}}."
+        "description": "Answers about moissanite and lab-grown diamonds, certificates, custom metals, ring sizing, making and shipping times and {{returnWindowDays}}-day returns at {{siteName}}."
       },
       "eyebrow": "Help center",
       "title": "Frequently asked questions",
       "updatedAt": "November 2026",
-      "body": "Quick answers about our diamonds, ring sizing, shipping and returns. Can't find your answer? Email [{{contactEmail}}](mailto:{{contactEmail}}) and we'll get back to you.\n\n## Diamonds and certification\n\n### Are your diamonds certified?\n\nYes. Every center stone comes with a GIA or IGI grading report, both printed and digital. The report number matches the tiny laser inscription on the edge (girdle) of the diamond.\n\n### Do you sell lab-grown and natural diamonds?\n\nYes, we sell both. They pass the same quality checks: ideal or excellent cut, eye-clean clarity and no hazy fluorescence. Each product page clearly says whether the diamond is natural or lab-grown.\n\n## Ring sizing, custom designs and orders\n\n### Can I resize my engagement ring after delivery?\n\nMost solitaire and cathedral rings can be resized up or down by one to two US sizes, depending on how many small diamonds (pave) are set in the band. Full eternity bands can't be resized, so please check your size with our [ring size guide](/ring-size-guide) or [contact us](/contact) before you order.\n\n### How long does a custom or made-to-order ring take?\n\nReady-to-ship pieces ship within 1–2 business days. Made-to-order pieces take the time shown on the product page, usually 14–21 days.\n\n## Shipping and returns\n\n### Is my order insured during shipping?\n\nYes. Every order is fully insured until it's delivered. For your security, orders of {{signatureThreshold}} or more need an adult signature on delivery.\n\n### What is your return policy?\n\nYou can return or exchange unworn pieces within {{returnWindowDays}} days of delivery. They must be in their original condition, with the security tag attached and the lab certificate included. Engraved and custom-made pieces can't be returned.\n"
+      "body": "Quick answers about our stones, custom orders, shipping and returns. Can't find your answer? Email [{{contactEmail}}](mailto:{{contactEmail}}) and we'll get back to you.\n\n## Stones and certificates\n\n### What stones do you use?\n\nMost pieces use moissanite, colorless (D-E-F) or in colors like champagne, green, blue and yellow. Some designs are also available with lab-grown diamonds. All our stones are conflict-free, and our moissanite passes a diamond tester.\n\n### Do your pieces come with a certificate?\n\nA certificate is available on request for an additional cost: IGI for lab-grown diamonds, and a moissanite certificate for moissanite pieces. Every piece is hallmarked for metal purity.\n\n## Custom orders and ring sizing\n\n### Can I choose a different metal, stone or size?\n\nYes. Every design is listed in 925 sterling silver, and you can ask for 10K, 14K or 18K solid gold, a different stone color or a custom ring size. Tap **Customize** on the product page and we'll send you a price before you pay. Not sure of your size? See our [ring size guide](/ring-size-guide).\n\n### How long does my order take?\n\nEvery piece is made to order. Making takes 7–10 business days, then standard shipping takes 7–14 business days. Express shipping is available at checkout.\n\n## Shipping and returns\n\n### Do I need to sign for my order?\n\nOrders of {{signatureThreshold}} or more need a signature on delivery. You'll see shipping options and delivery times at checkout, before you pay.\n\n### What is your return policy?\n\nYou can return unworn pieces in their original condition within {{returnWindowDays}} days of delivery. Engraved pieces and custom orders (a different metal, stone or size) can't be returned."
     },
     "care-guide": {
       "seo": {
-        "title": "How to Clean a Diamond Ring at Home",
-        "description": "How to clean a diamond ring at home in 4 easy steps, care for 18K gold and platinum, and store fine jewelry safely so it keeps its sparkle."
+        "title": "How to Clean & Care for Moissanite Jewelry",
+        "description": "How to clean moissanite and lab-grown diamond jewelry at home, care for sterling silver and solid gold, and store your pieces so they keep their sparkle."
       },
       "eyebrow": "Jewelry care",
       "title": "How to clean and care for your jewelry",
       "updatedAt": "November 2026",
-      "body": "The best way to clean a diamond ring at home is a 15-minute soak in warm, soapy water and a gentle brush. Diamonds pick up skin oils, lotion and soap over time, which dulls their sparkle. A few simple habits keep your jewelry looking its best, with no harsh cleaners needed.\n\n## Everyday habits\n\n- Put your jewelry on last, after perfume, hair products, sunscreen and hand lotion.\n- Take your rings off before working out, gardening, swimming in a pool or cleaning with bleach.\n- Store each piece separately in a soft, fabric-lined box so diamonds can't scratch your gold jewelry.\n\n## How do I clean my diamond ring at home?\n\n1. Fill a small bowl with warm (not hot) water and add two drops of mild, unscented dish soap.\n2. Soak your jewelry for 15 minutes to loosen dirt behind and under the stones.\n3. Gently brush around the prongs and setting with a soft baby toothbrush.\n4. Rinse under warm running water (close the drain first!), then pat dry with a lint-free microfiber cloth.\n\n## How often should I have my ring checked?\n\nHave the prongs on your rings checked once a year, especially an engagement ring you wear every day. We inspect and ultrasonically clean your jewelry for free. Email [{{contactEmail}}](mailto:{{contactEmail}}) to drop it off or ask for an insured shipping kit.\n"
+      "body": "Moissanite and lab-grown diamonds stay bright for years with a little care. Lotion, soap and skin oils can dull the sparkle over time, so a gentle clean now and then keeps your jewelry looking its best.\n\n## Everyday habits\n\n- Take your jewelry off before showers, skincare, workouts and swimming pools.\n- Keep it away from oils, perfumes and chemical dyes.\n- Store each piece in a soft pouch or on a flat surface so stones can't scratch other jewelry.\n\n## How do I clean my ring at home?\n\n1. Fill a small bowl with warm water and add a few drops of mild soap.\n2. Let your jewelry soak for a few minutes.\n3. Gently brush around the stone and setting with a soft brush.\n4. Rinse with warm water and pat dry with a soft cloth.\n\n## Need help?\n\nHave a question about caring for your piece? Email [{{contactEmail}}](mailto:{{contactEmail}})."
     },
     "ring-size-guide": {
       "seo": {
         "title": "Ring Size Chart: How to Find Your Size",
-        "description": "Find your ring size at home in minutes. Measure a ring you already own and use our ring size chart to convert US, UK, AU and EU sizes."
+        "description": "Find your ring size at home in minutes. Measure a ring you own and match it to our US, UK and EU size chart. We make sizes 3 to 10¾, custom on request."
       },
       "eyebrow": "Find your fit",
       "title": "Ring size guide: how to find your ring size",
       "updatedAt": "November 2026",
-      "body": "The easiest way to find your ring size at home is to measure the inside of a ring that already fits, then match it to the chart below. A ring that fits well slides over your knuckle with a little resistance and doesn't spin once it's on.\n\n## Tips for an accurate measurement\n\nYour finger size changes a little with temperature and time of day, so:\n\n- Measure at the end of the day, when your fingers are warm.\n- Don't measure right after exercise or when you're cold.\n- Wide bands (4 mm or wider) feel tighter than thin ones. For a wide band, go up a quarter to half a size.\n\n## How do I measure a ring I already own?\n\nTake a ring that fits the same finger well. Lay it on a ruler and measure the **inside diameter**, from inside edge to inside edge (don't include the metal). Then find your size in the ring size chart.\n\n| Inside diameter | Circumference | US / CA size | UK / AU size | EU size |\n| --------------- | ------------- | ------------ | ------------ | ------- |\n| 14.9 mm         | 46.8 mm       | 4            | H            | 47      |\n| 15.7 mm         | 49.3 mm       | 5            | J 1/2        | 49      |\n| 16.5 mm         | 51.9 mm       | 6            | L 1/2        | 52      |\n| 17.3 mm         | 54.4 mm       | 7            | N 1/2        | 54      |\n| 18.1 mm         | 57.0 mm       | 8            | P 1/2        | 57      |\n| 19.0 mm         | 59.5 mm       | 9            | R 1/2        | 59      |\n\n## Not sure of your size?\n\nEmail us at [{{contactEmail}}](mailto:{{contactEmail}}) and we'll help you choose the closest half or quarter size before your ring is made.\n"
+      "body": "The easiest way to find your ring size at home is to measure the inside of a ring that already fits, then match it to the chart below. A ring that fits well slides over your knuckle with a little resistance and doesn't spin once it's on.\n\n## Tips for an accurate measurement\n\nYour finger size changes a little with temperature and time of day, so:\n\n- Measure at the end of the day, when your fingers are warm.\n- Don't measure right after exercise or when you're cold.\n- Wide bands (4 mm or wider) feel tighter than thin ones. For a wide band, go up a quarter to half a size.\n\n## How do I measure a ring I already own?\n\nTake a ring that fits the same finger well. Lay it on a ruler and measure the **inside diameter**, from inside edge to inside edge (don't include the metal). Then find your size in the ring size chart.\n\n| Inside diameter | Circumference | US / CA size | UK / AU size | EU size |\n| --------------- | ------------- | ------------ | ------------ | ------- |\n| 14.1 mm         | 44.2 mm       | 3            | F            | 44      |\n| 14.9 mm         | 46.8 mm       | 4            | H            | 47      |\n| 15.7 mm         | 49.3 mm       | 5            | J 1/2        | 49      |\n| 16.5 mm         | 51.9 mm       | 6            | L 1/2        | 52      |\n| 17.3 mm         | 54.4 mm       | 7            | N 1/2        | 54      |\n| 18.1 mm         | 57.0 mm       | 8            | P 1/2        | 57      |\n| 19.0 mm         | 59.5 mm       | 9            | R 1/2        | 59      |\n| 19.8 mm         | 62.1 mm       | 10           | T 1/2        | 62      |\n\n## Which sizes do you make?\n\nWe make US sizes 3 to 10¾ in quarter sizes. Need a different size? Custom sizes are available on request — tap **Customize** on the product page.\n\n## Not sure of your size?\n\nEmail us at [{{contactEmail}}](mailto:{{contactEmail}}) and we'll help you choose the closest half or quarter size before your ring is made.\n"
     },
     "shipping-returns": {
       "seo": {
-        "title": "Shipping & Returns: Free Insured Shipping",
-        "description": "Free insured shipping on orders over {{freeShippingThreshold}}, discreet packaging and easy {{returnWindowDays}}-day returns on unworn jewelry from {{siteName}}."
+        "title": "Shipping & Returns: Delivery Times",
+        "description": "Every piece is handmade to order in 7–10 business days, then ships in 7–14 business days. Express shipping at checkout and {{returnWindowDays}}-day returns."
       },
       "eyebrow": "Shipping and returns",
       "title": "Shipping & returns",
       "updatedAt": "November 2026",
-      "body": "Every order is fully insured and sent by express shipping in plain, unbranded packaging. If something isn't right, you have {{returnWindowDays}} days to return it.\n\n## Insured shipping\n\n- **Free shipping:** orders over {{freeShippingThreshold}} get free insured express shipping within the country.\n- **Signature required:** orders of {{signatureThreshold}} or more need an adult signature. The carrier can't leave them at your door or in a package locker.\n- **When it ships:** in-stock pieces ship within 1–2 business days. Made-to-order pieces show how long they take on the product page.\n\n## International shipping\n\nWe ship insured packages to the United States, Canada, the United Kingdom, Australia and India. You'll see shipping options and estimated delivery times at checkout, before you pay.\n\n## {{returnWindowDays}}-day returns\n\nChanged your mind? You can return unworn pieces within **{{returnWindowDays}} days** of delivery. Please include:\n\n- the original gift box\n- the security tag, still attached\n- the original GIA or IGI lab report\n\n**How to return:** email [{{contactEmail}}](mailto:{{contactEmail}}) with your order number. We'll send you an insured return label and packing instructions.\n\n**What can't be returned:** custom-made pieces, rings made in non-standard sizes and engraved bands.\n"
+      "body": "Every piece is made to order. Here's how long it takes and how returns work.\n\n## Making and shipping times\n\n- **Making your piece:** 7–10 business days.\n- **Standard shipping:** 7–14 business days after your piece is made.\n- **Express shipping:** available at checkout.\n- **Free shipping:** orders over {{freeShippingThreshold}} ship free.\n- **Signature required:** orders of {{signatureThreshold}} or more need a signature on delivery.\n\nYou'll see your shipping options and costs at checkout, before you pay.\n\n## {{returnWindowDays}}-day returns\n\nYou can return unworn pieces within **{{returnWindowDays}} days** of delivery, in their original condition and packaging.\n\n**How to return:** email [{{contactEmail}}](mailto:{{contactEmail}}) with your order number and we'll send you instructions.\n\n**What can't be returned:** engraved pieces and custom orders (made in a different metal, stone or size)."
     },
     "privacy": {
       "seo": {
@@ -910,12 +910,12 @@
     "terms": {
       "seo": {
         "title": "Terms of Service",
-        "description": "The terms for buying from {{siteName}}: pricing, custom orders, diamond descriptions, insured shipping, delivery signatures and returns."
+        "description": "The terms for buying from {{siteName}}: prices, made-to-order and custom pieces, stone and metal descriptions, delivery and returns."
       },
       "eyebrow": "Legal",
       "title": "Terms of service",
       "updatedAt": "November 2026",
-      "body": "These terms apply to every purchase from {{siteName}}. Please read them before you order.\n\n## Prices, stock and accepting your order\n\n- Prices are confirmed by our system at checkout.\n- When you start to pay, we hold the item for you while your payment provider approves the payment.\n- If an order is affected by an obvious pricing or typing error, we may cancel or refund it before it ships.\n\n## Diamond and metal descriptions\n\nTotal carat weights and metal weights are accurate within standard industry tolerances. Natural inclusions and small characteristics shown on the GIA or IGI certificate are part of what makes each stone unique.\n\n## Delivery and signatures\n\nEvery shipment is insured by {{siteName}} until it's delivered and signed for at the address you gave us. Orders of {{signatureThreshold}} or more must be signed for by an adult.\n\n## Returns and care\n\nYou can return eligible unworn pieces within {{returnWindowDays}} days, as explained in our [shipping and returns policy](/shipping-returns). Our free care service doesn't cover damage from knocks or impacts, changes made by other jewelers, or prongs that haven't been maintained.\n\nQuestions about these terms? Email [{{contactEmail}}](mailto:{{contactEmail}}).\n"
+      "body": "These terms apply to every purchase from {{siteName}}. Please read them before you order.\n\n## Prices, stock and accepting your order\n\n- Prices are confirmed by our system at checkout.\n- When you start to pay, we hold the item for you while your payment provider approves the payment.\n- If an order is affected by an obvious pricing or typing error, we may cancel or refund it before it ships.\n\n## Stone and metal descriptions\n\nOur pieces use moissanite or lab-grown diamonds, as stated on each product page. Carat weights for moissanite are diamond-equivalent weights (DEW) and, like metal weights, are approximate. Certificates are available on request for an additional cost.\n\n## Delivery and signatures\n\nEvery piece is made to order, then shipped to the address you gave us. Orders of {{signatureThreshold}} or more must be signed for on delivery.\n\n## Returns and care\n\nYou can return eligible unworn pieces within {{returnWindowDays}} days, as explained in our [shipping and returns policy](/shipping-returns).\n\nQuestions about these terms? Email [{{contactEmail}}](mailto:{{contactEmail}}).\n"
     }
   },
   "ui": {
@@ -977,7 +977,7 @@
         },
         "SHIPPED": {
           "label": "Shipped",
-          "description": "On its way with insured shipping. Someone will need to sign for it."
+          "description": "Your order is on its way."
         },
         "DELIVERED": {
           "label": "Delivered",
@@ -1043,7 +1043,7 @@
         "inProgress": "In progress",
         "pending": "Pending",
         "shipping": "Shipping",
-        "defaultCarrier": "Insured shipping",
+        "defaultCarrier": "Standard shipping",
         "trackShipment": "Track delivery",
         "items": "Items",
         "sku": "SKU {sku}",
@@ -1260,8 +1260,8 @@
       "ringSizeGuide": "Ring size guide",
       "optionsAria": "Product options",
       "outOfStock": "Out of stock",
-      "inStock": "In stock",
-      "inStockShips": "In stock · ships in 1–2 days",
+      "inStock": "Made to order",
+      "inStockShips": "Made to order · ships after 7–10 business days",
       "quantity": "Quantity",
       "addingToBag": "Adding…",
       "added": "Added to cart ✓",
@@ -1274,7 +1274,7 @@
       "askExpert": "Ask an expert",
       "detailsHeading": "Details and specifications",
       "specsHeading": "Specifications",
-      "craftedNote": "Handmade in small batches. Every piece is stamped for metal purity.",
+      "craftedNote": "Handmade to order. Every piece is hallmarked for metal purity.",
       "certificationHeading": "Certification",
       "viewLabReport": "View certificate",
       "shippingHeading": "Delivery and returns",
@@ -1283,11 +1283,11 @@
       "specs": {
         "metal": "Metal",
         "metalWeight": "Metal weight (approx.)",
-        "stoneOrigin": "Stone origin",
+        "stoneOrigin": "Stone",
         "cutShape": "Shape",
         "caratTotal": "Total carat weight",
         "caratCenter": "Center stone carat",
-        "colourGrade": "Color grade",
+        "colourGrade": "Stone color",
         "clarityGrade": "Clarity grade",
         "cutGrade": "Cut grade",
         "polishSymmetry": "Polish and symmetry",
@@ -1305,7 +1305,16 @@
         "lightboxPrevious": "Previous",
         "lightboxNext": "Next",
         "viewImage": "View image {number}: {alt}",
-        "_comment": "Product image gallery and full-screen viewer (button labels and screen-reader text)."
+        "_comment": "Product image gallery and full-screen viewer (button labels and screen-reader text).",
+        "counter": "{current} of {total}",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "zoomReset": "Reset zoom",
+        "zoomHintDesktop": "Click or scroll to zoom · drag to move",
+        "zoomHintTouch": "Pinch or double-tap to zoom",
+        "hoverHint": "Hover to zoom · click for full screen",
+        "_zoomHintDesktop": "Hint in the full-screen photo viewer on computers.",
+        "_zoomHintTouch": "Hint in the full-screen photo viewer on phones and tablets."
       },
       "recentlyViewed": "Recently viewed",
       "enquiry": {
@@ -1323,14 +1332,14 @@
       "leadTimeSuffix": " in about {days} days",
       "addedToast": "{name} ({variant}) added to your cart.",
       "_addedToast": "Pop-up message after Add to Cart. {name} = product, {variant} = chosen option.",
-      "certifiedText": "Comes with its official {lab} grading certificate{certificate}, a metal purity stamp{purity} and a tiny laser inscription on the diamond so you can check it's the real one.",
+      "certifiedText": "A {lab} certificate{certificate} is available on request. Every piece is hallmarked{purity}.",
       "_certifiedText": "Certification section when the product has a lab certificate. {lab} = lab name; {certificate} = ' (#number)'; {purity} = ' (18K)' or empty.",
-      "hallmarkedText": "Made in recycled {metal}{purity}, stamped for metal purity and checked by our experts under 10× magnification.",
+      "hallmarkedText": "Made in {metal}{purity} and hallmarked for metal purity.",
       "_hallmarkedText": "Certification section for products without a lab certificate.",
       "defaultMetal": "precious metal",
-      "freeShippingText": "Free insured delivery on orders over {amount}. ",
-      "signatureText": "Orders over {amount} are sent insured and need a signature on delivery.",
-      "returnsText": "Free resizing and free returns on unworn pieces within {days} days of delivery.",
+      "freeShippingText": "Free shipping on orders over {amount}. ",
+      "signatureText": "Orders over {amount} need a signature on delivery.",
+      "returnsText": "Return unworn pieces within {days} days of delivery. Engraved and custom orders can't be returned.",
       "sizeGuide": {
         "title": "Ring size guide",
         "description": "Measure the inside of a ring that fits you, edge to edge, or wrap a strip of paper around your finger. Measure at room temperature for the best fit.",
@@ -1341,7 +1350,11 @@
         "fullGuide": "See the full sizing guide",
         "_comment": "'Ring Size Guide' drawer opened from the product option picker."
       },
-      "_comment": "Product detail page (/products/...): option picker, stock messages, Add to Cart / Buy Now buttons, Details/Certification/Shipping sections, image gallery, size-guide drawer and inquiry pop-up. Placeholders in {braces} are filled by the code."
+      "_comment": "Product detail page (/products/...): option picker, stock messages, Add to Cart / Buy Now buttons, Details/Certification/Shipping sections, image gallery, size-guide drawer and inquiry pop-up. Placeholders in {braces} are filled by the code.",
+      "sizeLabel": "Ring size (US)",
+      "sizeAria": "US size {size}",
+      "sizeOnlyMetal": "{metal} · {stone}. Choose your ring size.",
+      "_sizeOnlyMetal": "Shown above the size buttons. {metal} and {stone} come from the product."
     },
     "productCard": {
       "enquire": "Ask us",
@@ -1453,7 +1466,7 @@
       "drawer": {
         "_comment": "Slide-out shopping cart drawer.",
         "title": "Your cart ({count})",
-        "subtitle": "Free insured delivery on every order.",
+        "subtitle": "Every piece is handmade to order for you.",
         "liveEmpty": "Your cart is empty.",
         "liveSummary": "Your cart has {count} {items}, subtotal {subtotal}.",
         "liveUpdated": "Cart updated: {count} {items}, subtotal {subtotal}.",
@@ -1461,9 +1474,9 @@
         "removedToast": "{name} removed from cart.",
         "liveRemovedEmpty": "{name} removed. Your cart is now empty.",
         "liveRemoved": "{name} removed. {count} {items} remaining, subtotal {subtotal}.",
-        "freeShippingRemaining": "Spend {amount} more for free insured delivery",
-        "freeShippingUnlocked": "You've got free insured delivery",
-        "freeShippingProgressAria": "Progress towards free insured delivery",
+        "freeShippingRemaining": "Spend {amount} more for free shipping",
+        "freeShippingUnlocked": "You've got free shipping",
+        "freeShippingProgressAria": "Progress towards free shipping",
         "emptyTitle": "Your cart is empty",
         "emptyText": "Find something you love — from diamond engagement rings to everyday gold jewelry.",
         "emptyAction": "Shop jewelry",
@@ -1484,7 +1497,7 @@
         "removedToast": "{name} removed from your cart.",
         "savedToast": "{name} moved to your wishlist.",
         "emptyTitle": "Your cart is empty",
-        "emptyDescription": "Browse our certified diamond rings, earrings, necklaces and more — every piece ships insured.",
+        "emptyDescription": "Browse our moissanite rings, earrings, necklaces and bracelets — every piece is handmade to order.",
         "emptyAction": "Shop jewelry",
         "pricesUpdated": "Some prices in your cart have changed since you added them.",
         "stockChanged": "Some items in your cart are no longer available in the quantity you chose. Please update them to continue.",
@@ -1495,13 +1508,13 @@
         "saveForLater": "Save for later",
         "remove": "Remove",
         "summaryHeading": "Order summary",
-        "freeShippingQualified": "You've got free insured delivery",
+        "freeShippingQualified": "You've got free shipping",
         "freeShippingAddBefore": "Spend",
-        "freeShippingAddAfter": "more for free insured delivery",
+        "freeShippingAddAfter": "more for free shipping",
         "_freeShippingAddBefore": "Shown as: [Add] [amount] [more for ...].",
         "estimateDestination": "Delivering to",
         "itemsLabel": "Items ({count})",
-        "deliveryLabel": "Insured delivery",
+        "deliveryLabel": "Delivery",
         "calculating": "Calculating…",
         "complimentary": "Free",
         "calculatedAtCheckout": "Calculated at checkout",
@@ -1556,7 +1569,7 @@
         "mobileToggle": "Show order summary ({count})",
         "qty": "{variant} · Qty {quantity}",
         "subtotal": "Subtotal",
-        "shippingFallback": "Insured delivery",
+        "shippingFallback": "Shipping",
         "calculating": "Calculating…",
         "selectCountry": "Select country",
         "complimentary": "Free",
@@ -1568,7 +1581,7 @@
         "baseChargeBefore": "Payments are processed in {base}. You'll be charged",
         "baseChargeAfter": "; the {currency} amounts are approximate.",
         "_baseChargeBefore": "Shown as: [before] [charged amount] [after].",
-        "signatureNote": "Fully insured delivery in tamper-proof packaging. A signature is needed on delivery."
+        "signatureNote": "Securely packed. Orders over the signature limit need a signature on delivery."
       },
       "address": {
         "_comment": "Delivery and billing address form fields.",
@@ -1613,7 +1626,7 @@
         "_comment": "Step 3: choose a shipping option and add optional notes.",
         "heading": "Delivery method",
         "ariaLabel": "Delivery method",
-        "insured": "Insured",
+        "insured": "Shipping",
         "dispatchWindow": "Ships in {min}–{max} business days",
         "complimentary": "Free",
         "showNotes": "+ Add a gift message or delivery note",
@@ -1677,7 +1690,7 @@
         "emailLabel": "Email address",
         "nameLabel": "Full name",
         "phoneLabel": "Phone number",
-        "phoneHint": "We only use this to arrange insured delivery.",
+        "phoneHint": "We only use this to arrange delivery.",
         "phonePlaceholder": "+1 555 234 5678",
         "saveProfile": "Save changes",
         "profileSavedToast": "Details saved",
@@ -1778,7 +1791,7 @@
         "deleteAria": "Delete address {name}",
         "addTitle": "Add a delivery address",
         "editTitle": "Edit address",
-        "dialogText": "Use the recipient's full name and phone number. Our delivery partner needs them for insured delivery.",
+        "dialogText": "Use the recipient's full name and phone number. Our delivery partner needs them to deliver your order.",
         "presetAria": "Address label preset",
         "customLabel": "Label (optional)",
         "customLabelPlaceholder": "e.g. Mom's house, Office",
@@ -1916,9 +1929,9 @@
         "groupLabels": {
           "metal": "Metal",
           "certification": "Certification",
-          "shape": "Diamond shape",
-          "origin": "Diamond origin",
-          "color": "Color grade",
+          "shape": "Stone shape",
+          "origin": "Stone type",
+          "color": "Stone color",
           "clarity": "Clarity"
         },
         "_groupLabels": "Titles of the filter groups. Keys are fixed; the order here is the order of the active-filter chips.",
@@ -2048,7 +2061,7 @@
       "topics": {
         "BESPOKE": "Custom design or engagement ring",
         "PRODUCT": "Questions about a piece or an appointment",
-        "GENERAL": "Resizing, care or general help"
+        "GENERAL": "Sizing, care or general help"
       },
       "_topics": "Options in the 'Inquiry Topic' dropdown. Keys are fixed codes.",
       "productMessage": "I'd like more details about {product}.",

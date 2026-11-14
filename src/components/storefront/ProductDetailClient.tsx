@@ -151,6 +151,18 @@ export function ProductDetailClient({
 
   const selectedVariant =
     product.variants.find((v) => v.id === selectedVariantId) ?? initialVariant;
+  // Rings whose variants only differ by size: show compact size chips instead of long cards.
+  const sizeOnly =
+    product.variants.length > 1 &&
+    product.variants.every((v) => v.size) &&
+    new Set(product.variants.map((v) => `${v.metal ?? ""}|${v.stoneSpec ?? ""}`)).size === 1;
+  const sizeValue = (size: string | null) => {
+    const m = (size ?? "").match(/(\d+(?:\.\d+)?)(?:\s+(\d)\/(\d))?/);
+    return m ? Number(m[1]) + (m[2] ? Number(m[2]) / Number(m[3]) : 0) : 0;
+  };
+  const sizeVariants = sizeOnly
+    ? [...product.variants].sort((a, b) => sizeValue(a.size) - sizeValue(b.size))
+    : product.variants;
 
   useFlipIndicator(variantGroupRef, selectedVariant?.id ?? null, reducedMotion);
 
@@ -336,52 +348,96 @@ export function ProductDetailClient({
             )}
           </div>
 
-          <div
-            ref={variantGroupRef}
-            role="radiogroup"
-            aria-label={ui.product.optionsAria}
-            className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
-          >
-            {product.variants.map((variant) => {
-              const selected = variant.id === selectedVariant?.id;
-              const outOfStock = variant.availableStock <= 0;
-              return (
-                <button
-                  key={variant.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => setSelectedVariantId(variant.id)}
-                  className={cn(
-                    "transition-ui relative flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-                    selected
-                      ? "border-transparent text-text"
-                      : "border-border bg-surface text-text hover:border-border-strong",
-                    outOfStock && !selected ? "opacity-70" : "",
-                  )}
-                >
-                  {selected ? (
-                    <span
-                      data-ma-indicator="true"
-                      aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 rounded-lg border-[1.5px] border-accent bg-accent-tint ring-1 ring-accent"
-                    />
-                  ) : null}
-                  <div className="relative z-10 min-w-0">
-                    <span className="block truncate text-sm font-medium">{variant.title}</span>
-                    {variant.stoneSpec && (
-                      <span className="block truncate text-xs text-text-muted">
-                        {variant.stoneSpec}
-                      </span>
+          {sizeOnly ? (
+            <div>
+              <p className="mb-2.5 text-xs text-text-muted">
+                {fill(ui.product.sizeOnlyMetal, {
+                  metal: selectedVariant?.metal ?? "",
+                  stone: selectedVariant?.stoneSpec ?? "",
+                })}
+              </p>
+              <div
+                ref={variantGroupRef}
+                role="radiogroup"
+                aria-label={ui.product.sizeLabel}
+                className="grid grid-cols-6 gap-2 sm:grid-cols-8"
+              >
+                {sizeVariants.map((variant) => {
+                  const selected = variant.id === selectedVariant?.id;
+                  const label = (variant.size ?? "")
+                    .replace(/^US\s*/i, "")
+                    .replace(/\s*1\/4$/, "¼")
+                    .replace(/\s*1\/2$/, "½")
+                    .replace(/\s*3\/4$/, "¾");
+                  return (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      aria-label={fill(ui.product.sizeAria, { size: label })}
+                      onClick={() => setSelectedVariantId(variant.id)}
+                      className={cn(
+                        "transition-ui relative flex min-h-11 cursor-pointer items-center justify-center rounded-lg border px-1 text-sm font-medium tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                        selected
+                          ? "border-accent bg-accent-tint text-text ring-1 ring-accent"
+                          : "border-border bg-surface text-text hover:border-border-strong",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div
+              ref={variantGroupRef}
+              role="radiogroup"
+              aria-label={ui.product.optionsAria}
+              className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
+            >
+              {product.variants.map((variant) => {
+                const selected = variant.id === selectedVariant?.id;
+                const outOfStock = variant.availableStock <= 0;
+                return (
+                  <button
+                    key={variant.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setSelectedVariantId(variant.id)}
+                    className={cn(
+                      "transition-ui relative flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                      selected
+                        ? "border-transparent text-text"
+                        : "border-border bg-surface text-text hover:border-border-strong",
+                      outOfStock && !selected ? "opacity-70" : "",
                     )}
-                  </div>
-                  <span className="tabular-nums-price relative z-10 shrink-0 text-xs text-text-muted">
-                    {outOfStock ? ui.product.outOfStock : ui.product.inStock}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                  >
+                    {selected ? (
+                      <span
+                        data-ma-indicator="true"
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 rounded-lg border-[1.5px] border-accent bg-accent-tint ring-1 ring-accent"
+                      />
+                    ) : null}
+                    <div className="relative z-10 min-w-0">
+                      <span className="block truncate text-sm font-medium">{variant.title}</span>
+                      {variant.stoneSpec && (
+                        <span className="block truncate text-xs text-text-muted">
+                          {variant.stoneSpec}
+                        </span>
+                      )}
+                    </div>
+                    <span className="tabular-nums-price relative z-10 shrink-0 text-xs text-text-muted">
+                      {outOfStock ? ui.product.outOfStock : ui.product.inStock}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

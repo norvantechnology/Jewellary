@@ -178,19 +178,19 @@ async function ProductPageBody({ params }: ProductPageProps) {
     .slice(0, 3);
 
   const deliveryLabel = settings.freeShippingThreshold
-    ? `Complimentary insured express delivery applies from ${formatMoney(settings.freeShippingThreshold, settings.currency)}, with adult signature required at or above ${formatMoney(settings.signatureThreshold, settings.currency)}.`
-    : `Every parcel travels fully insured with adult signature confirmation from ${formatMoney(settings.signatureThreshold, settings.currency)}.`;
+    ? `Every piece is made to order in 7–10 business days, then standard shipping takes 7–14 business days (express available at checkout). Free shipping on orders over ${formatMoney(settings.freeShippingThreshold, settings.currency)}; orders of ${formatMoney(settings.signatureThreshold, settings.currency)} or more need a signature.`
+    : `Every piece is made to order in 7–10 business days, then standard shipping takes 7–14 business days (express available at checkout). Orders of ${formatMoney(settings.signatureThreshold, settings.currency)} or more need a signature.`;
 
   const certFaqAnswer = product.certificationLab
-    ? `This creation is accompanied by its ${product.certificationLab} grading dossier${product.certificateNumber ? ` (#${product.certificateNumber})` : ""}, stamped metal purity mark${product.metalPurity ? ` (${product.metalPurity})` : ""}, and laser girdle inscription verification.`
-    : `Crafted in solid recycled ${product.metalType ?? "precious metal"}${product.metalPurity ? ` (${product.metalPurity})` : ""} and individually inspected under 10× magnification before dispatch.`;
+    ? `A ${product.certificationLab} certificate${product.certificateNumber ? ` (#${product.certificateNumber})` : ""} is available for this piece, and it is hallmarked for metal purity${product.metalPurity ? ` (${product.metalPurity})` : ""}.`
+    : `${product.stoneOrigin ? `The stone is ${product.stoneOrigin.toLowerCase()}. ` : ""}Handmade to order in ${product.metalType ?? "precious metal"} and hallmarked for metal purity. A certificate is available on request for an additional cost.`;
 
   const customFaqs = product.seoFaqs ?? [];
   const combinedFaqs = [
-    { question: "How are the diamonds and precious metals verified?", answer: certFaqAnswer },
+    { question: "What stone and metal is this piece made with?", answer: certFaqAnswer },
     {
-      question: "What are the insured delivery and return terms?",
-      answer: `${deliveryLabel} Eligible unworn pieces may be returned within ${settings.returnWindowDays} days of delivery.`,
+      question: "How long do making, shipping and returns take?",
+      answer: `${deliveryLabel} Unworn pieces may be returned within ${settings.returnWindowDays} days of delivery.`,
     },
     ...(product.warrantyText
       ? [
@@ -226,12 +226,12 @@ async function ProductPageBody({ params }: ProductPageProps) {
       <Container>
         <Breadcrumbs items={breadcrumbs} compactOnMobile />
 
-        <div className="mt-4 grid items-start gap-8 lg:grid-cols-12 lg:gap-12">
-          <div className="lg:col-span-6">
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-8 lg:grid-cols-12 lg:gap-12">
+          <div className="min-w-0 lg:col-span-6">
             <ProductGallery images={product.images} productName={product.name} />
           </div>
 
-          <div className="lg:sticky lg:top-24 lg:col-span-6">
+          <div className="min-w-0 lg:sticky lg:top-24 lg:col-span-6">
             <ProductDetailClient
               product={product}
               currency={settings.currency}
@@ -243,7 +243,7 @@ async function ProductPageBody({ params }: ProductPageProps) {
         </div>
 
         {/* Piece Questions & Gemology References (AEO + Internal Linking) */}
-        <section className="mt-10 grid gap-8 border-t border-border pt-12 sm:mt-16 lg:grid-cols-12">
+        <section className="mt-10 grid grid-cols-[minmax(0,1fr)] gap-8 border-t border-border pt-12 sm:mt-16 lg:grid-cols-12">
           <div className="space-y-4 lg:col-span-7">
             <Reveal>
               <h2 className="type-h2 font-display font-semibold text-foreground">
@@ -261,8 +261,8 @@ async function ProductPageBody({ params }: ProductPageProps) {
                 </AccordionTrigger>
                 <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
                   {product.certificationLab
-                    ? `This creation is accompanied by its ${product.certificationLab} grading dossier${product.certificateNumber ? ` (#${product.certificateNumber})` : ""}, stamped metal purity mark${product.metalPurity ? ` (${product.metalPurity})` : ""}, and laser girdle inscription verification.`
-                    : `Crafted in solid recycled ${product.metalType ?? "precious metal"}${product.metalPurity ? ` (${product.metalPurity})` : ""} and individually inspected under 10× magnification before dispatch.`}
+                    ? `A ${product.certificationLab} certificate${product.certificateNumber ? ` (#${product.certificateNumber})` : ""} is available for this piece, and it is hallmarked for metal purity${product.metalPurity ? ` (${product.metalPurity})` : ""}.`
+                    : `${product.stoneOrigin ? `The stone is ${product.stoneOrigin.toLowerCase()}. ` : ""}Handmade to order in ${product.metalType ?? "precious metal"} and hallmarked for metal purity. A certificate is available on request for an additional cost.`}
                 </AccordionContent>
               </AccordionItem>
 
@@ -271,8 +271,8 @@ async function ProductPageBody({ params }: ProductPageProps) {
                   {copy.faqDeliveryQuestion}
                 </AccordionTrigger>
                 <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
-                  {deliveryLabel} Eligible unworn pieces may be returned within{" "}
-                  {settings.returnWindowDays} days of delivery.
+                  {deliveryLabel} Unworn pieces may be returned within {settings.returnWindowDays}{" "}
+                  days of delivery.
                 </AccordionContent>
               </AccordionItem>
 

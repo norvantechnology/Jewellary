@@ -67,7 +67,7 @@ export function calculateCheckoutQuote(params: {
     return {
       ok: false,
       code: "UNSUPPORTED_COUNTRY",
-      message: `Insured delivery is not currently available for ${country}.`,
+      message: `We don't ship to ${country} yet.`,
     };
   }
 

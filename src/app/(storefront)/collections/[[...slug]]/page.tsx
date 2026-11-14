@@ -187,7 +187,7 @@ export async function generateMetadata({
   if (!target || target.kind === "redirect") {
     return buildMetadata({
       title: "Collection",
-      description: `Explore fine jewellery crafted in 18K recycled gold and platinum by ${settings.storeName}.`,
+      description: `Moissanite and lab-grown diamond jewelry, handmade to order in sterling silver or solid gold by ${settings.storeName}.`,
       pathname: basePath,
       storeName: settings.storeName,
       siteDefaultOgImage: settings.defaultOgImageUrl,

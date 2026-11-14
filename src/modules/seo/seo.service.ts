@@ -626,7 +626,7 @@ export async function listBulkSeoItems(): Promise<BulkSeoItemDTO[]> {
     );
     const resolvedDescription = finalizeSeoDescription(
       c.seoDescription?.trim() || c.description || c.name,
-      `Explore ${c._count.products} ${c.name} designs in 18K gold & 950 platinum.`,
+      `Explore ${c._count.products} ${c.name} designs with moissanite and lab-grown diamonds, handmade to order.`,
     );
     const textIssues = validateSeoCopy({
       name: c.name,

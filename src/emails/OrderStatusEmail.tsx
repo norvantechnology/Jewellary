@@ -36,7 +36,7 @@ export function OrderStatusEmail({
       <Text style={EMAIL_PARAGRAPH_STYLE}>{message}</Text>
       {(carrier || trackingNumber) && (
         <Text style={EMAIL_PARAGRAPH_STYLE}>
-          <strong>Carrier:</strong> {carrier ?? "Insured shipping"} &bull;{" "}
+          <strong>Carrier:</strong> {carrier ?? "Standard shipping"} &bull;{" "}
           <strong>Tracking number:</strong> {trackingNumber ?? "Coming soon"}
         </Text>
       )}

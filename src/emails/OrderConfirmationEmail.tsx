@@ -46,8 +46,8 @@ export function OrderConfirmationEmail({
     >
       <Text style={EMAIL_PARAGRAPH_STYLE}>Hi {recipientName},</Text>
       <Text style={EMAIL_PARAGRAPH_STYLE}>
-        Thank you for your order with {siteName}. We’re preparing your jewelry, its certificate and
-        your insured shipment.
+        Thank you for your order with {siteName}. We’re now making your jewelry by hand. Making
+        takes 7–10 business days, and we’ll email you when it ships.
       </Text>
 
       <Section

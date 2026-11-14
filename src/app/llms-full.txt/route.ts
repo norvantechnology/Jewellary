@@ -27,7 +27,7 @@ export async function GET() {
     `Canonical Origin: ${toAbsoluteUrl("/")}`,
     `Legal Entity: ${settings.legalName ?? settings.storeName}`,
     `Contact: ${settings.contactEmail}`,
-    `Base Currency: ${settings.currency} · Insured Return Window: ${settings.returnWindowDays} days`,
+    `Base Currency: ${settings.currency} · Return Window: ${settings.returnWindowDays} days`,
     "",
     "## Collections Overview",
     ...categories.map(

@@ -48,7 +48,8 @@ export function createPrismaClient(connectionString?: string): PrismaClient {
           ...buildConnection(url),
           max: POOL_MAX,
           idleTimeoutMillis: 30_000,
-          connectionTimeoutMillis: 5_000,
+          // Hosted Postgres (e.g. Supabase) can take a few seconds for a new TLS connection.
+          connectionTimeoutMillis: 15_000,
           maxUses: 7500,
         })
       : globalForPrisma.prismaPool;

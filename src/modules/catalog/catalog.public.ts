@@ -1122,6 +1122,36 @@ export async function getHomepagePayload(): Promise<HomepagePayloadDTO> {
       getPublishedArticles(3),
     ]);
 
+  // Until products are hand-picked in admin (Featured / New arrival), the home page still shows
+  // real catalog items: a varied pick across categories plus the most recently added pieces.
+  let featured = featuredRows;
+  let newArrivals = newArrivalRows;
+  if (featured.length === 0 || newArrivals.length === 0) {
+    const recent = await db.product.findMany({
+      where: { status: "ACTIVE", deletedAt: null },
+      orderBy: [{ createdAt: "desc" }],
+      take: 120,
+      select: PUBLIC_PRODUCT_CARD_SELECT,
+    });
+    if (featured.length === 0) {
+      const perCategory = new Map<string, (typeof recent)[number]>();
+      for (const row of recent) {
+        const key = row.category?.name ?? row.id;
+        if (!perCategory.has(key)) perCategory.set(key, row);
+      }
+      const picks = Array.from(perCategory.values());
+      for (const row of recent) {
+        if (picks.length >= 8) break;
+        if (!picks.includes(row)) picks.push(row);
+      }
+      featured = picks.slice(0, 8);
+    }
+    if (newArrivals.length === 0) {
+      const featuredIds = new Set(featured.map((r) => r.id));
+      newArrivals = recent.filter((r) => !featuredIds.has(r.id)).slice(0, 4);
+    }
+  }
+
   return {
     banners: {
       hero: banners.filter((b) => b.position === "HERO"),
@@ -1129,8 +1159,8 @@ export async function getHomepagePayload(): Promise<HomepagePayloadDTO> {
       editorial: banners.filter((b) => b.position === "EDITORIAL"),
     },
     categories,
-    featuredProducts: featuredRows.map(mapProductRowToCardDTO),
-    newArrivals: newArrivalRows.map(mapProductRowToCardDTO),
+    featuredProducts: featured.map(mapProductRowToCardDTO),
+    newArrivals: newArrivals.map(mapProductRowToCardDTO),
     bestsellers: bestsellerRows.map(mapProductRowToCardDTO),
     articles,
   };

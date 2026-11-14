@@ -53,6 +53,26 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
   });
 
   const count = images.length;
+  // Desktop hover zoom: magnify the active photo around the cursor (mouse / trackpad only).
+  const [hoverZoom, setHoverZoom] = React.useState<{ x: number; y: number } | null>(null);
+  const canHoverZoom = React.useSyncExternalStore(
+    (cb) => {
+      const mq = window.matchMedia("(hover: hover) and (pointer: fine)");
+      mq.addEventListener("change", cb);
+      return () => mq.removeEventListener("change", cb);
+    },
+    () => window.matchMedia("(hover: hover) and (pointer: fine)").matches,
+    () => false,
+  );
+
+  function trackHoverZoom(event: React.PointerEvent<HTMLDivElement>) {
+    if (!canHoverZoom || event.pointerType !== "mouse" || swipeRef.current.active) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setHoverZoom({
+      x: ((event.clientX - rect.left) / rect.width) * 100,
+      y: ((event.clientY - rect.top) / rect.height) * 100,
+    });
+  }
 
   useFlipIndicator(thumbsRef, selectedIndex, reducedMotion);
 
@@ -160,13 +180,17 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:gap-4">
+    <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
       <div className="group relative overflow-hidden rounded-xl border border-border bg-muted shadow-sm">
         <div
           ref={stageRef}
           className="relative aspect-[4/5] cursor-zoom-in touch-pan-y"
           onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
+          onPointerMove={(event) => {
+            handlePointerMove(event);
+            trackHoverZoom(event);
+          }}
+          onPointerLeave={() => setHoverZoom(null)}
           onPointerUp={finishSwipe}
           onPointerCancel={finishSwipe}
           onClick={() => {
@@ -189,18 +213,29 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 aria-hidden={!isActive}
                 className={cn("absolute inset-0", isActive ? "z-10" : "pointer-events-none z-0")}
               >
-                <Image
-                  src={image.url}
-                  alt={image.altText}
-                  fill
-                  preload={idx === 0}
-                  fetchPriority={idx === 0 ? "high" : undefined}
-                  sizes="(max-width: 1024px) 100vw, 48vw"
-                  className={cn(
-                    "object-cover select-none",
-                    isSeed ? "object-cover object-center dark:brightness-90" : "object-center",
-                  )}
-                />
+                <div
+                  className="absolute inset-0 transition-transform duration-150 ease-out will-change-transform"
+                  style={
+                    isActive && hoverZoom
+                      ? {
+                          transform: "scale(2)",
+                          transformOrigin: `${hoverZoom.x}% ${hoverZoom.y}%`,
+                        }
+                      : undefined
+                  }
+                >
+                  <Image
+                    src={image.url}
+                    alt={image.altText}
+                    fill
+                    draggable={false}
+                    preload={idx === 0}
+                    fetchPriority={idx === 0 ? "high" : undefined}
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    quality={85}
+                    className={cn("object-contain select-none", isSeed ? "dark:brightness-90" : "")}
+                  />
+                </div>
               </m.div>
             );
           })}
@@ -221,7 +256,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
         </AnimatePresence>
 
         <span className="pointer-events-none absolute right-16 bottom-3 z-20 hidden rounded-full border border-border bg-card/90 px-2.5 py-1 text-[11px] font-medium text-foreground/85 opacity-0 shadow-sm backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100 sm:inline-flex">
-          {ui.product.gallery.clickToZoom}
+          {ui.product.gallery.hoverHint}
         </span>
 
         <button
@@ -283,7 +318,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
       {count > 1 && (
         <div
           ref={thumbsRef}
-          className="flex scrollbar-none gap-2.5 overflow-x-auto pb-1 sm:grid sm:grid-cols-5 sm:gap-3 sm:overflow-visible sm:pb-0"
+          className="flex min-w-0 scrollbar-none gap-2.5 overflow-x-auto pb-1 sm:grid sm:grid-cols-6 sm:gap-2.5 sm:overflow-visible sm:pb-0"
         >
           {images.map((image, idx) => {
             const active = idx === selectedIndex;

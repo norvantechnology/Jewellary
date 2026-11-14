@@ -99,7 +99,7 @@ export async function getPublicStoreSettings(): Promise<PublicStoreSettings> {
       signatureThreshold: "500.00",
       returnWindowDays: 30,
       announcementBarEnabled: true,
-      announcementBarText: "Complimentary insured express delivery on orders above $1,000",
+      announcementBarText: "Handmade to order · free shipping on orders over $1,000",
       announcementBarHref: "/shipping-returns",
       logoUrl: null,
       socialLinks: [],
