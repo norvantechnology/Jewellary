@@ -36,3 +36,11 @@ public/uploads/
 public/images/seed/
 
 
+
+# Local image working files (never commit)
+/test_*.webp
+/.cache_raw_images/
+/processed_product_images/
+/.temp_ai_processing/
+/*.webp
+/*.onnx
