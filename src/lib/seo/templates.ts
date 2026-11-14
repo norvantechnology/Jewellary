@@ -263,7 +263,9 @@ const RAW_TEST_TOKEN_PATTERNS: RegExp[] = [
   /\b(?:asdf|qwerty|foobar|dummy|sample[-_\s]*sku)\b/i,
   /\bplaceholder\b/i,
   /\btodo\b/i,
-  /-[a-z0-9]{7,8}$/i,
+  // Random id suffix like "-mwc41pq0" (must mix letters and digits, so real words such as
+  // "-pendant", "-necklace" or "-earrings" don't match).
+  /-(?=[a-z0-9]*\d)(?=[a-z0-9]*[a-z])[a-z0-9]{7,8}$/i,
 ];
 
 /**

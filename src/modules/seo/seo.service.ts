@@ -822,10 +822,15 @@ export async function runAndSaveSeoAudit(
     }
   }
 
+  // A parent category shows its subcategories' products too, so count the whole branch.
+  const branchCount = (path: string) =>
+    categories
+      .filter((c) => c.path === path || c.path.startsWith(`${path}/`))
+      .reduce((sum, c) => sum + c._count.products, 0);
   for (const cat of categories) {
     totalUrls += 1;
     const url = `/collections/${cat.path}`;
-    if (cat._count.products === 0 && !cat.noindex) {
+    if (branchCount(cat.path) === 0 && !cat.noindex) {
       issues.push({
         url,
         entityType: "category",
