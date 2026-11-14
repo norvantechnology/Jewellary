@@ -143,6 +143,16 @@ function buildConnectSrc(isHttps: boolean): string {
     "https://*.ingest.sentry.io",
     "https://challenges.cloudflare.com",
   ];
+  // Browser uploads go straight to object storage with a presigned URL (e.g. Supabase S3).
+  const s3Endpoint = process.env.S3_ENDPOINT;
+  if (s3Endpoint) {
+    try {
+      const origin = new URL(s3Endpoint).origin;
+      if (!sources.includes(origin)) sources.push(origin);
+    } catch {
+      // Ignore invalid S3_ENDPOINT format
+    }
+  }
   const realtimeUrl = process.env.NEXT_PUBLIC_REALTIME_URL;
   if (realtimeUrl) {
     try {
