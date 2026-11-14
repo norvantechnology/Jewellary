@@ -107,5 +107,8 @@
     "*.{css,md,json,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
