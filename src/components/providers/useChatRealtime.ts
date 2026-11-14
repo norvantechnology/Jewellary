@@ -15,6 +15,10 @@ interface RealtimeSocketState {
   pausedByHidden: boolean;
 }
 
+/** Poll intervals used only when the live socket isn't connected. */
+const POLL_INTERVAL_MS = 4000;
+const INBOX_POLL_INTERVAL_MS = 8000;
+
 const state: RealtimeSocketState = {
   socket: null,
   initPromise: null,
@@ -563,6 +567,45 @@ export function useConversationRealtime(params: {
     };
   }, [conversationId, enabled, socketConnected, sseAllowed]);
 
+  // Polling fallback: without the live socket (e.g. on Vercel, or `npm run dev` without the
+  // realtime server) fetch new messages every few seconds while the chat is open and visible.
+  React.useEffect(() => {
+    if (!enabled || !conversationId || socketConnected) return;
+    let stopped = false;
+    let busy = false;
+    const tick = async () => {
+      if (stopped || busy || document.visibilityState !== "visible") return;
+      busy = true;
+      try {
+        const after = latestSeqRef.current;
+        const res = await fetch(
+          `/api/chat/conversations/${encodeURIComponent(conversationId)}/messages?afterSeq=${after}&limit=50`,
+          { cache: "no-store" },
+        );
+        const json = (await res.json().catch(() => null)) as {
+          ok?: boolean;
+          data?: { messages?: ChatMessageDTO[] };
+        } | null;
+        const fresh = (json?.data?.messages ?? []).filter((m) => m.seq > latestSeqRef.current);
+        if (!stopped && fresh.length > 0) callbacksRef.current.onSyncMessages?.(fresh);
+      } catch {
+        // offline: try again on the next tick
+      } finally {
+        busy = false;
+      }
+    };
+    const timer = window.setInterval(tick, POLL_INTERVAL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [conversationId, enabled, socketConnected, latestSeqRef]);
+
   return { socketConnected };
 }
 
@@ -658,6 +701,16 @@ export function useAdminInboxRealtime(params: {
       es.close();
     };
   }, [enabled, socketConnected, sseAllowed]);
+
+  // Polling fallback for the inbox list when the live socket isn't available.
+  React.useEffect(() => {
+    if (!enabled || socketConnected) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible")
+        callbackRef.current({ type: "poll", payload: {} });
+    }, INBOX_POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [enabled, socketConnected]);
 }
 
 export function useUserCustomizationsRealtime(params: {

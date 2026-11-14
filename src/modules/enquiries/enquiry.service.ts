@@ -1,4 +1,5 @@
 import "server-only";
+import { telegramAlerts } from "@/server/telegram";
 import type { EnquiryStatus, EnquiryType, Prisma } from "@/generated/prisma/client";
 import type {
   AdminReplyEnquiryInput,
@@ -72,6 +73,16 @@ export async function createCustomerEnquiry(
       status: true,
       createdAt: true,
     },
+  });
+
+  telegramAlerts.inquiry({
+    id: enquiry.id,
+    name: input.name,
+    email: input.email,
+    phone: input.phone ?? null,
+    type: input.type,
+    productName,
+    message: input.message,
   });
 
   try {

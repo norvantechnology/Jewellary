@@ -1,4 +1,5 @@
 import "server-only";
+import { telegramAlerts } from "@/server/telegram";
 import crypto from "node:crypto";
 import { createId } from "@paralleldrive/cuid2";
 import { Prisma } from "@/generated/prisma/client";
@@ -1900,6 +1901,22 @@ export async function processVerifiedWebhookEvent(event: VerifiedWebhookEvent): 
     },
     { timeout: 10000 },
   );
+
+  // Telegram alert for the store owner: the payload exists only when this event marked the order paid.
+  if (emailPayloadRef.payload && txResult.orderId) {
+    const p = emailPayloadRef.payload;
+    telegramAlerts.paidOrder({
+      id: txResult.orderId,
+      orderNumber: p.orderNumber,
+      total: p.totalFormatted,
+      customerName: p.recipientName,
+      customerEmail: p.to,
+      items: p.lines.map((l) => ({
+        title: l.variantTitle ? `${l.title} (${l.variantTitle})` : l.title,
+        quantity: l.quantity,
+      })),
+    });
+  }
 
   // Send order confirmation email safely outside transaction so local SMTP downtime never fails settlement
   if (emailPayloadRef.payload) {

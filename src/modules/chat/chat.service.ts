@@ -18,6 +18,7 @@ import {
 } from "@/server/private-media";
 import { enforceRateLimit } from "@/server/rate-limit";
 import { publishRealtimeEvent } from "@/server/realtime/realtime-bus";
+import { telegramAlerts } from "@/server/telegram";
 import type {
   adminAddNoteSchema,
   adminCannedReplySchema,
@@ -686,6 +687,16 @@ export async function getOrCreateConversation(
       customerTargetKeys: targetKeys,
       notifyAdminInbox: true,
     });
+    if (!actor.isStaff) {
+      telegramAlerts.chatMessage({
+        conversationId: created.conv.id,
+        customerName: actor.userName ?? created.conv.guestName ?? null,
+        customerEmail: actor.userEmail ?? created.conv.guestEmail ?? null,
+        body: created.firstMsg.body ?? "",
+        context: created.conv.contextType !== "GENERAL" ? created.conv.contextType : null,
+        isNewConversation: true,
+      });
+    }
   }
   await publishRealtimeEvent({
     type: "conversation.updated",
@@ -1263,6 +1274,17 @@ export async function sendChatMessage(
           notifyAdminInbox: true,
         }),
       ]);
+
+      // Telegram alert for every customer message (sent after the response).
+      if (senderRole === "CUSTOMER") {
+        telegramAlerts.chatMessage({
+          conversationId: conv.id,
+          customerName: conv.user?.name ?? conv.guestName ?? actor.userName ?? null,
+          customerEmail: conv.user?.email ?? conv.guestEmail ?? actor.userEmail ?? null,
+          body: messageDto.body ?? "",
+          context: conv.contextType !== "GENERAL" ? conv.contextType : null,
+        });
+      }
 
       // Off-critical-path offline notification email dispatch
       if (senderRole === "ADMIN") {

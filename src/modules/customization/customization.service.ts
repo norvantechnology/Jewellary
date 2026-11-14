@@ -1,4 +1,5 @@
 import "server-only";
+import { telegramAlerts } from "@/server/telegram";
 import crypto from "crypto";
 import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import Decimal from "decimal.js";
@@ -1044,6 +1045,17 @@ export async function createCustomizationRequest(
       ...(actor.guestToken ? [`guest:${actor.guestToken}`] : []),
     ],
     notifyAdminInbox: true,
+  });
+
+  telegramAlerts.customizationRequest({
+    id: created.id,
+    requestNumber: created.requestNumber,
+    productName: productMeta.name,
+    customerName: cleanedName,
+    customerEmail: customerEmailNormalized,
+    summary: validation.selections
+      .filter((s) => s.displayValue)
+      .map((s) => `${s.groupLabel}: ${s.displayValue}`),
   });
 
   return getCustomizationRequestDetailForActor(created.id, actor);
