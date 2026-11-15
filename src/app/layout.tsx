@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { BRAND_PALETTE } from "@/lib/brand-palette";
 import { INDEXABLE_ROBOTS, SITE_LOCALE, getSiteUrl } from "@/lib/seo/metadata";
 import { DEFAULT_BRAND_NAME } from "@/lib/seo/site";
+import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 import { getSiteContent } from "@/modules/site-content/site-content.service";
 import "./globals.css";
 
@@ -51,7 +52,25 @@ const imageCdnOrigin = getImageCdnOrigin();
 
 // Default title, title template and description: data/frontend/site-content.json → site.seo
 export async function generateMetadata(): Promise<Metadata> {
-  const { seo } = (await getSiteContent()).site;
+  const [{ seo }, settings] = await Promise.all([
+    getSiteContent().then((c) => c.site),
+    getPublicStoreSettings().catch(() => null),
+  ]);
+  // Verification codes: Admin > SEO > Global config first, env vars as fallback. Accepts either the
+  // bare code or the full "google-site-verification=..." string.
+  const clean = (v?: string | null) =>
+    v
+      ?.trim()
+      .replace(/^google-site-verification=/i, "")
+      .replace(/^msvalidate\.01=/i, "") || undefined;
+  const googleCode =
+    clean(settings?.seoSettings?.googleSiteVerification) ??
+    clean(process.env.GOOGLE_SITE_VERIFICATION);
+  const bingCode =
+    clean(settings?.seoSettings?.bingSiteVerification) ?? clean(process.env.BING_SITE_VERIFICATION);
+  const pinterestCode =
+    clean(settings?.seoSettings?.pinterestVerification) ??
+    clean(process.env.PINTEREST_SITE_VERIFICATION);
   return {
     metadataBase: new URL(siteUrl),
     applicationName: siteName,
@@ -87,18 +106,12 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     robots: INDEXABLE_ROBOTS,
     verification: {
-      ...(process.env.GOOGLE_SITE_VERIFICATION
-        ? { google: process.env.GOOGLE_SITE_VERIFICATION }
-        : {}),
-      ...(process.env.BING_SITE_VERIFICATION || process.env.PINTEREST_SITE_VERIFICATION
+      ...(googleCode ? { google: googleCode } : {}),
+      ...(bingCode || pinterestCode
         ? {
             other: {
-              ...(process.env.BING_SITE_VERIFICATION
-                ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION }
-                : {}),
-              ...(process.env.PINTEREST_SITE_VERIFICATION
-                ? { "p:domain_verify": process.env.PINTEREST_SITE_VERIFICATION }
-                : {}),
+              ...(bingCode ? { "msvalidate.01": bingCode } : {}),
+              ...(pinterestCode ? { "p:domain_verify": pinterestCode } : {}),
             },
           }
         : {}),
