@@ -10,12 +10,16 @@ import {
   Check,
   CheckCircle2,
   ExternalLink,
+  Gem,
   Loader2,
+  Lock,
   MessageSquare,
   MessagesSquare,
+  RotateCcw,
   Ruler,
   ShoppingBag,
   Sparkles,
+  Truck,
 } from "lucide-react";
 import { openAtelierChat, openAtelierCustomization } from "@/lib/atelier-events";
 import { Price } from "@/components/shared/Price";
@@ -619,6 +623,35 @@ export function ProductDetailClient({
           />
         ) : null}
       </div>
+
+      <ul className="grid grid-cols-2 gap-x-3 gap-y-2.5 rounded-xl border border-border bg-surface-2 px-4 py-3.5 text-[13px] text-text-2 sm:text-sm">
+        {[
+          freeShippingThreshold
+            ? {
+                icon: Truck,
+                text: fill(ui.product.trustShippingOver, {
+                  amount: formatPrice(freeShippingThreshold),
+                }),
+              }
+            : null,
+          returnWindowDays > 0
+            ? { icon: RotateCcw, text: fill(ui.product.trustReturns, { days: returnWindowDays }) }
+            : null,
+          { icon: Lock, text: ui.product.trustSecure },
+          { icon: Gem, text: ui.product.trustHandmade },
+        ]
+          .filter((item) => item !== null)
+          .map(({ icon: Icon, text }) => (
+            <li key={text} className="flex items-center gap-2">
+              <Icon
+                className="size-4 shrink-0 text-accent-text"
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+              <span>{text}</span>
+            </li>
+          ))}
+      </ul>
 
       <section className="space-y-4 border-t border-border pt-6">
         {product.description && <ProductDescription text={product.description} />}

@@ -203,7 +203,7 @@ async function GuideArticleBody({ params }: GuideDetailPageProps) {
             }
           >
             <article
-              className="editorial-prose max-w-[720px] min-w-0 space-y-5 text-foreground/90 [&_a]:text-accent-text [&_a]:underline [&_a]:underline-offset-4 [&_h2]:mt-10 [&_h2]:scroll-mt-24 [&_h2]:text-2xl [&_h2]:leading-[1.2] [&_h2]:font-semibold [&_h2]:tracking-[-0.015em] [&_h2]:text-foreground [&_h3]:mt-7 [&_h3]:text-xl [&_h3]:leading-[1.25] [&_h3]:font-semibold [&_h3]:text-foreground [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5"
+              className="editorial-prose max-w-[720px] min-w-0 space-y-5 text-foreground/90 [&_a]:text-accent-text [&_a]:underline [&_a]:underline-offset-4 [&_h2]:mt-10 [&_h2]:scroll-mt-24 [&_h2]:text-2xl [&_h2]:leading-[1.2] [&_h2]:font-semibold [&_h2]:tracking-[-0.015em] [&_h2]:text-foreground [&_h3]:mt-7 [&_h3]:text-xl [&_h3]:leading-[1.25] [&_h3]:font-semibold [&_h3]:text-foreground [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_table]:block [&_table]:max-w-full [&_table]:border-collapse [&_table]:overflow-x-auto [&_table]:text-left [&_table]:text-sm [&_td]:border-b [&_td]:border-border [&_td]:py-2.5 [&_td]:pr-4 [&_th]:border-b [&_th]:border-border [&_th]:py-2.5 [&_th]:pr-4 [&_th]:font-semibold [&_th]:text-foreground [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5"
               dangerouslySetInnerHTML={{ __html: bodyHtml }}
             />
 

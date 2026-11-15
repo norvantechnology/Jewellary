@@ -1411,7 +1411,11 @@
       "sizeLabel": "Ring size (US)",
       "sizeAria": "US size {size}",
       "sizeOnlyMetal": "{metal} · {stone}. Choose your ring size.",
-      "_sizeOnlyMetal": "Shown above the size buttons. {metal} and {stone} come from the product."
+      "_sizeOnlyMetal": "Shown above the size buttons. {metal} and {stone} come from the product.",
+      "trustShippingOver": "Free shipping over {amount}",
+      "trustReturns": "{days}-day returns",
+      "trustSecure": "Secure checkout",
+      "trustHandmade": "Handmade to order"
     },
     "productCard": {
       "enquire": "Ask us",

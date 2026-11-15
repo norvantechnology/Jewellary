@@ -3,6 +3,7 @@ import type * as React from "react";
 import { render } from "@react-email/render";
 import { EnquiryNotificationEmail } from "@/emails/EnquiryNotificationEmail";
 import { EnquiryReplyEmail } from "@/emails/EnquiryReplyEmail";
+import { CartReminderEmail, FeedbackRequestEmail } from "@/emails/LifecycleEmails";
 import { NewsletterConfirmEmail } from "@/emails/NewsletterConfirmEmail";
 import {
   OrderConfirmationEmail,
@@ -243,6 +244,44 @@ export async function sendNewsletterConfirmationEmail(input: {
       siteName: env.NEXT_PUBLIC_SITE_NAME,
       confirmUrl: input.confirmUrl,
       unsubscribeUrl: input.unsubscribeUrl,
+      contactEmail: env.EMAIL_FROM,
+    }),
+  });
+}
+
+export async function sendCartReminderEmail(input: {
+  to: string;
+  recipientName: string;
+  itemNames: string[];
+}) {
+  return sendTemplate({
+    to: input.to,
+    subject: `Your cart at ${env.NEXT_PUBLIC_SITE_NAME} is saved for you`,
+    tag: "cart-reminder",
+    element: CartReminderEmail({
+      siteName: env.NEXT_PUBLIC_SITE_NAME,
+      recipientName: input.recipientName,
+      itemNames: input.itemNames,
+      cartUrl: `${env.NEXT_PUBLIC_SITE_URL}/cart`,
+      contactEmail: env.EMAIL_FROM,
+    }),
+  });
+}
+
+export async function sendFeedbackRequestEmail(input: {
+  to: string;
+  recipientName: string;
+  orderNumber: string;
+}) {
+  return sendTemplate({
+    to: input.to,
+    subject: `How do you like your ${env.NEXT_PUBLIC_SITE_NAME} jewelry?`,
+    tag: "feedback-request",
+    element: FeedbackRequestEmail({
+      siteName: env.NEXT_PUBLIC_SITE_NAME,
+      recipientName: input.recipientName,
+      orderNumber: input.orderNumber,
+      shopUrl: env.NEXT_PUBLIC_SITE_URL,
       contactEmail: env.EMAIL_FROM,
     }),
   });

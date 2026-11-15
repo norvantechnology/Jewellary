@@ -567,6 +567,7 @@ model Cart {
   guestToken String?    @unique
   currency   String     @default("USD")
   expiresAt  DateTime?
+  recoveryEmailSentAt DateTime?
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
@@ -665,6 +666,7 @@ model Order {
   cancelledAt          DateTime?
   refundedAt           DateTime?
   refundedAmount       Decimal     @default(0) @db.Decimal(14, 3)
+  reviewRequestSentAt  DateTime?
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
 
