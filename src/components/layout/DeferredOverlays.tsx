@@ -42,8 +42,8 @@ function parseConsentFromDocument(): { analytics: boolean } | null {
 }
 
 function subscribeConsentEvents(callback: () => void): () => void {
-  window.addEventListener("maison:consent-updated", callback);
-  return () => window.removeEventListener("maison:consent-updated", callback);
+  window.addEventListener("shinora:consent-updated", callback);
+  return () => window.removeEventListener("shinora:consent-updated", callback);
 }
 
 function getMissingConsentSnapshot(): boolean {

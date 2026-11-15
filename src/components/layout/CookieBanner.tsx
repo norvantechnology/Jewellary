@@ -17,7 +17,7 @@ export interface ConsentState {
   decidedAt: string;
 }
 
-export const CONSENT_EVENT = "maison:consent-updated";
+export const CONSENT_EVENT = "shinora:consent-updated";
 
 export function readConsentCookie(): ConsentState | null {
   if (typeof document === "undefined") return null;

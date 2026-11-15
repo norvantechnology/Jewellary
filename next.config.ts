@@ -56,6 +56,21 @@ const nextConfig: NextConfig = {
   output: process.env.VERCEL ? undefined : "standalone",
   // Files read at runtime with fs must be bundled into serverless functions.
   outputFileTracingIncludes: { "/**": ["./certs/**"] },
+  outputFileTracingExcludes: {
+    "/**": [
+      "./.models/**",
+      "./.source_images/**",
+      "./.temp_ai_processing/**",
+      "./scripts/**",
+      "./docs/**",
+      "./processed_product_images/**",
+    ],
+  },
+  typescript: {
+    // TypeScript typecheck is run via `npm run typecheck` in CI; skipping it inside
+    // the Vercel production build container saves 3+ minutes and 1GB of memory overhead.
+    ignoreBuildErrors: Boolean(process.env.VERCEL),
+  },
   devIndicators: false,
   cacheComponents: true,
   partialPrefetching: true,

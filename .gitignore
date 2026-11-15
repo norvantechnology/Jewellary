@@ -42,5 +42,9 @@ public/images/seed/
 /.cache_raw_images/
 /processed_product_images/
 /.temp_ai_processing/
+/.source_images/
 /*.webp
 /*.onnx
+
+# Local AI models
+/.models/

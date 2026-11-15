@@ -1,0 +1,18 @@
+# Vercel Deployment Ignore
+# Exclude heavy assets, AI models, local scripts, and non-production files
+
+.models/
+.source_images/
+*.onnx
+*.csv
+scripts/
+processed_product_images/
+.temp_ai_processing/
+.cache_raw_images/
+output/
+docs/
+Dockerfile
+docker-compose.yml
+*.tsbuildinfo
+test_*.webp
+*.log

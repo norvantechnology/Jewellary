@@ -196,6 +196,30 @@ function isLocalHostname(host: string): boolean {
   );
 }
 
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+const STATIC_TOP_LEVEL_PATHS = new Set([
+  "/",
+  "/about",
+  "/cart",
+  "/checkout",
+  "/contact",
+  "/faq",
+  "/terms",
+  "/privacy",
+  "/shipping-returns",
+  "/ring-size-guide",
+  "/care-guide",
+  "/wishlist",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/search",
+  "/newsletter",
+  "/orders/track",
+]);
+
 function recordBotHitNonBlocking(
   bot: { name: string; group: "search" | "ai-search" | "ai-training" },
   pathname: string,
@@ -212,19 +236,21 @@ function recordBotHitNonBlocking(
       ts: new Date().toISOString(),
     }),
   );
-  void db.aiBotHit
-    .create({
-      data: {
-        botName: bot.name,
-        botGroup: bot.group,
-        path: pathname.slice(0, 500),
-        status,
-        referer: referer ? referer.slice(0, 500) : null,
-      },
-    })
-    .catch(() => {
-      // Best-effort telemetry; never block request rendering.
-    });
+  if (!isServerless) {
+    void db.aiBotHit
+      .create({
+        data: {
+          botName: bot.name,
+          botGroup: bot.group,
+          path: pathname.slice(0, 500),
+          status,
+          referer: referer ? referer.slice(0, 500) : null,
+        },
+      })
+      .catch(() => {
+        // Best-effort telemetry; never block request rendering.
+      });
+  }
 }
 
 function shouldCanonicalizePath(pathname: string): boolean {
@@ -324,9 +350,13 @@ export async function proxy(request: NextRequest) {
       Boolean(canonicalHost) && !isLocal && (incomingHost !== canonicalHost || !isHttps);
     const needsPathRedirect = normalizedPath !== pathname;
 
-    // Look up DB redirects & 410 rules cleanly (best effort)
+    // Look up DB redirects & 410 rules cleanly (best effort). Known static pages bypass DB lookup completely.
     let matchedRedirect: Awaited<ReturnType<typeof lookupProxyRedirect>> = null;
-    if (pathname !== "/" && !pathname.startsWith("/admin")) {
+    if (
+      !STATIC_TOP_LEVEL_PATHS.has(normalizedPath) &&
+      !pathname.startsWith("/admin") &&
+      !pathname.startsWith("/account")
+    ) {
       try {
         matchedRedirect = await lookupProxyRedirect(normalizedPath);
       } catch {
@@ -335,23 +365,25 @@ export async function proxy(request: NextRequest) {
     }
 
     if (matchedRedirect) {
-      if (matchedRedirect.kind === "rule") {
-        void db.redirectRule
-          .update({
-            where: { id: matchedRedirect.id },
-            data: { hits: { increment: 1 }, lastHitAt: new Date() },
-          })
-          .catch(() => {});
-      } else if (matchedRedirect.entityType && matchedRedirect.oldSlug) {
-        void db.slugRedirect
-          .updateMany({
-            where: {
-              entityType: matchedRedirect.entityType,
-              oldSlug: matchedRedirect.oldSlug,
-            },
-            data: { hits: { increment: 1 }, lastHitAt: new Date() },
-          })
-          .catch(() => {});
+      if (!isServerless) {
+        if (matchedRedirect.kind === "rule") {
+          void db.redirectRule
+            .update({
+              where: { id: matchedRedirect.id },
+              data: { hits: { increment: 1 }, lastHitAt: new Date() },
+            })
+            .catch(() => {});
+        } else if (matchedRedirect.entityType && matchedRedirect.oldSlug) {
+          void db.slugRedirect
+            .updateMany({
+              where: {
+                entityType: matchedRedirect.entityType,
+                oldSlug: matchedRedirect.oldSlug,
+              },
+              data: { hits: { increment: 1 }, lastHitAt: new Date() },
+            })
+            .catch(() => {});
+        }
       }
 
       if (matchedRedirect.statusCode === 410) {
