@@ -9,14 +9,11 @@
     view-transition-name: site-header;
   }
 
-  [data-vt="footer"] {
-    view-transition-name: site-footer;
-  }
+  /* No view-transition-name on the footer: Chrome stopped painting the tall named footer
+     after scrolling to the bottom of long pages (blank white area). */
 
   ::view-transition-old(site-header),
-  ::view-transition-new(site-header),
-  ::view-transition-old(site-footer),
-  ::view-transition-new(site-footer) {
+  ::view-transition-new(site-header) {
     animation: none;
   }
 

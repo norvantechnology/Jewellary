@@ -100,7 +100,6 @@ export function Footer({ config, content }: { config: SiteHeaderConfig; content:
   return (
     <footer
       data-focus-hide=""
-      data-vt="footer"
       className="border-t border-footer-border bg-footer-bg text-footer-text"
     >
       <div className="container-wide pt-12 pb-[calc(3rem+env(safe-area-inset-bottom,0px)+var(--sticky-cta-offset,0px))] md:pt-16 lg:py-16">
