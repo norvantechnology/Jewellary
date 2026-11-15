@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { getSiteContent } from "@/modules/site-content/site-content.service";
 import Image from "next/image";
 import Link from "next/link";
+import { ScrollActiveIntoView } from "@/components/shared/ScrollActiveIntoView";
 import { notFound, permanentRedirect } from "next/navigation";
 import { connection } from "next/server";
 import { Gem } from "lucide-react";
@@ -736,25 +737,36 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
           )}
 
           {siblingFacets.length > 0 && (
-            <nav aria-label="Curated collection facets" className="mt-4 flex flex-wrap gap-2">
-              {siblingFacets.map((facetItem) => {
-                const href = `/collections/${facetItem.categoryPath}/${facetItem.facetSlug}`;
-                const isActiveFacet = activeFacet?.id === facetItem.id;
-                return (
-                  <Link
-                    key={facetItem.id}
-                    href={href}
-                    aria-current={isActiveFacet ? "page" : undefined}
-                    className={
-                      isActiveFacet
-                        ? "inline-flex min-h-9 items-center rounded-md border border-primary bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-                        : "inline-flex min-h-9 items-center rounded-md border border-border bg-surface px-3 py-1 text-xs font-medium text-muted-foreground hover:border-border-strong hover:text-foreground"
-                    }
-                  >
-                    {facetItem.name}
-                  </Link>
-                );
-              })}
+            <nav
+              aria-label="Shop by shape and stone"
+              className="chips-scroll-fade -mx-4 mt-4 sm:mx-0"
+            >
+              <ScrollActiveIntoView className="relative flex snap-x scrollbar-none gap-2 overflow-x-auto px-4 pb-1 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+                {siblingFacets.map((facetItem) => {
+                  const href = `/collections/${facetItem.categoryPath}/${facetItem.facetSlug}`;
+                  const isActiveFacet = activeFacet?.id === facetItem.id;
+                  // Short chip label: "Oval Engagement Rings" -> "Oval" (the page heading says the rest).
+                  const shortLabel =
+                    facetItem.name
+                      .replace(/\s+(engagement rings|wedding bands|rings|bands)$/i, "")
+                      .trim() || facetItem.name;
+                  return (
+                    <Link
+                      key={facetItem.id}
+                      href={href}
+                      title={facetItem.name}
+                      aria-current={isActiveFacet ? "page" : undefined}
+                      className={
+                        isActiveFacet
+                          ? "inline-flex min-h-10 shrink-0 snap-start items-center rounded-full border border-primary bg-primary px-4 text-sm font-medium whitespace-nowrap text-on-primary shadow-sm"
+                          : "transition-ui inline-flex min-h-10 shrink-0 snap-start items-center rounded-full border border-border bg-surface px-4 text-sm font-medium whitespace-nowrap text-text-2 hover:border-border-strong hover:text-text"
+                      }
+                    >
+                      {shortLabel}
+                    </Link>
+                  );
+                })}
+              </ScrollActiveIntoView>
             </nav>
           )}
         </header>
