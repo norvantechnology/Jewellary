@@ -61,7 +61,7 @@ const emptyArticle = (): ArticleFormState => ({
   bodyMarkdown: "## Craftsmanship & Care\n\nWrite your jewelry guide in Markdown.",
   coverImageUrl: "",
   coverAltText: "",
-  authorName: "Maison Aurelia Team",
+  authorName: "Shinora Jewels Team",
   authorJobTitle: "Senior Gemologist",
   authorCredentials: "GIA Graduate Gemologist (GG)",
   authorBio: "",

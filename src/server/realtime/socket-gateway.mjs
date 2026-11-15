@@ -7,7 +7,7 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import Redis from "ioredis";
 import { Server as SocketIOServer } from "socket.io";
 
-export const REALTIME_CHANNEL = "maison-aurelia:realtime";
+export const REALTIME_CHANNEL = "shinora-jewels:realtime";
 
 function extractJsonError(json, fallback) {
   if (!json || typeof json !== "object") return fallback;

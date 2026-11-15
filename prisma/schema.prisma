@@ -760,7 +760,7 @@ model WebhookEvent {
 
 model StoreSetting {
   id                      String   @id @default("default")
-  storeName               String   @default("Maison Aurelia")
+  storeName               String   @default("Shinora Jewels")
   legalName               String?
   tagline                 String?
   contactEmail            String

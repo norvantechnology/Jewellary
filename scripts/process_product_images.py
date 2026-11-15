@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Maison Aurelia - High-Fidelity AI Product Image Transformation Pipeline
+Shinora Jewels - High-Fidelity AI Product Image Transformation Pipeline
 ========================================================================
 - Uses State-of-the-Art Neural AI Inpainting (LaMa - Large Mask Inpainting ONNX)
   running locally for 100% free, unlimited, zero-quota processing.
@@ -43,7 +43,7 @@ load_dotenv(ROOT_DIR / ".env")
 OUTPUT_ROOT = ROOT_DIR / "processed_product_images"
 MANIFEST_PATH = OUTPUT_ROOT / "manifest.json"
 TEMP_DIR = ROOT_DIR / ".temp_ai_processing"
-MODEL_PATH = ROOT_DIR / "lama.onnx"
+MODEL_PATH = ROOT_DIR / ".models" / "lama.onnx" if (ROOT_DIR / ".models" / "lama.onnx").exists() else ROOT_DIR / "lama.onnx"
 
 
 def get_db_connection():
@@ -217,7 +217,7 @@ class AiImageProcessor:
 
 def run_pipeline(limit=None, category_filter=None, product_filter=None):
     print("=" * 75)
-    print("MAISON AURELIA - HIGH-SPEED NEURAL AI PRODUCT IMAGE PIPELINE")
+    print("SHINORA JEWELS - HIGH-SPEED NEURAL AI PRODUCT IMAGE PIPELINE")
     print("=" * 75)
 
     db_map = load_category_product_map()
@@ -354,7 +354,7 @@ def run_pipeline(limit=None, category_filter=None, product_filter=None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Maison Aurelia AI Product Image Pipeline")
+    parser = argparse.ArgumentParser(description="Shinora Jewels AI Product Image Pipeline")
     parser.add_argument("--limit", type=int, default=None, help="Limit number of images")
     parser.add_argument("--category", type=str, default=None, help="Category slug")
     parser.add_argument("--product", type=str, default=None, help="Product slug")

@@ -4,7 +4,7 @@ import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const settings = await getPublicStoreSettings().catch(() => null);
-  const name = settings?.storeName ?? "Maison Aurelia";
+  const name = settings?.storeName ?? "Shinora Jewels";
 
   return {
     name,

@@ -7,9 +7,9 @@ export const MAX_CUSTOMIZATION_FILES = 5;
 export const MAX_CHAT_FILES = 5;
 export const MAX_PRODUCT_IMAGES = 12;
 export const ORDER_RESERVATION_MINUTES = 30;
-export const GUEST_COOKIE_NAME = "maison_guest_id";
-export const GUEST_TRACKING_COOKIE_NAME = "maison_order_track";
-export const CONSENT_COOKIE_NAME = "maison_consent";
+export const GUEST_COOKIE_NAME = "shinora_guest_id";
+export const GUEST_TRACKING_COOKIE_NAME = "shinora_order_track";
+export const CONSENT_COOKIE_NAME = "shinora_consent";
 
 export const ALLOWED_IMAGE_MIME_TYPES = [
   "image/jpeg",

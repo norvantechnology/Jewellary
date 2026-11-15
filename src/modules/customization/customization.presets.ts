@@ -161,7 +161,7 @@ const DIAMOND_COLOR_GRADES: PresetOptionValueDraft[] = [
   },
   {
     value: "G",
-    label: "G — Near Colourless (Maison Standard)",
+    label: "G — Near Colorless (Shinora Standard)",
     priceAdjustmentType: "NONE",
     priceAdjustmentValue: "0",
     isAvailable: true,
@@ -169,7 +169,7 @@ const DIAMOND_COLOR_GRADES: PresetOptionValueDraft[] = [
   },
   {
     value: "H",
-    label: "H — Near Colourless",
+    label: "H — Near Colorless",
     priceAdjustmentType: "NONE",
     priceAdjustmentValue: "0",
     isAvailable: true,
@@ -204,7 +204,7 @@ const DIAMOND_CLARITY_GRADES: PresetOptionValueDraft[] = [
   },
   {
     value: "VS1",
-    label: "VS1 — Eye-Clean (Maison Standard)",
+    label: "VS1 — Eye-Clean (Shinora Standard)",
     priceAdjustmentType: "NONE",
     priceAdjustmentValue: "0",
     isAvailable: true,

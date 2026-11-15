@@ -82,8 +82,8 @@ async function seedProductionBaseline() {
       seoDefaultDescription:
         "GIA certified diamonds, custom engagement rings and 18K recycled gold jewelry, with free insured shipping.",
       socialLinks: [
-        { label: "Instagram", href: "https://instagram.com/maisonaurelia" },
-        { label: "Pinterest", href: "https://pinterest.com/maisonaurelia" },
+        { label: "Instagram", href: "https://instagram.com/shinorajewels" },
+        { label: "Pinterest", href: "https://pinterest.com/shinorajewels" },
       ],
     },
   });

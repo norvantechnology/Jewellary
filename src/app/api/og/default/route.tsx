@@ -20,7 +20,7 @@ export async function GET() {
     brand: settings.storeName,
     title: hero?.title || content.pages.home.hero.headline,
     subtitle: hero?.subtitle || content.pages.home.hero.subtitle,
-    // Website address as the footer line (e.g. maisonaurelia.com).
+    // Website address as the footer line (e.g. shinorajewels.com).
     highlight: new URL(getSiteUrl()).host.replace(/^www\./, ""),
     photo: await loadOgPhoto(hero?.imageUrl, 600, 630),
   });

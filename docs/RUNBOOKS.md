@@ -1,4 +1,4 @@
-# Operations Runbooks — Maison Aurelia
+# Operations Runbooks — Shinora Jewels
 
 Operational procedures for production deployments, database recovery, secret rotation, payment incidents, security patching, and search visibility monitoring.
 

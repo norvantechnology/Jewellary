@@ -282,7 +282,7 @@ export async function proxy(request: NextRequest) {
       recordBotHitNonBlocking(botInfo, pathname, 503, request.headers.get("referer"));
     }
     return new NextResponse(
-      "<!doctype html><html><head><title>Scheduled Maintenance — Maison Aurelia</title></head><body><main style='font-family:system-ui,sans-serif;padding:4rem;text-align:center'><h1>Maison Aurelia is briefly undergoing scheduled maintenance</h1><p>Please check back shortly.</p></main></body></html>",
+      "<!doctype html><html><head><title>Scheduled Maintenance — Shinora Jewels</title></head><body><main style='font-family:system-ui,sans-serif;padding:4rem;text-align:center'><h1>Shinora Jewels is briefly undergoing scheduled maintenance</h1><p>Please check back shortly.</p></main></body></html>",
       {
         status: 503,
         headers: {
@@ -326,7 +326,7 @@ export async function proxy(request: NextRequest) {
 
     // Look up DB redirects & 410 rules cleanly (best effort)
     let matchedRedirect: Awaited<ReturnType<typeof lookupProxyRedirect>> = null;
-    if (!pathname.startsWith("/admin")) {
+    if (pathname !== "/" && !pathname.startsWith("/admin")) {
       try {
         matchedRedirect = await lookupProxyRedirect(normalizedPath);
       } catch {
@@ -359,7 +359,7 @@ export async function proxy(request: NextRequest) {
           recordBotHitNonBlocking(botInfo, pathname, 410, request.headers.get("referer"));
         }
         return new NextResponse(
-          "<!doctype html><html><head><title>Permanently Removed — Maison Aurelia</title></head><body><main style='font-family:system-ui,sans-serif;padding:4rem;text-align:center'><h1>410 — Permanently Removed</h1><p>This piece or page has been permanently removed from our catalogue.</p><p><a href='/collections'>Explore Current Collections</a></p></main></body></html>",
+          "<!doctype html><html><head><title>Permanently Removed — Shinora Jewels</title></head><body><main style='font-family:system-ui,sans-serif;padding:4rem;text-align:center'><h1>410 — Permanently Removed</h1><p>This piece or page has been permanently removed from our catalogue.</p><p><a href='/collections'>Explore Current Collections</a></p></main></body></html>",
           {
             status: 410,
             headers: {

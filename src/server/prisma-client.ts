@@ -9,28 +9,37 @@ const globalForPrisma = globalThis as unknown as {
   prismaClient?: PrismaClient;
 };
 
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const isBuild =
+  process.env.NEXT_PHASE === "phase-production-build" ||
+  process.argv.some((arg) => arg.includes("build"));
+
 const defaultPoolMax = Number.parseInt(process.env.PG_POOL_MAX ?? "", 10);
 const POOL_MAX =
   Number.isFinite(defaultPoolMax) && defaultPoolMax > 0
     ? defaultPoolMax
-    : process.env.NODE_ENV === "production"
-      ? 20
-      : 10;
+    : isServerless || isBuild
+      ? 1
+      : process.env.NODE_ENV === "production"
+        ? 10
+        : 5;
 
 /**
- * TLS for hosted Postgres. With DATABASE_SSL_CA set (path to the provider's root CA, e.g.
- * certs/supabase-root-2021-ca.crt) the server certificate is fully verified. The sslmode in the
- * URL is removed for node-postgres because it would override this config; Prisma CLI still uses it.
+ * TLS for hosted Postgres. Statically scoped to ./certs/ to avoid Turbopack tracing the whole repo root.
  */
 function buildConnection(url: string): Pick<PoolConfig, "connectionString" | "ssl"> {
   const caPath = process.env.DATABASE_SSL_CA;
   if (!caPath) return { connectionString: url };
   const parsed = new URL(url);
   parsed.searchParams.delete("sslmode");
+
+  const certFile = path.basename(caPath);
+  const resolvedPath = path.join(process.cwd(), "certs", certFile);
+
   return {
     connectionString: parsed.toString(),
     ssl: {
-      ca: readFileSync(path.resolve(process.cwd(), caPath), "utf8"),
+      ca: readFileSync(resolvedPath, "utf8"),
       rejectUnauthorized: true,
     },
   };
@@ -47,10 +56,9 @@ export function createPrismaClient(connectionString?: string): PrismaClient {
       ? new Pool({
           ...buildConnection(url),
           max: POOL_MAX,
-          idleTimeoutMillis: 30_000,
-          // Hosted Postgres (e.g. Supabase) can take a few seconds for a new TLS connection.
-          connectionTimeoutMillis: 15_000,
-          maxUses: 7500,
+          idleTimeoutMillis: isServerless ? 5_000 : 30_000,
+          connectionTimeoutMillis: isServerless ? 6_000 : 12_000,
+          maxUses: isServerless ? 500 : 7500,
         })
       : globalForPrisma.prismaPool;
 

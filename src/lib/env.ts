@@ -72,8 +72,8 @@ export const env = createEnv({
     MAINTENANCE_MODE: z.enum(["true", "false"]).default("false"),
   },
   client: {
-    NEXT_PUBLIC_SITE_URL: z.string().url().default("https://maisonaurelia.com"),
-    NEXT_PUBLIC_SITE_NAME: z.string().min(1).default("Maison Aurelia"),
+    NEXT_PUBLIC_SITE_URL: z.string().url().default("https://shinorajewels.com"),
+    NEXT_PUBLIC_SITE_NAME: z.string().min(1).default("Shinora Jewels"),
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: emptyToUndefined(z.string().min(1)),
     NEXT_PUBLIC_RAZORPAY_KEY_ID: emptyToUndefined(z.string().min(1)),
     NEXT_PUBLIC_IMAGE_CDN_URL: z.string().url().default("http://localhost:9000/jewellery-media"),

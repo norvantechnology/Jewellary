@@ -5,7 +5,7 @@ import Redis from "ioredis";
 import { env } from "@/lib/env";
 import { logger } from "@/server/logger";
 
-export const REALTIME_CHANNEL = "maison-aurelia:realtime";
+export const REALTIME_CHANNEL = "shinora-jewels:realtime";
 
 export type RealtimeEvent =
   | {

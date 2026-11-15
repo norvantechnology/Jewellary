@@ -168,10 +168,9 @@ export function buildWebSiteJsonLd(settings: PublicStoreSettings): WithContext<W
   const siteUrl = getSiteUrl();
   const alternateName = Array.from(
     new Set(
-      [
-        settings.legalName?.trim(),
-        settings.storeName === "Maison Aurelia" ? "MAISON AURELIA" : null,
-      ].filter((v): v is string => Boolean(v) && v !== settings.storeName),
+      [settings.legalName?.trim(), "Shinora", "Shinora Jewelry"].filter(
+        (v): v is string => Boolean(v) && v !== settings.storeName,
+      ),
     ),
   );
 

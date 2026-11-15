@@ -401,7 +401,7 @@ export function AdminShell({
               </span>
               <span className="hidden text-xs text-muted-foreground sm:inline">
                 {" "}
-                — Maison Aurelia
+                — Shinora Jewels
               </span>
             </div>
           </div>

@@ -43,7 +43,7 @@ jobs:
       BETTER_AUTH_SECRET: ci_only_secret_at_least_32_characters_long_123
       BETTER_AUTH_URL: http://localhost:3000
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
-      NEXT_PUBLIC_SITE_NAME: Maison Aurelia
+      NEXT_PUBLIC_SITE_NAME: Shinora Jewels
       PAYMENT_PROVIDER: stripe
       PAYMENT_TEST_SANDBOX: "true"
       S3_ENDPOINT: http://localhost:9000

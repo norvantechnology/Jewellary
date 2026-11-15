@@ -291,7 +291,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
                 <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
                   <AreaChart data={data.series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="aureliaRevenueFill" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="shinoraRevenueFill" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor={palette.accent} stopOpacity={0.35} />
                         <stop offset="95%" stopColor={palette.accent} stopOpacity={0.02} />
                       </linearGradient>
@@ -322,7 +322,7 @@ export function AdminDashboardClient({ data }: { data: DashboardAnalyticsDTO }) 
                       name={`Revenue (${data.currency})`}
                       stroke={palette.accentText}
                       strokeWidth={2}
-                      fill="url(#aureliaRevenueFill)"
+                      fill="url(#shinoraRevenueFill)"
                     />
                   </AreaChart>
                 </ResponsiveContainer>

@@ -75,7 +75,7 @@ export function buildSeoImageStem(input: {
   hashSuffix?: string;
 }): string {
   const parts: string[] = [];
-  const base = slugify(input.slug || input.productName || "maison-aurelia-piece");
+  const base = slugify(input.slug || input.productName || "shinora-jewels-piece");
   if (base) parts.push(base);
 
   if (input.metal?.trim()) {

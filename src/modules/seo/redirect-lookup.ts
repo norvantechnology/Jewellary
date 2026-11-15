@@ -11,6 +11,14 @@ interface CachedRuleEntry {
 const CACHE_TTL_MS = 60_000;
 const SLUG_CACHE_TTL_MS = 60_000;
 const MAX_SLUG_CACHE_ENTRIES = 2000;
+const PROXY_DB_TIMEOUT_MS = 500;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
 
 let cachedRules: { expiresAt: number; byPath: Map<string, CachedRuleEntry> } | null = null;
 let inFlightRules: Promise<Map<string, CachedRuleEntry>> | null = null;
@@ -31,10 +39,10 @@ async function loadActiveRulesMap(): Promise<Map<string, CachedRuleEntry>> {
     return cachedRules.byPath;
   }
   if (inFlightRules) {
-    return inFlightRules;
+    return withTimeout(inFlightRules, PROXY_DB_TIMEOUT_MS, new Map<string, CachedRuleEntry>());
   }
 
-  inFlightRules = (async () => {
+  const queryPromise = (async () => {
     try {
       const rows = await db.redirectRule.findMany({
         where: { isActive: true },
@@ -64,12 +72,15 @@ async function loadActiveRulesMap(): Promise<Map<string, CachedRuleEntry>> {
         byPath,
       };
       return byPath;
+    } catch {
+      return new Map<string, CachedRuleEntry>();
     } finally {
       inFlightRules = null;
     }
   })();
 
-  return inFlightRules;
+  inFlightRules = queryPromise;
+  return withTimeout(queryPromise, PROXY_DB_TIMEOUT_MS, new Map<string, CachedRuleEntry>());
 }
 
 async function lookupSlugRedirectCached(
@@ -84,31 +95,39 @@ async function lookupSlugRedirectCached(
     return cached.value;
   }
 
-  const hit = await db.slugRedirect.findUnique({
-    where: { entityType_oldSlug: { entityType, oldSlug } },
-    select: { id: true, newSlug: true, statusCode: true },
-  });
+  const queryPromise = (async () => {
+    try {
+      const hit = await db.slugRedirect.findUnique({
+        where: { entityType_oldSlug: { entityType, oldSlug } },
+        select: { id: true, newSlug: true, statusCode: true },
+      });
 
-  const value: ProxyRedirectMatch | null =
-    hit && hit.newSlug !== oldSlug
-      ? {
-          kind: "slug",
-          id: hit.id,
-          toPath: `${prefix}${hit.newSlug}`,
-          statusCode: hit.statusCode || 301,
-          entityType,
-          oldSlug,
+      const value: ProxyRedirectMatch | null =
+        hit && hit.newSlug !== oldSlug
+          ? {
+              kind: "slug",
+              id: hit.id,
+              toPath: `${prefix}${hit.newSlug}`,
+              statusCode: hit.statusCode || 301,
+              entityType,
+              oldSlug,
+            }
+          : null;
+
+      if (slugRedirectCache.size >= MAX_SLUG_CACHE_ENTRIES) {
+        const firstKey = slugRedirectCache.keys().next().value;
+        if (firstKey !== undefined) {
+          slugRedirectCache.delete(firstKey);
         }
-      : null;
-
-  if (slugRedirectCache.size >= MAX_SLUG_CACHE_ENTRIES) {
-    const firstKey = slugRedirectCache.keys().next().value;
-    if (firstKey !== undefined) {
-      slugRedirectCache.delete(firstKey);
+      }
+      slugRedirectCache.set(key, { expiresAt: Date.now() + SLUG_CACHE_TTL_MS, value });
+      return value;
+    } catch {
+      return null;
     }
-  }
-  slugRedirectCache.set(key, { expiresAt: now + SLUG_CACHE_TTL_MS, value });
-  return value;
+  })();
+
+  return withTimeout(queryPromise, PROXY_DB_TIMEOUT_MS, null);
 }
 
 export interface ProxyRedirectMatch {

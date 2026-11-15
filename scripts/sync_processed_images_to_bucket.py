@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Maison Aurelia - Sync Processed Studio Images to S3 Bucket & Database
+Shinora Jewels - Sync Processed Studio Images to S3 Bucket & Database
 =====================================================================
 Reads `processed_product_images/manifest.json`, generates optimized
 responsive variants (-med, -thumb), uploads them to the S3 bucket,
