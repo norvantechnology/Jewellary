@@ -69,7 +69,7 @@ export function EmailLayout({
   previewText,
   heading,
   children,
-  contactEmail = "help@example.com",
+  contactEmail = "info@shinorajewels.com",
 }: EmailLayoutProps) {
   return (
     <Html lang="en">

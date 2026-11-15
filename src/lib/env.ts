@@ -31,10 +31,14 @@ export const env = createEnv({
     S3_SECRET_ACCESS_KEY: emptyToUndefined(z.string().min(1)),
 
     RESEND_API_KEY: emptyToUndefined(z.string().min(1)),
-    EMAIL_FROM: z.string().email().default("concierge@example.com"),
-    ADMIN_NOTIFY_EMAIL: z.string().email().default("admin@example.com"),
+    EMAIL_FROM: z.string().email().default("info@shinorajewels.com"),
+    ADMIN_NOTIFY_EMAIL: z.string().email().default("info@shinorajewels.com"),
+    // SMTP (e.g. Hostinger: smtp.hostinger.com, port 465, SSL). Used when RESEND_API_KEY is empty.
     SMTP_HOST: emptyToUndefined(z.string().min(1)),
-    SMTP_PORT: z.coerce.number().int().positive().default(1025),
+    SMTP_PORT: z.coerce.number().int().positive().default(465),
+    SMTP_SECURE: emptyToUndefined(z.enum(["true", "false"])),
+    SMTP_USER: emptyToUndefined(z.string().min(1)),
+    SMTP_PASSWORD: emptyToUndefined(z.string().min(1)),
 
     UPSTASH_REDIS_REST_URL: emptyToUndefined(z.string().url()),
     UPSTASH_REDIS_REST_TOKEN: emptyToUndefined(z.string().min(1)),

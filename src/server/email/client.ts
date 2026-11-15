@@ -43,7 +43,11 @@ function getSmtpTransporter(): nodemailer.Transporter | null {
     cachedTransporter = nodemailer.createTransport({
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
-      secure: false,
+      // Port 465 uses SSL from the start; 587 upgrades with STARTTLS.
+      secure: env.SMTP_SECURE ? env.SMTP_SECURE === "true" : env.SMTP_PORT === 465,
+      auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASSWORD ?? "" } : undefined,
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
     });
   }
   return cachedTransporter;
