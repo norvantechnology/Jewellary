@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Award, Compass, Gem, ShieldCheck, Sparkles, Truck } from "lucide-react";
+import { ArrowRight, Award, Compass, Gem, Lock, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import { Float, FloatSparkles } from "@/components/motion/Float";
 import { Magnetic } from "@/components/motion/Magnetic";
 import { Reveal, RevealStagger, ScaleIn } from "@/components/motion/Reveal";
@@ -9,9 +9,16 @@ import { Container, Section, getProductGridClassName } from "@/components/shared
 import { JsonLd } from "@/components/seo/JsonLd";
 import { HomeProductFinder } from "@/components/storefront/HomeProductFinder";
 import { ProductCard } from "@/components/storefront/ProductCard";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { buildJewelryStoreJsonLd } from "@/lib/seo/jsonld";
-import { getHomepagePayload } from "@/modules/catalog/catalog.public";
+import { fill } from "@/lib/fill-text";
+import { buildFaqPageJsonLd, buildJewelryStoreJsonLd } from "@/lib/seo/jsonld";
+import { getHomeShapeTiles, getHomepagePayload } from "@/modules/catalog/catalog.public";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
 
@@ -20,15 +27,17 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const STEP_ICONS = [Compass, Sparkles, Award];
-const GUARANTEE_ICONS = [Award, Truck, ShieldCheck];
+const GUARANTEE_ICONS = [Award, Truck, ShieldCheck, Lock];
 
 export default async function HomePage() {
-  const [payload, settings, content] = await Promise.all([
+  const [payload, settings, content, shapeTiles] = await Promise.all([
     getHomepagePayload(),
     getPublicStoreSettings(),
     getSiteContent(),
+    getHomeShapeTiles().catch(() => []),
   ]);
   const home = content.pages.home;
+  const faqJsonLd = home.faq.length > 0 ? buildFaqPageJsonLd(home.faq) : null;
   const jewelryStoreJsonLd = buildJewelryStoreJsonLd(settings);
 
   const heroBanner = payload.banners.hero[0] ?? null;
@@ -36,7 +45,7 @@ export default async function HomePage() {
   const editorialBanner = payload.banners.editorial[0] ?? null;
   const arrivalPieces = [...payload.newArrivals, ...payload.bestsellers]
     .filter((item, idx, arr) => arr.findIndex((p) => p.id === item.id) === idx)
-    .slice(0, 4);
+    .slice(0, 8);
 
   const heroHeadline = heroBanner?.title ?? home.hero.headline;
   const heroWords = heroHeadline.split(/\s+/).filter(Boolean);
@@ -48,6 +57,7 @@ export default async function HomePage() {
   return (
     <>
       {jewelryStoreJsonLd && <JsonLd data={jewelryStoreJsonLd} />}
+      {faqJsonLd && <JsonLd data={faqJsonLd} />}
       {/* Hero & Instant Product Discovery */}
       <Section className="overflow-x-clip border-b border-border bg-bg py-8 sm:py-12 lg:py-16">
         <Container variant="wide">
@@ -131,6 +141,38 @@ export default async function HomePage() {
         </Container>
       </Section>
 
+      {/* Trust bar: reassurance right under the hero */}
+      <Section
+        spacing="sm"
+        className="border-b border-border bg-bg-alt"
+        aria-label="Our guarantees"
+      >
+        <Container variant="wide">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:gap-6 lg:grid-cols-4">
+            {home.guarantees.map((item, idx) => {
+              const GuaranteeIcon = GUARANTEE_ICONS[idx % GUARANTEE_ICONS.length]!;
+              return (
+                <div
+                  key={`${item.title}-${idx}`}
+                  className="flex flex-col items-center gap-2 text-center sm:flex-row sm:items-start sm:gap-3 sm:text-left"
+                >
+                  <ScaleIn
+                    delayMs={idx * 60}
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-accent-text shadow-sm ring-1 ring-border"
+                  >
+                    <GuaranteeIcon className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                  </ScaleIn>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-text">{item.title}</p>
+                    <p className="mt-0.5 hidden text-sm text-text-2 sm:block">{item.text}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Container>
+      </Section>
+
       {/* Shop by Collection */}
       {featuredCategories.length > 0 && (
         <Section
@@ -208,6 +250,63 @@ export default async function HomePage() {
         </Section>
       )}
 
+      {/* Shop by shape: round tiles linking to the shape landing pages */}
+      {shapeTiles.length > 0 && (
+        <Section
+          className="border-t border-border bg-bg py-10 md:py-16 lg:py-20"
+          aria-labelledby="shapes-heading"
+        >
+          <Container variant="wide">
+            <Reveal className="mb-6 flex items-center justify-between gap-4 sm:mb-8">
+              <h2 id="shapes-heading" className="type-h2 font-display font-semibold text-text">
+                {home.sections.shapes.heading}
+              </h2>
+              <Link
+                href="/collections/rings/engagement-rings"
+                className="ma-link-underline inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-medium text-accent-text transition-colors hover:text-accent-hover focus-visible:underline focus-visible:outline-none"
+              >
+                <span>{home.sections.shapes.linkLabel}</span>
+                <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              </Link>
+            </Reveal>
+            <RevealStagger className="-mx-4 flex snap-x snap-mandatory scrollbar-none gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-6 sm:overflow-visible sm:px-0 lg:grid-cols-8">
+              {shapeTiles.map((tile) => (
+                <Link
+                  key={tile.href}
+                  href={tile.href}
+                  className="group flex w-24 shrink-0 snap-start flex-col items-center gap-2.5 text-center focus-visible:outline-none sm:w-auto"
+                >
+                  <span className="relative block aspect-square w-full overflow-hidden rounded-full bg-surface-2 ring-1 ring-border transition-all duration-300 group-hover:ring-2 group-hover:ring-accent group-focus-visible:ring-2 group-focus-visible:ring-accent">
+                    {tile.imageUrl ? (
+                      <Image
+                        src={tile.imageUrl}
+                        alt={`${tile.name} engagement rings`}
+                        fill
+                        sizes="(min-width: 1024px) 140px, (min-width: 640px) 22vw, 96px"
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    ) : (
+                      <Gem
+                        className="absolute inset-0 m-auto size-8 text-text-muted"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </span>
+                  <span>
+                    <span className="block text-sm font-medium text-text group-hover:text-accent-text">
+                      {tile.name}
+                    </span>
+                    <span className="block text-xs text-text-muted">
+                      {fill(home.sections.shapes.countLabel, { count: tile.count })}
+                    </span>
+                  </span>
+                </Link>
+              ))}
+            </RevealStagger>
+          </Container>
+        </Section>
+      )}
+
       {/* Featured Pieces */}
       {payload.featuredProducts.length > 0 && (
         <Section
@@ -229,7 +328,7 @@ export default async function HomePage() {
             </Reveal>
 
             <RevealStagger className={getProductGridClassName("default")}>
-              {payload.featuredProducts.slice(0, 4).map((product) => (
+              {payload.featuredProducts.slice(0, 8).map((product) => (
                 <ProductCard key={product.id} product={product} currency={settings.currency} />
               ))}
             </RevealStagger>
@@ -339,6 +438,52 @@ export default async function HomePage() {
         </Container>
       </Section>
 
+      {/* FAQ: answers the common doubts before buying */}
+      {home.faq.length > 0 && (
+        <Section
+          className="border-t border-border bg-bg-alt py-10 md:py-16 lg:py-20"
+          aria-labelledby="home-faq-heading"
+        >
+          <Container variant="wide">
+            <div className="grid gap-6 lg:grid-cols-12 lg:gap-12">
+              <Reveal className="space-y-3 lg:col-span-4">
+                <h2 id="home-faq-heading" className="type-h2 font-display font-semibold text-text">
+                  {home.sections.faq.heading}
+                </h2>
+                <Link
+                  href="/faq"
+                  className="ma-link-underline inline-flex min-h-11 items-center gap-1 text-sm font-medium text-accent-text hover:text-accent-hover"
+                >
+                  <span>{home.sections.faq.linkLabel}</span>
+                  <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                </Link>
+              </Reveal>
+              <Reveal className="lg:col-span-8">
+                <Accordion
+                  type="single"
+                  collapsible
+                  className="rounded-xl border border-border bg-surface px-4 shadow-sm sm:px-6"
+                >
+                  {home.faq.map((item, idx) => (
+                    <AccordionItem key={item.question} value={`faq-${idx}`}>
+                      <AccordionTrigger
+                        headingLevel="h3"
+                        className="min-h-14 py-4 text-left text-base font-medium"
+                      >
+                        {item.question}
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-4 text-sm leading-relaxed text-text-2">
+                        {item.answer}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </Reveal>
+            </div>
+          </Container>
+        </Section>
+      )}
+
       {/* Buying Guides */}
       {payload.articles.length > 0 && (
         <Section
@@ -394,38 +539,6 @@ export default async function HomePage() {
           </Container>
         </Section>
       )}
-
-      {/* Single 3-Item Trust Strip (shown once above footer) */}
-      <Section
-        spacing="sm"
-        className="border-y border-border bg-bg-alt"
-        aria-label="Our guarantees"
-      >
-        <Container variant="wide">
-          <div className="grid grid-cols-3 gap-3 sm:gap-6">
-            {home.guarantees.map((item, idx) => {
-              const GuaranteeIcon = GUARANTEE_ICONS[idx % GUARANTEE_ICONS.length]!;
-              return (
-                <div
-                  key={`${item.title}-${idx}`}
-                  className="flex flex-col items-center gap-2 text-center sm:flex-row sm:items-start sm:gap-3 sm:text-left"
-                >
-                  <ScaleIn
-                    delayMs={idx * 60}
-                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-accent-text shadow-sm ring-1 ring-border"
-                  >
-                    <GuaranteeIcon className="size-5" strokeWidth={1.5} aria-hidden="true" />
-                  </ScaleIn>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-text">{item.title}</p>
-                    <p className="mt-0.5 hidden text-sm text-text-2 sm:block">{item.text}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Container>
-      </Section>
     </>
   );
 }

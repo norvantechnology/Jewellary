@@ -372,6 +372,15 @@
           "heading": "Buying guides",
           "linkLabel": "All guides",
           "readLabel": "Read the guide"
+        },
+        "shapes": {
+          "heading": "Shop engagement rings by shape",
+          "linkLabel": "All engagement rings",
+          "countLabel": "{count} rings"
+        },
+        "faq": {
+          "heading": "Questions, answered",
+          "linkLabel": "All FAQs"
         }
       },
       "custom": {
@@ -412,9 +421,35 @@
         {
           "title": "{{returnWindowDays}}-day returns",
           "text": "Return unworn pieces in their original condition within {{returnWindowDays}} days."
+        },
+        {
+          "title": "Secure checkout",
+          "text": "Pay safely by card, UPI or wallet through Razorpay. Your details are never stored on our site."
         }
       ],
-      "_comment": "Home page (/). If an active banner exists in Admin > Banners, it replaces the hero text. Featured products, categories and articles come from the database."
+      "_comment": "Home page (/). If an active banner exists in Admin > Banners, it replaces the hero text. Featured products, categories and articles come from the database.",
+      "faq": [
+        {
+          "question": "Is moissanite a real diamond?",
+          "answer": "No. Moissanite is its own gemstone, made in a lab. It is nearly as hard as diamond, sparkles more, and passes a standard diamond tester, at a fraction of the price. We also offer lab-grown diamonds, which are real diamonds."
+        },
+        {
+          "question": "How long does my order take?",
+          "answer": "Every piece is handmade to order in 7–10 business days, then ships in 7–14 business days. Express shipping is available at checkout."
+        },
+        {
+          "question": "Which metals can I choose?",
+          "answer": "925 sterling silver as standard, or 10K, 14K and 18K solid gold in yellow, white or rose. Choose your metal on the product page."
+        },
+        {
+          "question": "What if the ring doesn't fit?",
+          "answer": "We make US sizes 3 to 10¾. Use our ring size guide before you order, and contact us if you need a resize after delivery."
+        },
+        {
+          "question": "Can I return my piece?",
+          "answer": "Yes. Return unworn pieces in their original condition within {{returnWindowDays}} days. Engraved and fully custom pieces can't be returned."
+        }
+      ]
     },
     "collections": {
       "seo": {

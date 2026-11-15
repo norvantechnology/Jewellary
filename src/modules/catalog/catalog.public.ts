@@ -1110,13 +1110,13 @@ export async function getHomepagePayload(): Promise<HomepagePayloadDTO> {
       db.product.findMany({
         where: { status: "ACTIVE", deletedAt: null, isNewArrival: true },
         orderBy: [{ createdAt: "desc" }],
-        take: 4,
+        take: 8,
         select: PUBLIC_PRODUCT_CARD_SELECT,
       }),
       db.product.findMany({
         where: { status: "ACTIVE", deletedAt: null, isBestseller: true },
         orderBy: [{ createdAt: "desc" }],
-        take: 4,
+        take: 8,
         select: PUBLIC_PRODUCT_CARD_SELECT,
       }),
       getPublishedArticles(3),
@@ -1148,7 +1148,7 @@ export async function getHomepagePayload(): Promise<HomepagePayloadDTO> {
     }
     if (newArrivals.length === 0) {
       const featuredIds = new Set(featured.map((r) => r.id));
-      newArrivals = recent.filter((r) => !featuredIds.has(r.id)).slice(0, 4);
+      newArrivals = recent.filter((r) => !featuredIds.has(r.id)).slice(0, 8);
     }
   }
 
@@ -1164,6 +1164,64 @@ export async function getHomepagePayload(): Promise<HomepagePayloadDTO> {
     bestsellers: bestsellerRows.map(mapProductRowToCardDTO),
     articles,
   };
+}
+
+export interface HomeShapeTile {
+  name: string;
+  href: string;
+  imageUrl: string | null;
+  count: number;
+}
+
+/**
+ * "Shop by shape" tiles for the home page: the active landing pages that filter by stone shape
+ * (Admin > SEO > Landing Facets), each with a real product photo and its piece count.
+ */
+export async function getHomeShapeTiles(): Promise<HomeShapeTile[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.products, CACHE_TAGS.landingFacets);
+
+  const facets = await db.landingFacet.findMany({
+    where: { isActive: true, noindex: false },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+  const tiles: HomeShapeTile[] = [];
+  const seenShapes = new Set<string>();
+  for (const facet of facets) {
+    const fp = (facet.filterParams ?? {}) as { shape?: string[] };
+    const shape = fp.shape?.[0];
+    if (!shape || seenShapes.has(shape)) continue;
+    const where: Prisma.ProductWhereInput = {
+      status: "ACTIVE",
+      deletedAt: null,
+      stoneShape: shape,
+      category: { path: { startsWith: facet.categoryPath } },
+    };
+    const [count, sample] = await Promise.all([
+      db.product.count({ where }),
+      db.product.findFirst({
+        where,
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+        select: {
+          images: {
+            orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+            take: 1,
+            select: { url: true, thumbUrl: true },
+          },
+        },
+      }),
+    ]);
+    if (count === 0) continue;
+    seenShapes.add(shape);
+    tiles.push({
+      name: shape,
+      href: `/collections/${facet.categoryPath}/${facet.facetSlug}`,
+      imageUrl: sample?.images[0]?.thumbUrl ?? sample?.images[0]?.url ?? null,
+      count,
+    });
+  }
+  return tiles.slice(0, 8);
 }
 
 export interface SitemapCategoryItem {
