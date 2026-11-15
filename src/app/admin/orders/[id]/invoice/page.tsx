@@ -10,6 +10,18 @@ import { getAdminOrderDetail } from "@/modules/orders/admin-orders.service";
 import { requirePermission } from "@/server/dal";
 import { NotFoundError } from "@/server/errors";
 
+const STATUS_LABELS: Record<string, string> = {
+  PENDING_PAYMENT: "Awaiting payment",
+  PAYMENT_FAILED: "Payment failed",
+  PAID: "Paid",
+  PROCESSING: "In the workshop",
+  PACKED: "Packed",
+  SHIPPED: "Shipped",
+  DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
+  REFUNDED: "Refunded",
+};
+
 export const metadata: Metadata = {
   title: "Commercial Invoice & Packing Slip",
 };
@@ -46,210 +58,244 @@ export default async function AdminOrderInvoicePage({
       </div>
 
       {/* Commercial Invoice */}
-      <article className="rounded-xl border border-border bg-card p-4 sm:p-10">
-        <header className="flex flex-col items-start justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:flex-wrap">
-          <div className="min-w-0">
-            <p className="text-editorial-label text-accent-text">{order.store.storeName}</p>
-            <h1 className="type-h2 mt-1 font-display font-medium text-foreground">
-              Commercial Invoice
-            </h1>
-            {order.store.physicalStore?.address && (
-              <p className="mt-1 text-xs break-words text-muted-foreground">
-                {order.store.physicalStore.address}
+      <article className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="h-1.5 bg-accent" aria-hidden="true" />
+        <div className="p-4 sm:p-10">
+          <header className="flex flex-col items-start justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:flex-wrap">
+            <div className="min-w-0">
+              <p className="text-editorial-label text-accent-text">{order.store.storeName}</p>
+              <h1 className="type-h2 mt-1 font-display font-medium text-foreground">Invoice</h1>
+              {order.store.physicalStore?.address && (
+                <p className="mt-1 text-xs break-words text-muted-foreground">
+                  {order.store.physicalStore.address}
+                </p>
+              )}
+              <p className="text-xs break-all text-muted-foreground">
+                {order.store.contactEmail}
+                {order.store.contactPhone ? ` · ${order.store.contactPhone}` : ""}
               </p>
-            )}
-            <p className="text-xs break-all text-muted-foreground">
-              {order.store.contactEmail}
-              {order.store.contactPhone ? ` · ${order.store.contactPhone}` : ""}
-            </p>
-          </div>
-          <dl className="space-y-1 text-left text-sm sm:text-right">
-            <div>
-              <dt className="inline text-muted-foreground">Invoice / Order: </dt>
-              <dd className="inline font-medium text-foreground">{order.orderNumber}</dd>
             </div>
-            <div>
-              <dt className="inline text-muted-foreground">Date Issued: </dt>
-              <dd className="inline text-foreground">{formatDate(order.createdAt)}</dd>
-            </div>
-            <div>
-              <dt className="inline text-muted-foreground">Status: </dt>
-              <dd className="inline text-foreground">{order.status}</dd>
-            </div>
-          </dl>
-        </header>
-
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
-          <div>
-            <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              Bill To
-            </h2>
-            <address className="mt-2 space-y-0.5 text-sm text-foreground not-italic">
-              <p className="font-medium">{order.billingAddress.fullName}</p>
-              <p>{order.billingAddress.line1}</p>
-              {order.billingAddress.line2 && <p>{order.billingAddress.line2}</p>}
-              <p>
-                {order.billingAddress.city}, {order.billingAddress.state}{" "}
-                {order.billingAddress.postalCode}
-              </p>
-              <p>{formatCountryName(order.billingAddress.country)}</p>
-              <p className="text-xs text-muted-foreground">{order.customerEmail}</p>
-            </address>
-          </div>
-
-          <div>
-            <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              Ship To ({order.shippingMethodName})
-            </h2>
-            <address className="mt-2 space-y-0.5 text-sm text-foreground not-italic">
-              <p className="font-medium">{order.shippingAddress.fullName}</p>
-              <p>{order.shippingAddress.line1}</p>
-              {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
-              <p>
-                {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
-                {order.shippingAddress.postalCode}
-              </p>
-              <p>{formatCountryName(order.shippingAddress.country)}</p>
-              <p className="text-xs text-muted-foreground">{order.shippingAddress.phone}</p>
-            </address>
-          </div>
-        </div>
-
-        {/* Mobile item cards (< 768px) */}
-        <ul className="mt-8 divide-y divide-border border-t border-border md:hidden print:hidden">
-          {order.items.map((item) => (
-            <li key={item.id} className="space-y-2 py-3.5 text-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium break-words text-foreground">{item.titleSnapshot}</p>
-                  <p className="text-xs text-muted-foreground">{item.variantTitleSnapshot}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">SKU {item.skuSnapshot}</p>
-                </div>
-                <span className="tabular-nums-price shrink-0 font-semibold text-foreground">
-                  {formatMoneyExact(
-                    item.lineTotal,
-                    order.currency,
-                    "en-US",
-                    order.currencyDecimals,
-                  )}
-                </span>
+            <dl className="space-y-1 text-left text-sm sm:text-right">
+              <div>
+                <dt className="inline text-muted-foreground">Invoice / Order: </dt>
+                <dd className="inline font-medium text-foreground">{order.orderNumber}</dd>
               </div>
-              <div className="tabular-nums-price flex items-center justify-between text-xs text-muted-foreground">
-                <span>Qty: {item.quantity}</span>
-                <span>
-                  Unit:{" "}
-                  {formatMoneyExact(
-                    item.unitPrice,
-                    order.currency,
-                    "en-US",
-                    order.currencyDecimals,
-                  )}
-                </span>
+              <div>
+                <dt className="inline text-muted-foreground">Date Issued: </dt>
+                <dd className="inline text-foreground">{formatDate(order.createdAt)}</dd>
               </div>
-            </li>
-          ))}
-        </ul>
+              <div>
+                <dt className="inline text-muted-foreground">Status: </dt>
+                <dd className="inline font-medium text-foreground">
+                  {STATUS_LABELS[order.status] ?? order.status}
+                </dd>
+              </div>
+            </dl>
+          </header>
 
-        {/* Desktop & Print invoice table */}
-        <div className="mt-8 hidden overflow-x-auto md:block print:block">
-          <table className="w-full min-w-[540px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs tracking-wider text-muted-foreground uppercase">
-                <th className="py-2.5 pr-3">Piece</th>
-                <th className="py-2.5 pr-3">SKU</th>
-                <th className="py-2.5 pr-3 text-right">Qty</th>
-                <th className="py-2.5 pr-3 text-right">Unit Price</th>
-                <th className="py-2.5 text-right">Line Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {order.items.map((item) => (
-                <tr key={item.id}>
-                  <td className="py-3 pr-3">
-                    <p className="font-medium text-foreground">{item.titleSnapshot}</p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border-l-2 border-accent bg-muted/40 p-4">
+              <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                Bill To
+              </h2>
+              <address className="mt-2 space-y-0.5 text-sm text-foreground not-italic">
+                <p className="font-medium">{order.billingAddress.fullName}</p>
+                <p>{order.billingAddress.line1}</p>
+                {order.billingAddress.line2 && <p>{order.billingAddress.line2}</p>}
+                <p>
+                  {order.billingAddress.city}, {order.billingAddress.state}{" "}
+                  {order.billingAddress.postalCode}
+                </p>
+                <p>{formatCountryName(order.billingAddress.country)}</p>
+                <p className="text-xs text-muted-foreground">{order.customerEmail}</p>
+              </address>
+            </div>
+
+            <div className="rounded-lg border-l-2 border-accent bg-muted/40 p-4">
+              <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                Ship To ({order.shippingMethodName})
+              </h2>
+              <address className="mt-2 space-y-0.5 text-sm text-foreground not-italic">
+                <p className="font-medium">{order.shippingAddress.fullName}</p>
+                <p>{order.shippingAddress.line1}</p>
+                {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
+                <p>
+                  {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
+                  {order.shippingAddress.postalCode}
+                </p>
+                <p>{formatCountryName(order.shippingAddress.country)}</p>
+                <p className="text-xs text-muted-foreground">{order.shippingAddress.phone}</p>
+              </address>
+            </div>
+          </div>
+
+          {/* Mobile item cards (< 768px) */}
+          <ul className="mt-8 divide-y divide-border border-t border-border md:hidden print:hidden">
+            {order.items.map((item) => (
+              <li key={item.id} className="space-y-2 py-3.5 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium break-words text-foreground">{item.titleSnapshot}</p>
                     <p className="text-xs text-muted-foreground">{item.variantTitleSnapshot}</p>
-                  </td>
-                  <td className="py-3 pr-3 text-xs text-muted-foreground">{item.skuSnapshot}</td>
-                  <td className="tabular-nums-price py-3 pr-3 text-right">{item.quantity}</td>
-                  <td className="tabular-nums-price py-3 pr-3 text-right">
-                    {formatMoneyExact(
-                      item.unitPrice,
-                      order.currency,
-                      "en-US",
-                      order.currencyDecimals,
-                    )}
-                  </td>
-                  <td className="tabular-nums-price py-3 text-right font-medium">
+                    <p className="mt-0.5 text-xs text-muted-foreground">SKU {item.skuSnapshot}</p>
+                  </div>
+                  <span className="tabular-nums-price shrink-0 font-semibold text-foreground">
                     {formatMoneyExact(
                       item.lineTotal,
                       order.currency,
                       "en-US",
                       order.currencyDecimals,
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </span>
+                </div>
+                <div className="tabular-nums-price flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Qty: {item.quantity}</span>
+                  <span>
+                    Unit:{" "}
+                    {formatMoneyExact(
+                      item.unitPrice,
+                      order.currency,
+                      "en-US",
+                      order.currencyDecimals,
+                    )}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
 
-        <div className="mt-6 flex justify-end border-t border-border pt-4">
-          <dl className="w-full max-w-xs space-y-1.5 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Subtotal</dt>
-              <dd className="tabular-nums-price">
-                {formatMoneyExact(order.subtotal, order.currency, "en-US", order.currencyDecimals)}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Shipping</dt>
-              <dd className="tabular-nums-price">
-                {formatMoneyExact(
-                  order.shippingCost,
-                  order.currency,
-                  "en-US",
-                  order.currencyDecimals,
-                )}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Tax</dt>
-              <dd className="tabular-nums-price">
-                {formatMoneyExact(order.taxAmount, order.currency, "en-US", order.currencyDecimals)}
-              </dd>
-            </div>
-            <div className="flex justify-between border-t border-border pt-2 font-medium">
-              <dt>Invoice Total ({order.currency})</dt>
-              <dd className="tabular-nums-price font-display text-lg">
-                {formatMoneyExact(order.total, order.currency, "en-US", order.currencyDecimals)}
-              </dd>
-            </div>
-            {order.currency !== order.baseCurrency && (
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <dt>
-                  FX 1 {order.baseCurrency} = {Number(order.exchangeRate).toFixed(4)}{" "}
-                  {order.currency}
-                </dt>
+          {/* Desktop & Print invoice table */}
+          <div className="mt-8 hidden overflow-x-auto md:block print:block">
+            <table className="w-full min-w-[540px] border-collapse text-sm">
+              <thead>
+                <tr className="bg-muted/50 text-left text-xs tracking-wider text-muted-foreground uppercase">
+                  <th className="py-2.5 pr-3 pl-3">Item</th>
+                  <th className="py-2.5 pr-3">SKU</th>
+                  <th className="py-2.5 pr-3 text-right">Qty</th>
+                  <th className="py-2.5 pr-3 text-right">Unit Price</th>
+                  <th className="py-2.5 pr-3 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {order.items.map((item) => (
+                  <tr key={item.id}>
+                    <td className="py-3 pr-3 pl-3">
+                      <p className="font-medium text-foreground">{item.titleSnapshot}</p>
+                      <p className="text-xs text-muted-foreground">{item.variantTitleSnapshot}</p>
+                    </td>
+                    <td className="py-3 pr-3 text-xs text-muted-foreground">{item.skuSnapshot}</td>
+                    <td className="tabular-nums-price py-3 pr-3 text-right">{item.quantity}</td>
+                    <td className="tabular-nums-price py-3 pr-3 text-right">
+                      {formatMoneyExact(
+                        item.unitPrice,
+                        order.currency,
+                        "en-US",
+                        order.currencyDecimals,
+                      )}
+                    </td>
+                    <td className="tabular-nums-price py-3 pr-3 text-right font-medium">
+                      {formatMoneyExact(
+                        item.lineTotal,
+                        order.currency,
+                        "en-US",
+                        order.currencyDecimals,
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-6 flex justify-end border-t border-border pt-4">
+            <dl className="w-full max-w-xs space-y-1.5 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Subtotal</dt>
                 <dd className="tabular-nums-price">
-                  Base: {formatMoneyExact(order.baseTotal, order.baseCurrency)}
-                </dd>
-              </div>
-            )}
-            {Number(order.refundedAmount) > 0 && (
-              <div className="flex justify-between text-xs text-accent-text">
-                <dt>Refunded</dt>
-                <dd className="tabular-nums-price">
-                  -
                   {formatMoneyExact(
-                    order.refundedAmount,
+                    order.subtotal,
                     order.currency,
                     "en-US",
                     order.currencyDecimals,
                   )}
                 </dd>
               </div>
-            )}
-          </dl>
+              {Number(order.discountAmount) > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Discount</dt>
+                  <dd className="tabular-nums-price">
+                    -
+                    {formatMoneyExact(
+                      order.discountAmount,
+                      order.currency,
+                      "en-US",
+                      order.currencyDecimals,
+                    )}
+                  </dd>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Shipping</dt>
+                <dd className="tabular-nums-price">
+                  {Number(order.shippingCost) === 0
+                    ? "Free"
+                    : formatMoneyExact(
+                        order.shippingCost,
+                        order.currency,
+                        "en-US",
+                        order.currencyDecimals,
+                      )}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Tax</dt>
+                <dd className="tabular-nums-price">
+                  {formatMoneyExact(
+                    order.taxAmount,
+                    order.currency,
+                    "en-US",
+                    order.currencyDecimals,
+                  )}
+                </dd>
+              </div>
+              <div className="-mx-3 flex items-center justify-between rounded-md bg-primary px-3 py-2.5 font-medium text-on-primary">
+                <dt>Total ({order.currency})</dt>
+                <dd className="tabular-nums-price font-display text-lg">
+                  {formatMoneyExact(order.total, order.currency, "en-US", order.currencyDecimals)}
+                </dd>
+              </div>
+              {order.currency !== order.baseCurrency && (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <dt>
+                    FX 1 {order.baseCurrency} = {Number(order.exchangeRate).toFixed(4)}{" "}
+                    {order.currency}
+                  </dt>
+                  <dd className="tabular-nums-price">
+                    Base: {formatMoneyExact(order.baseTotal, order.baseCurrency)}
+                  </dd>
+                </div>
+              )}
+              {Number(order.refundedAmount) > 0 && (
+                <div className="flex justify-between text-xs text-accent-text">
+                  <dt>Refunded</dt>
+                  <dd className="tabular-nums-price">
+                    -
+                    {formatMoneyExact(
+                      order.refundedAmount,
+                      order.currency,
+                      "en-US",
+                      order.currencyDecimals,
+                    )}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
+
+          <p className="mt-8 border-t border-border pt-4 text-center text-xs text-muted-foreground">
+            Thank you for shopping with {order.store.storeName}. Every piece is handmade to order.
+            Questions? {order.store.contactEmail}
+          </p>
         </div>
       </article>
 

@@ -6,6 +6,7 @@ import {
   Heading,
   Hr,
   Html,
+  Link,
   Preview,
   Section,
   Text,
@@ -20,46 +21,62 @@ interface EmailLayoutProps {
   contactEmail?: string;
 }
 
+const P = BRAND_PALETTE.light;
+const SANS = "Helvetica, Arial, sans-serif";
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://shinorajewels.com").replace(
+  /\/$/,
+  "",
+);
+
 const STYLES = {
   body: {
-    backgroundColor: BRAND_PALETTE.light.bg,
-    color: BRAND_PALETTE.light.text,
-    fontFamily: "Georgia, 'Times New Roman', serif",
+    backgroundColor: P.surface2,
+    color: P.text,
+    fontFamily: SANS,
     margin: "0",
-    padding: "32px 16px",
+    padding: "24px 12px",
   },
   container: {
-    backgroundColor: BRAND_PALETTE.light.surface,
-    border: `1px solid ${BRAND_PALETTE.light.border}`,
-    borderRadius: "4px",
+    backgroundColor: P.surface,
+    border: `1px solid ${P.border}`,
+    borderRadius: "10px",
     margin: "0 auto",
-    maxWidth: "580px",
-    padding: "40px 36px",
+    maxWidth: "600px",
+    overflow: "hidden" as const,
   },
-  brandHeader: {
-    fontSize: "13px",
-    letterSpacing: "0.22em",
+  header: {
+    backgroundColor: P.primary,
+    padding: "22px 32px",
+    textAlign: "center" as const,
+  },
+  brand: {
+    color: P.footerAccent,
+    fontFamily: "Georgia, 'Times New Roman', serif",
+    fontSize: "20px",
+    letterSpacing: "0.2em",
     textTransform: "uppercase" as const,
-    color: BRAND_PALETTE.light.accentText,
-    margin: "0 0 12px 0",
-    fontFamily: "Helvetica, Arial, sans-serif",
+    textDecoration: "none",
+    margin: "0",
   },
+  goldRule: { height: "3px", backgroundColor: P.accent, lineHeight: "3px", fontSize: "1px" },
+  content: { padding: "36px 32px 12px" },
   heading: {
+    fontFamily: "Georgia, 'Times New Roman', serif",
     fontSize: "26px",
-    lineHeight: "1.25",
+    lineHeight: "1.3",
     fontWeight: "500",
-    color: BRAND_PALETTE.light.text,
+    color: P.text,
     margin: "0 0 20px 0",
   },
-  hr: {
-    borderColor: BRAND_PALETTE.light.border,
-    margin: "28px 0 20px 0",
-  },
-  footer: {
+  hr: { borderColor: P.border, margin: "24px 0 0 0" },
+  footer: { padding: "20px 32px 28px", textAlign: "center" as const },
+  footerLinks: { fontSize: "13px", fontFamily: SANS, margin: "0 0 10px 0" },
+  footerLink: { color: P.accentText, textDecoration: "none", fontWeight: "600" },
+  footerText: {
     fontSize: "12px",
     lineHeight: "1.6",
-    color: BRAND_PALETTE.light.textMuted,
-    fontFamily: "Helvetica, Arial, sans-serif",
+    color: P.textMuted,
+    fontFamily: SANS,
     margin: "0",
   },
 };
@@ -77,18 +94,40 @@ export function EmailLayout({
       <Preview>{previewText}</Preview>
       <Body style={STYLES.body}>
         <Container style={STYLES.container}>
-          <Section>
-            <Text style={STYLES.brandHeader}>{siteName}</Text>
+          <Section style={STYLES.header}>
+            <Link href={SITE_URL} style={STYLES.brand}>
+              {siteName}
+            </Link>
+          </Section>
+          <Section style={STYLES.goldRule}>&nbsp;</Section>
+          <Section style={STYLES.content}>
             <Heading style={STYLES.heading}>{heading}</Heading>
             {children}
           </Section>
           <Hr style={STYLES.hr} />
-          <Section>
-            <Text style={STYLES.footer}>
-              {siteName} Customer Care &bull; Questions? Email us at{" "}
-              <a href={`mailto:${contactEmail}`} style={{ color: BRAND_PALETTE.light.accentText }}>
+          <Section style={STYLES.footer}>
+            <Text style={STYLES.footerLinks}>
+              <Link href={`${SITE_URL}/collections`} style={STYLES.footerLink}>
+                Shop
+              </Link>
+              &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+              <Link href={`${SITE_URL}/account/orders`} style={STYLES.footerLink}>
+                My orders
+              </Link>
+              &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+              <Link href={`${SITE_URL}/contact`} style={STYLES.footerLink}>
+                Help
+              </Link>
+            </Text>
+            <Text style={STYLES.footerText}>
+              Questions? Reply to this email or write to{" "}
+              <Link href={`mailto:${contactEmail}`} style={{ color: P.accentText }}>
                 {contactEmail}
-              </a>
+              </Link>
+              .
+            </Text>
+            <Text style={{ ...STYLES.footerText, marginTop: "6px" }}>
+              Handmade fine jewelry &middot; {siteName}
             </Text>
           </Section>
         </Container>
@@ -100,7 +139,7 @@ export function EmailLayout({
 export const EMAIL_BUTTON_STYLE = {
   backgroundColor: BRAND_PALETTE.light.primary,
   color: BRAND_PALETTE.light.onPrimary,
-  borderRadius: "4px",
+  borderRadius: "6px",
   fontSize: "13px",
   letterSpacing: "0.08em",
   textTransform: "uppercase" as const,
