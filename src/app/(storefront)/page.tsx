@@ -7,6 +7,7 @@ import { Magnetic } from "@/components/motion/Magnetic";
 import { Reveal, RevealStagger, ScaleIn } from "@/components/motion/Reveal";
 import { Container, Section, getProductGridClassName } from "@/components/shared/primitives";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { EtsyTrustSection } from "@/components/storefront/EtsyTrustSection";
 import { HomeProductFinder } from "@/components/storefront/HomeProductFinder";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import {
@@ -172,6 +173,9 @@ export default async function HomePage() {
           </div>
         </Container>
       </Section>
+
+      {/* Also on Etsy: independent proof from verified buyers */}
+      <EtsyTrustSection content={home.etsy} />
 
       {/* Shop by Collection */}
       {featuredCategories.length > 0 && (

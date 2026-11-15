@@ -16,6 +16,14 @@ import type { SiteHeaderConfig } from "@/types/navigation";
 
 function SocialIcon({ label }: { label: string }) {
   const lower = label.toLowerCase();
+  if (lower.includes("etsy")) {
+    // Etsy's "E" mark in the footer's text color.
+    return (
+      <span className="font-display text-xl leading-none font-semibold" aria-hidden="true">
+        E
+      </span>
+    );
+  }
   if (lower.includes("instagram")) {
     return (
       <svg
