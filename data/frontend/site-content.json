@@ -376,7 +376,8 @@
         "shapes": {
           "heading": "Shop engagement rings by shape",
           "linkLabel": "All engagement rings",
-          "countLabel": "{count} rings"
+          "countLabel": "{count} rings",
+          "subheading": "Find your favorite stone shape, each one handmade to order."
         },
         "faq": {
           "heading": "Questions, answered",
@@ -468,7 +469,8 @@
           "Same jewelers, same handmade quality",
           "Verified buyer reviews on Etsy",
           "Shop here or on Etsy, whichever you prefer"
-        ]
+        ],
+        "heroLinkLabel": "Also on Etsy · read verified buyer reviews"
       }
     },
     "collections": {
@@ -910,7 +912,7 @@
       "eyebrow": "Our story",
       "title": "About {{siteName}}",
       "updatedAt": "November 2026",
-      "body": "{{siteName}} makes moissanite and lab-grown diamond jewelry by hand, one order at a time. Every engagement ring, wedding band, pair of earrings, pendant and bracelet is made to order for you.\n\n## Handmade to order\n\nNothing sits on a shelf. Once you order, our jewelers make your piece in 7–10 business days. Every piece is hallmarked for metal purity.\n\n## Moissanite and lab-grown diamonds\n\nMost of our designs use moissanite: colorless (D-E-F) or in colors like champagne, green, blue, yellow and grey. Moissanite is conflict-free, has more fire than a diamond and passes a standard diamond tester. Some designs are also available with lab-grown diamonds.\n\nCertificates are available on request for an additional cost (IGI for lab-grown diamonds).\n\n## Sterling silver or solid gold\n\nEvery design is listed in 925 sterling silver. You can also have it made in 10K, 14K or 18K solid yellow, white or rose gold. Gold and other upgrades are priced on request; we send you a quote before you pay.\n\n## Make it yours\n\nChange the metal, stone color or ring size, or add an engraving. Tap **Customize** on any piece, or email [{{contactEmail}}](mailto:{{contactEmail}}).\n\n## Also on Etsy\n\nYou can also find our work on Etsy, where we sell as [GianGem](https://www.etsy.com/shop/giangem). The same jewelers make every piece, whether you order there or here, and you can read reviews from verified Etsy buyers before you buy.\n"
+      "body": "{{siteName}} makes moissanite and lab-grown diamond jewelry by hand, one order at a time. Every engagement ring, wedding band, pair of earrings, pendant and bracelet is made to order for you.\n\n## Handmade to order\n\nNothing sits on a shelf. Once you order, our jewelers make your piece in 7–10 business days. Every piece is hallmarked for metal purity.\n\n## Moissanite and lab-grown diamonds\n\nMost of our designs use moissanite: colorless (D-E-F) or in colors like champagne, green, blue, yellow and grey. Moissanite is conflict-free, has more fire than a diamond and passes a standard diamond tester. Some designs are also available with lab-grown diamonds.\n\nCertificates are available on request for an additional cost (IGI for lab-grown diamonds).\n\n## Sterling silver or solid gold\n\nEvery design is listed in 925 sterling silver. You can also have it made in 10K, 14K or 18K solid yellow, white or rose gold. Gold and other upgrades are priced on request; we send you a quote before you pay.\n\n## Make it yours\n\nChange the metal, stone color or ring size, or add an engraving. Tap **Customize** on any piece, or email [{{contactEmail}}](mailto:{{contactEmail}}).\n"
     },
     "faq": {
       "seo": {

@@ -1,12 +1,23 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Award, Compass, Gem, Lock, ShieldCheck, Sparkles, Truck } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Award,
+  Compass,
+  Gem,
+  Lock,
+  ShieldCheck,
+  Sparkles,
+  Truck,
+} from "lucide-react";
 import { Float, FloatSparkles } from "@/components/motion/Float";
 import { Magnetic } from "@/components/motion/Magnetic";
 import { Reveal, RevealStagger, ScaleIn } from "@/components/motion/Reveal";
 import { Container, Section, getProductGridClassName } from "@/components/shared/primitives";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { EtsyLogo } from "@/components/shared/EtsyLogo";
 import { EtsyTrustSection } from "@/components/storefront/EtsyTrustSection";
 import { HomeProductFinder } from "@/components/storefront/HomeProductFinder";
 import { ProductCard } from "@/components/storefront/ProductCard";
@@ -105,6 +116,21 @@ export default async function HomePage() {
                   <Link href={home.hero.secondaryCta.href}>{home.hero.secondaryCta.label}</Link>
                 </Button>
               </div>
+              {home.etsy.url ? (
+                <a
+                  href={home.etsy.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group mt-1 inline-flex min-h-11 items-center gap-2.5 text-sm text-text-2 hover:text-text"
+                >
+                  <EtsyLogo size="md" />
+                  <span className="underline-offset-4 group-hover:underline">
+                    {home.etsy.heroLinkLabel}
+                  </span>
+                  <ArrowUpRight className="size-4 shrink-0" aria-hidden="true" />
+                  <span className="sr-only">(opens Etsy in a new tab)</span>
+                </a>
+              ) : null}
             </div>
 
             <div className="relative min-w-0 lg:col-span-5">
@@ -261,52 +287,63 @@ export default async function HomePage() {
           aria-labelledby="shapes-heading"
         >
           <Container variant="wide">
-            <Reveal className="mb-6 flex items-center justify-between gap-4 sm:mb-8">
-              <h2 id="shapes-heading" className="type-h2 font-display font-semibold text-text">
-                {home.sections.shapes.heading}
-              </h2>
+            <Reveal className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+              <div className="space-y-1.5">
+                <h2 id="shapes-heading" className="type-h2 font-display font-semibold text-text">
+                  {home.sections.shapes.heading}
+                </h2>
+                <p className="text-sm text-text-2">{home.sections.shapes.subheading}</p>
+              </div>
               <Link
                 href="/collections/rings/engagement-rings"
-                className="ma-link-underline inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-medium text-accent-text transition-colors hover:text-accent-hover focus-visible:underline focus-visible:outline-none"
+                className="ma-link-underline hidden min-h-11 shrink-0 items-center gap-1 text-sm font-medium text-accent-text transition-colors hover:text-accent-hover focus-visible:underline focus-visible:outline-none sm:inline-flex"
               >
                 <span>{home.sections.shapes.linkLabel}</span>
                 <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
               </Link>
             </Reveal>
-            <RevealStagger className="-mx-4 flex snap-x snap-mandatory scrollbar-none gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-6 sm:overflow-visible sm:px-0 lg:grid-cols-8">
+            <RevealStagger className="grid grid-cols-4 gap-x-3 gap-y-5 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-8 lg:gap-x-5">
               {shapeTiles.map((tile) => (
                 <Link
                   key={tile.href}
                   href={tile.href}
-                  className="group flex w-24 shrink-0 snap-start flex-col items-center gap-2.5 text-center focus-visible:outline-none sm:w-auto"
+                  className="group flex min-w-0 flex-col items-center gap-2 text-center focus-visible:outline-none"
                 >
-                  <span className="relative block aspect-square w-full overflow-hidden rounded-full bg-surface-2 ring-1 ring-border transition-all duration-300 group-hover:ring-2 group-hover:ring-accent group-focus-visible:ring-2 group-focus-visible:ring-accent">
-                    {tile.imageUrl ? (
-                      <Image
-                        src={tile.imageUrl}
-                        alt={`${tile.name} engagement rings`}
-                        fill
-                        sizes="(min-width: 1024px) 140px, (min-width: 640px) 22vw, 96px"
-                        className="object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                    ) : (
-                      <Gem
-                        className="absolute inset-0 m-auto size-8 text-text-muted"
-                        aria-hidden="true"
-                      />
-                    )}
+                  <span className="relative block aspect-square w-full max-w-36 overflow-hidden rounded-full bg-surface-2 p-0.5 ring-1 ring-border transition-all duration-300 group-hover:ring-2 group-hover:ring-accent group-focus-visible:ring-2 group-focus-visible:ring-accent">
+                    <span className="relative block size-full overflow-hidden rounded-full">
+                      {tile.imageUrl ? (
+                        <Image
+                          src={tile.imageUrl}
+                          alt={`${tile.name} engagement rings`}
+                          fill
+                          sizes="(min-width: 1024px) 144px, 25vw"
+                          className="object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <Gem
+                          className="absolute inset-0 m-auto size-7 text-text-muted"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </span>
                   </span>
-                  <span>
-                    <span className="block text-sm font-medium text-text group-hover:text-accent-text">
+                  <span className="w-full min-w-0">
+                    <span className="block truncate text-xs font-medium text-text group-hover:text-accent-text sm:text-sm">
                       {tile.name}
                     </span>
-                    <span className="block text-xs text-text-muted">
+                    <span className="block truncate text-[11px] text-text-muted sm:text-xs">
                       {fill(home.sections.shapes.countLabel, { count: tile.count })}
                     </span>
                   </span>
                 </Link>
               ))}
             </RevealStagger>
+            <Button asChild variant="outline" className="mt-7 w-full sm:hidden">
+              <Link href="/collections/rings/engagement-rings">
+                {home.sections.shapes.linkLabel}
+                <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              </Link>
+            </Button>
           </Container>
         </Section>
       )}

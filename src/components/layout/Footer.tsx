@@ -1,3 +1,4 @@
+import { EtsyLogo } from "@/components/shared/EtsyLogo";
 import { UiText } from "@/components/shared/UiText";
 import * as React from "react";
 import Link from "next/link";
@@ -17,12 +18,7 @@ import type { SiteHeaderConfig } from "@/types/navigation";
 function SocialIcon({ label }: { label: string }) {
   const lower = label.toLowerCase();
   if (lower.includes("etsy")) {
-    // Etsy's "E" mark in the footer's text color.
-    return (
-      <span className="font-display text-xl leading-none font-semibold" aria-hidden="true">
-        E
-      </span>
-    );
+    return <EtsyLogo size="sm" />;
   }
   if (lower.includes("instagram")) {
     return (

@@ -1,17 +1,20 @@
 import { JsonLd } from "@/components/seo/JsonLd";
 import { EditorialContentView } from "@/components/storefront/EditorialContentView";
+import { EtsyTrustSection } from "@/components/storefront/EtsyTrustSection";
 import { getEditorialContentPage, getEditorialMetadata } from "@/lib/content";
 import { buildJewelryStoreJsonLd, buildWebPageJsonLd } from "@/lib/seo/jsonld";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
+import { getSiteContent } from "@/modules/site-content/site-content.service";
 
 export async function generateMetadata() {
   return getEditorialMetadata("about");
 }
 
 export default async function AboutPage() {
-  const [page, settings] = await Promise.all([
+  const [page, settings, content] = await Promise.all([
     getEditorialContentPage("about"),
     getPublicStoreSettings(),
+    getSiteContent(),
   ]);
   const aboutJsonLd = buildWebPageJsonLd({
     type: "AboutPage",
@@ -27,6 +30,7 @@ export default async function AboutPage() {
       <JsonLd data={aboutJsonLd} />
       {jewelryStoreJsonLd && <JsonLd data={jewelryStoreJsonLd} />}
       <EditorialContentView slug="about" />
+      <EtsyTrustSection content={content.pages.home.etsy} headingId="about-etsy-heading" />
     </>
   );
 }
