@@ -44,12 +44,6 @@ function getCardBadge(
 
 const LOW_STOCK_THRESHOLD = 5;
 
-/** 4:5 photos fill the card; other shapes (e.g. square) are shown whole instead of cropped. */
-function fitsCard(img: { width?: number | null; height?: number | null }): boolean {
-  if (!img.width || !img.height) return true;
-  return Math.abs(img.width / img.height - 0.8) < 0.06;
-}
-
 export const ProductCard = React.memo(function ProductCard({
   product,
   currency = "USD",
@@ -105,7 +99,7 @@ export const ProductCard = React.memo(function ProductCard({
               preload={priority || preload}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className={cn(
-                fitsCard(primary) ? "object-cover" : "object-contain",
+                "object-cover",
                 "object-center dark:brightness-90",
                 isOutOfStock ? "opacity-75 grayscale-[25%]" : "ma-product-media-img",
                 !isOutOfStock && secondary && "ma-product-has-alt",
@@ -121,7 +115,7 @@ export const ProductCard = React.memo(function ProductCard({
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className={cn(
                   "ma-product-secondary-img object-center dark:brightness-90",
-                  fitsCard(secondary) ? "object-cover" : "object-contain",
+                  "object-cover",
                 )}
               />
             )}

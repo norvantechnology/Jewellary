@@ -1,6 +1,14 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
+import {
+  OPTION_FACETS_SELECT,
+  availableMetals,
+  availableStones,
+  optionAvailabilityWhere,
+  sortMetalBuckets,
+  sortStoneBuckets,
+} from "@/modules/catalog/option-filters";
 import { PAGINATION_PAGE_SIZE, SEARCH_SUGGEST_LIMIT } from "@/lib/constants";
 import {
   mapProductRowToCardDTO,
@@ -210,9 +218,8 @@ export async function searchProducts(input: SearchQueryInput): Promise<SearchRes
 
   const where: Prisma.ProductWhereInput = {
     ...scopeWhere,
-    ...(input.metal && input.metal.length > 0 ? { metalType: { in: input.metal } } : {}),
+    AND: optionAvailabilityWhere(input),
     ...(input.shape && input.shape.length > 0 ? { stoneShape: { in: input.shape } } : {}),
-    ...(input.origin && input.origin.length > 0 ? { stoneOrigin: { in: input.origin } } : {}),
     ...(input.color && input.color.length > 0 ? { colorGrade: { in: input.color } } : {}),
     ...(input.clarity && input.clarity.length > 0 ? { clarityGrade: { in: input.clarity } } : {}),
     ...(input.certification && input.certification.length > 0
@@ -257,6 +264,7 @@ export async function searchProducts(input: SearchQueryInput): Promise<SearchRes
         certificationLab: true,
         basePrice: true,
         caratTotal: true,
+        ...OPTION_FACETS_SELECT,
       },
     }),
     db.product.findMany({
@@ -330,9 +338,9 @@ export async function searchProducts(input: SearchQueryInput): Promise<SearchRes
     totalPages,
     matchedBy: "fts-trgm",
     facets: {
-      metals: countMap(facetRows.map((r) => r.metalType)),
+      metals: sortMetalBuckets(countMap(facetRows.flatMap((r) => availableMetals(r)))),
       shapes: countMap(facetRows.map((r) => r.stoneShape)),
-      origins: countMap(facetRows.map((r) => r.stoneOrigin)),
+      origins: sortStoneBuckets(countMap(facetRows.flatMap((r) => availableStones(r)))),
       colors: countMap(facetRows.map((r) => r.colorGrade)),
       clarities: countMap(facetRows.map((r) => r.clarityGrade)),
       certifications: countMap(facetRows.map((r) => r.certificationLab)),

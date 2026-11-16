@@ -149,7 +149,7 @@
     },
     "footer": {
       "_comment": "Footer text. The Shop column also lists the top 4 categories from the database automatically.",
-      "blurb": "Moissanite and lab-grown diamond jewelry, handmade to order in 925 sterling silver and 10K–18K solid gold.",
+      "blurb": "Moissanite and lab-grown diamond jewelry, handmade to order in 925 sterling silver and 9K–18K solid gold or platinum.",
       "copyright": "All rights reserved.",
       "columns": [
         {
@@ -241,7 +241,7 @@
       "_productDescription": "Product description when the product has no SEO description. Also uses {price}. Used only when Admin > SEO > Templates is set; otherwise the product's own summary is used.",
       "collectionTitle": "{collection} – Moissanite & Lab-Grown Diamond | {brand}",
       "_collectionTitle": "Category page title, e.g. 'Engagement Rings – Certified Diamond Jewelry | Store'. {collection} = category name. Long titles are shortened to 60 characters by dropping the part after the dash first.",
-      "collectionDescription": "Shop {count} {collection} ({priceRange}) with moissanite and lab-grown diamonds, handmade to order in sterling silver or 10K–18K solid gold.",
+      "collectionDescription": "Shop {count} {collection} ({priceRange}) with moissanite and lab-grown diamonds, handmade to order in sterling silver or 9K–18K solid gold or platinum.",
       "_collectionDescription": "Category page description. {count} = number of products, {priceRange} = lowest to highest price.",
       "facetTitle": "{name} – {collection} | {brand}",
       "_facetTitle": "Title for filtered category pages, e.g. 'Oval Engagement Rings'. {name} = the filter (e.g. Oval).",
@@ -288,7 +288,7 @@
       },
       "llms": {
         "_comment": "/llms.txt: a plain summary of the store for AI search tools (ChatGPT, Perplexity, Google AI). Shown only when ENABLE_LLMS_TXT is on.",
-        "tagline": "Moissanite and lab-grown diamond jewelry, handmade to order in 925 sterling silver and 10K–18K solid gold.",
+        "tagline": "Moissanite and lab-grown diamond jewelry, handmade to order in 925 sterling silver and 9K–18K solid gold or platinum.",
         "_tagline": "Used when Admin > Settings has no tagline.",
         "collectionsHeading": "Jewelry Collections",
         "collectionFallback": "{name} handmade to order in sterling silver or solid gold.",
@@ -345,7 +345,7 @@
       },
       "hero": {
         "headline": "Moissanite engagement rings, made for you",
-        "subtitle": "Moissanite and lab-grown diamond rings, handmade to order in 925 sterling silver or 10K, 14K and 18K solid gold.",
+        "subtitle": "Moissanite and lab-grown diamond rings, handmade to order in 925 sterling silver or 9K, 10K, 14K and 18K solid gold or platinum.",
         "primaryCta": {
           "label": "Shop engagement rings",
           "href": "/collections"
@@ -402,7 +402,7 @@
           },
           {
             "title": "2. We make your ring",
-            "text": "Handmade to order in 925 sterling silver or 10K, 14K or 18K solid gold in 7–10 business days."
+            "text": "Handmade to order in 925 sterling silver or 9K, 10K, 14K or 18K solid gold in 7–10 business days."
           },
           {
             "title": "3. Delivered to your door",
@@ -440,7 +440,7 @@
         },
         {
           "question": "Which metals can I choose?",
-          "answer": "925 sterling silver as standard, or 10K, 14K and 18K solid gold in yellow, white or rose. Choose your metal on the product page."
+          "answer": "925 sterling silver as standard, or 9K, 10K, 14K and 18K solid gold or platinum in yellow, white or rose. Choose your metal on the product page."
         },
         {
           "question": "What if the ring doesn't fit?",
@@ -476,7 +476,7 @@
     "collections": {
       "seo": {
         "title": "Moissanite & Lab-Grown Diamond Jewelry",
-        "description": "Shop moissanite engagement rings, wedding bands, earrings, necklaces and tennis bracelets, handmade to order in sterling silver or 10K–18K solid gold."
+        "description": "Shop moissanite engagement rings, wedding bands, earrings, necklaces and tennis bracelets, handmade to order in sterling silver or 9K–18K solid gold or platinum."
       },
       "heading": "Shop all jewelry",
       "intro": "Moissanite and lab-grown diamond rings, earrings, necklaces and bracelets, handmade to order in 925 sterling silver or solid gold.",
@@ -497,7 +497,7 @@
       "aboutTitle": "How to choose your {category}",
       "aboutFallbackCategory": "fine jewelry",
       "_aboutTitle": "Heading inside 'About this collection'. {category} = the category name in lowercase, or aboutFallbackCategory on the Shop all page.",
-      "aboutText": "Every piece at {storeName} is handmade to order in 925 sterling silver, or in 10K, 14K or 18K solid gold on request, and hallmarked. Our moissanite is conflict-free and passes a diamond tester. Production takes 7–10 business days, and you can return unworn pieces within {days} days.",
+      "aboutText": "Every piece at {storeName} is handmade to order in 925 sterling silver, or in 9K, 10K, 14K or 18K solid gold on request, and hallmarked. Our moissanite is conflict-free and passes a diamond tester. Production takes 7–10 business days, and you can return unworn pieces within {days} days.",
       "_aboutText": "Text inside 'About this collection'. {storeName} = store name, {days} = return window from Admin > Settings.",
       "shareCountLabel": "{count} pieces",
       "_shareCountLabel": "Shown on the image people see when a collection link is shared (WhatsApp, Facebook...). {count} = number of products."
@@ -505,7 +505,7 @@
     "product": {
       "seo": {
         "title": "Moissanite & Lab-Grown Diamond Jewelry",
-        "description": "Moissanite and lab-grown diamond jewelry, handmade to order in 925 sterling silver or 10K–18K solid gold. Custom metal, stone, size and engraving."
+        "description": "Moissanite and lab-grown diamond jewelry, handmade to order in 925 sterling silver or 9K–18K solid gold or platinum. Custom metal, stone, size and engraving."
       },
       "_comment": "Product page (/products/<slug>). Product names, prices, photos and descriptions come from the database. This block holds the fixed section titles and FAQ questions shown under every product.",
       "_seo": "Backup SEO, used only when a product has no SEO title or description of its own (set per product in Admin > Products).",
@@ -907,12 +907,12 @@
     "about": {
       "seo": {
         "title": "About Us: Handmade Moissanite Jewelry",
-        "description": "Meet {{siteName}}: moissanite and lab-grown diamond engagement rings and fine jewelry, handmade to order in sterling silver and 10K–18K solid gold."
+        "description": "Meet {{siteName}}: moissanite and lab-grown diamond engagement rings and fine jewelry, handmade to order in sterling silver and 9K–18K solid gold or platinum."
       },
       "eyebrow": "Our story",
       "title": "About {{siteName}}",
       "updatedAt": "November 2026",
-      "body": "{{siteName}} makes moissanite and lab-grown diamond jewelry by hand, one order at a time. Every engagement ring, wedding band, pair of earrings, pendant and bracelet is made to order for you.\n\n## Handmade to order\n\nNothing sits on a shelf. Once you order, our jewelers make your piece in 7–10 business days. Every piece is hallmarked for metal purity.\n\n## Moissanite and lab-grown diamonds\n\nMost of our designs use moissanite: colorless (D-E-F) or in colors like champagne, green, blue, yellow and grey. Moissanite is conflict-free, has more fire than a diamond and passes a standard diamond tester. Some designs are also available with lab-grown diamonds.\n\nCertificates are available on request for an additional cost (IGI for lab-grown diamonds).\n\n## Sterling silver or solid gold\n\nEvery design is listed in 925 sterling silver. You can also have it made in 10K, 14K or 18K solid yellow, white or rose gold. Gold and other upgrades are priced on request; we send you a quote before you pay.\n\n## Make it yours\n\nChange the metal, stone color or ring size, or add an engraving. Tap **Customize** on any piece, or email [{{contactEmail}}](mailto:{{contactEmail}}).\n"
+      "body": "{{siteName}} makes moissanite and lab-grown diamond jewelry by hand, one order at a time. Every engagement ring, wedding band, pair of earrings, pendant and bracelet is made to order for you.\n\n## Handmade to order\n\nNothing sits on a shelf. Once you order, our jewelers make your piece in 7–10 business days. Every piece is hallmarked for metal purity.\n\n## Moissanite and lab-grown diamonds\n\nMost of our designs use moissanite: colorless (D-E-F) or in colors like champagne, green, blue, yellow and grey. Moissanite is conflict-free, has more fire than a diamond and passes a standard diamond tester. Some designs are also available with lab-grown diamonds.\n\nCertificates are available on request for an additional cost (IGI for lab-grown diamonds).\n\n## Sterling silver or solid gold\n\nEvery design is listed in 925 sterling silver. You can also have it made in 9K, 10K, 14K or 18K solid yellow, white or rose gold. Gold and other upgrades are priced on request; we send you a quote before you pay.\n\n## Make it yours\n\nChange the metal, stone color or ring size, or add an engraving. Tap **Customize** on any piece, or email [{{contactEmail}}](mailto:{{contactEmail}}).\n"
     },
     "faq": {
       "seo": {
@@ -922,7 +922,7 @@
       "eyebrow": "Help center",
       "title": "Frequently asked questions",
       "updatedAt": "November 2026",
-      "body": "Quick answers about our stones, custom orders, shipping and returns. Can't find your answer? Email [{{contactEmail}}](mailto:{{contactEmail}}) and we'll get back to you.\n\n## Stones and certificates\n\n### What stones do you use?\n\nMost pieces use moissanite, colorless (D-E-F) or in colors like champagne, green, blue and yellow. Some designs are also available with lab-grown diamonds. All our stones are conflict-free, and our moissanite passes a diamond tester.\n\n### Do your pieces come with a certificate?\n\nA certificate is available on request for an additional cost: IGI for lab-grown diamonds, and a moissanite certificate for moissanite pieces. Every piece is hallmarked for metal purity.\n\n## Custom orders and ring sizing\n\n### Can I choose a different metal, stone or size?\n\nYes. Every design is listed in 925 sterling silver, and you can ask for 10K, 14K or 18K solid gold, a different stone color or a custom ring size. Tap **Customize** on the product page and we'll send you a price before you pay. Not sure of your size? See our [ring size guide](/ring-size-guide).\n\n### How long does my order take?\n\nEvery piece is made to order. Making takes 7–10 business days, then standard shipping takes 7–14 business days. Express shipping is available at checkout.\n\n## Shipping and returns\n\n### Do I need to sign for my order?\n\nOrders of {{signatureThreshold}} or more need a signature on delivery. You'll see shipping options and delivery times at checkout, before you pay.\n\n### What is your return policy?\n\nYou can return unworn pieces in their original condition within {{returnWindowDays}} days of delivery. Engraved pieces and custom orders (a different metal, stone or size) can't be returned."
+      "body": "Quick answers about our stones, custom orders, shipping and returns. Can't find your answer? Email [{{contactEmail}}](mailto:{{contactEmail}}) and we'll get back to you.\n\n## Stones and certificates\n\n### What stones do you use?\n\nMost pieces use moissanite, colorless (D-E-F) or in colors like champagne, green, blue and yellow. Some designs are also available with lab-grown diamonds. All our stones are conflict-free, and our moissanite passes a diamond tester.\n\n### Do your pieces come with a certificate?\n\nA certificate is available on request for an additional cost: IGI for lab-grown diamonds, and a moissanite certificate for moissanite pieces. Every piece is hallmarked for metal purity.\n\n## Custom orders and ring sizing\n\n### Can I choose a different metal, stone or size?\n\nYes. Every design is listed in 925 sterling silver, and you can ask for 9K, 10K, 14K or 18K solid gold, a different stone color or a custom ring size. Tap **Customize** on the product page and we'll send you a price before you pay. Not sure of your size? See our [ring size guide](/ring-size-guide).\n\n### How long does my order take?\n\nEvery piece is made to order. Making takes 7–10 business days, then standard shipping takes 7–14 business days. Express shipping is available at checkout.\n\n## Shipping and returns\n\n### Do I need to sign for my order?\n\nOrders of {{signatureThreshold}} or more need a signature on delivery. You'll see shipping options and delivery times at checkout, before you pay.\n\n### What is your return policy?\n\nYou can return unworn pieces in their original condition within {{returnWindowDays}} days of delivery. Engraved pieces and custom orders (a different metal, stone or size) can't be returned."
     },
     "care-guide": {
       "seo": {

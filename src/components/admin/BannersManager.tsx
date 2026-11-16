@@ -354,6 +354,10 @@ export function BannersManager({ banners }: { banners: BannerDTO[] }) {
               onUrlChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
               onUploaded={(asset) => setForm((f) => ({ ...f, imageUrl: asset.url }))}
             />
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Shown on laptops and desktops in a 4:3 landscape frame. Best size: 1600 × 1200 px.
+              Keep text and the jewelry near the centre; other shapes are filled from the centre.
+            </p>
             {fieldErrors.imageUrl?.[0] && (
               <p className="text-xs font-medium text-destructive">{fieldErrors.imageUrl[0]}</p>
             )}
@@ -366,6 +370,10 @@ export function BannersManager({ banners }: { banners: BannerDTO[] }) {
               onUrlChange={(url) => setForm((f) => ({ ...f, mobileImageUrl: url }))}
               onUploaded={(asset) => setForm((f) => ({ ...f, mobileImageUrl: asset.url }))}
             />
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Shown on phones and tablets at its own shape (square or portrait works best, e.g. 1080
+              × 1350 px). If empty, phones show the desktop artwork.
+            </p>
 
             <FormField
               id="ban-alt"

@@ -44,44 +44,86 @@ export interface PresetOptionGroupDraft {
   values: PresetOptionValueDraft[];
 }
 
+function metalValue(
+  value: string,
+  label: string,
+  swatchHex: string,
+  sortOrder: number,
+): PresetOptionValueDraft {
+  return {
+    value,
+    label,
+    swatchHex,
+    priceAdjustmentType: "NONE",
+    priceAdjustmentValue: "0",
+    isAvailable: true,
+    sortOrder,
+  };
+}
+
+/**
+ * Every metal we can make: 925 silver is the listed price; gold and platinum are quoted before
+ * payment, so they carry no automatic price adjustment.
+ */
 const SHARED_METALS: PresetOptionValueDraft[] = [
+  metalValue("925_silver", "925 Sterling Silver", METAL_SWATCH_COLORS.silver925, 0),
+  metalValue("9k_yellow", "9K Yellow Gold", METAL_SWATCH_COLORS.gold9kYellow, 1),
+  metalValue("9k_white", "9K White Gold", METAL_SWATCH_COLORS.gold9kWhite, 2),
+  metalValue("9k_rose", "9K Rose Gold", METAL_SWATCH_COLORS.gold9kRose, 3),
+  metalValue("10k_yellow", "10K Yellow Gold", METAL_SWATCH_COLORS.gold10kYellow, 4),
+  metalValue("10k_white", "10K White Gold", METAL_SWATCH_COLORS.gold10kWhite, 5),
+  metalValue("10k_rose", "10K Rose Gold", METAL_SWATCH_COLORS.gold10kRose, 6),
+  metalValue("14k_yellow", "14K Yellow Gold", METAL_SWATCH_COLORS.gold14kYellow, 7),
+  metalValue("14k_white", "14K White Gold", METAL_SWATCH_COLORS.gold14kWhite, 8),
+  metalValue("14k_rose", "14K Rose Gold", METAL_SWATCH_COLORS.gold14kRose, 9),
+  metalValue("18k_yellow", "18K Yellow Gold", METAL_SWATCH_COLORS.gold18kYellow, 10),
+  metalValue("18k_white", "18K White Gold", METAL_SWATCH_COLORS.gold18kWhite, 11),
+  metalValue("18k_rose", "18K Rose Gold", METAL_SWATCH_COLORS.gold18kRose, 12),
+  metalValue("platinum_950", "Platinum 950", METAL_SWATCH_COLORS.platinum950, 13),
+];
+
+/** Stone material choices; moissanite is the listed price, the others are quoted or adjusted. */
+export const SHARED_STONE_TYPES: PresetOptionValueDraft[] = [
   {
-    value: "platinum_950",
-    label: "Platinum 950",
-    swatchHex: METAL_SWATCH_COLORS.platinum950,
-    priceAdjustmentType: "FIXED",
-    priceAdjustmentValue: "250.00",
+    value: "moissanite",
+    label: "Moissanite",
+    priceAdjustmentType: "NONE",
+    priceAdjustmentValue: "0",
     isAvailable: true,
     sortOrder: 0,
   },
   {
-    value: "gold_18k_yellow",
-    label: "18K Yellow Gold",
-    swatchHex: METAL_SWATCH_COLORS.gold18kYellow,
+    value: "lab_grown_diamond",
+    label: "Lab-Grown Diamond",
     priceAdjustmentType: "NONE",
     priceAdjustmentValue: "0",
     isAvailable: true,
     sortOrder: 1,
   },
   {
-    value: "gold_18k_white",
-    label: "18K White Gold",
-    swatchHex: METAL_SWATCH_COLORS.gold18kWhite,
+    value: "cubic_zirconia",
+    label: "Cubic Zirconia (CZ)",
     priceAdjustmentType: "NONE",
     priceAdjustmentValue: "0",
     isAvailable: true,
     sortOrder: 2,
   },
-  {
-    value: "gold_18k_rose",
-    label: "18K Rose Gold",
-    swatchHex: METAL_SWATCH_COLORS.gold18kRose,
-    priceAdjustmentType: "FIXED",
-    priceAdjustmentValue: "50.00",
-    isAvailable: true,
-    sortOrder: 3,
-  },
 ];
+
+function stoneTypeGroup(sortOrder: number): PresetOptionGroupDraft {
+  return {
+    code: "stone_type",
+    label: "Stone",
+    type: "SELECT",
+    helperText:
+      "Moissanite is the listed price. Lab-grown diamond and cubic zirconia are priced before you pay.",
+    required: true,
+    defaultValue: "moissanite",
+    isActive: true,
+    sortOrder,
+    values: SHARED_STONE_TYPES,
+  };
+}
 
 const SHARED_STONE_SHAPES: PresetOptionValueDraft[] = [
   {
@@ -260,6 +302,7 @@ export const CUSTOMIZATION_CATEGORY_PRESETS: Record<
       sortOrder: 1,
       values: SHARED_STONE_SHAPES,
     },
+    stoneTypeGroup(1),
     {
       code: "diamond_color",
       label: "Diamond color grade",
@@ -443,6 +486,7 @@ export const CUSTOMIZATION_CATEGORY_PRESETS: Record<
       sortOrder: 1,
       values: SHARED_STONE_SHAPES,
     },
+    stoneTypeGroup(1),
     {
       code: "carat_weight",
       label: "Stone Carat Weight",
@@ -569,6 +613,7 @@ export const CUSTOMIZATION_CATEGORY_PRESETS: Record<
       sortOrder: 1,
       values: SHARED_STONE_SHAPES.filter((v) => v.value !== "no_stone"),
     },
+    stoneTypeGroup(1),
     {
       code: "carat_per_stone",
       label: "Carat Per Ear",
@@ -629,6 +674,7 @@ export const CUSTOMIZATION_CATEGORY_PRESETS: Record<
       sortOrder: 0,
       values: SHARED_METALS,
     },
+    stoneTypeGroup(1),
     {
       code: "wrist_size",
       label: "Wrist Length",

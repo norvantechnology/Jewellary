@@ -233,7 +233,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                     fetchPriority={idx === 0 ? "high" : undefined}
                     sizes="(max-width: 1024px) 100vw, 50vw"
                     quality={85}
-                    className={cn("object-contain select-none", isSeed ? "dark:brightness-90" : "")}
+                    className={cn("object-cover select-none", isSeed ? "dark:brightness-90" : "")}
                   />
                 </div>
               </m.div>

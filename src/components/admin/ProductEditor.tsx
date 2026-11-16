@@ -331,6 +331,25 @@ function buildInitialState(
   };
 }
 
+/** Suggested values; the storefront filters group products by these exact labels. */
+const METAL_TYPE_SUGGESTIONS = [
+  "925 Sterling Silver",
+  "9K Yellow Gold",
+  "9K White Gold",
+  "9K Rose Gold",
+  "10K Yellow Gold",
+  "10K White Gold",
+  "10K Rose Gold",
+  "14K Yellow Gold",
+  "14K White Gold",
+  "14K Rose Gold",
+  "18K Yellow Gold",
+  "18K White Gold",
+  "18K Rose Gold",
+  "Platinum 950",
+];
+const STONE_ORIGIN_SUGGESTIONS = ["Moissanite", "Lab-Grown Diamond", "Cubic Zirconia"];
+
 export function ProductEditor({
   product,
   categories,
@@ -1063,6 +1082,16 @@ export function ProductEditor({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <datalist id="spec-metal-options">
+                {METAL_TYPE_SUGGESTIONS.map((v) => (
+                  <option key={v} value={v} />
+                ))}
+              </datalist>
+              <datalist id="spec-stone-options">
+                {STONE_ORIGIN_SUGGESTIONS.map((v) => (
+                  <option key={v} value={v} />
+                ))}
+              </datalist>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <FormField id="spec-mtype" label="Metal Type">
                   {(aria) => (
@@ -1070,7 +1099,8 @@ export function ProductEditor({
                       {...aria}
                       value={form.metalType}
                       onChange={(e) => setForm((f) => ({ ...f, metalType: e.target.value }))}
-                      placeholder="GOLD_18K / PLATINUM"
+                      placeholder="925 Sterling Silver"
+                      list="spec-metal-options"
                     />
                   )}
                 </FormField>
@@ -1090,7 +1120,7 @@ export function ProductEditor({
                       {...aria}
                       value={form.metalPurity}
                       onChange={(e) => setForm((f) => ({ ...f, metalPurity: e.target.value }))}
-                      placeholder="18K / PT950"
+                      placeholder="925 / 9K / 14K / PT950"
                     />
                   )}
                 </FormField>
@@ -1113,7 +1143,8 @@ export function ProductEditor({
                       {...aria}
                       value={form.stoneOrigin}
                       onChange={(e) => setForm((f) => ({ ...f, stoneOrigin: e.target.value }))}
-                      placeholder="NATURAL / LAB_GROWN"
+                      placeholder="Moissanite"
+                      list="spec-stone-options"
                     />
                   )}
                 </FormField>

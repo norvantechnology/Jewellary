@@ -12,11 +12,11 @@ import {
   Sparkles,
   Truck,
 } from "lucide-react";
-import { Float, FloatSparkles } from "@/components/motion/Float";
 import { Magnetic } from "@/components/motion/Magnetic";
 import { Reveal, RevealStagger, ScaleIn } from "@/components/motion/Reveal";
 import { Container, Section, getProductGridClassName } from "@/components/shared/primitives";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { HeroBannerImage } from "@/components/storefront/HeroBannerImage";
 import { EtsyLogo } from "@/components/shared/EtsyLogo";
 import { EtsyTrustSection } from "@/components/storefront/EtsyTrustSection";
 import { HomeProductFinder } from "@/components/storefront/HomeProductFinder";
@@ -134,34 +134,22 @@ export default async function HomePage() {
             </div>
 
             <div className="relative min-w-0 lg:col-span-5">
-              <div
-                className="ma-hero-aura pointer-events-none absolute -inset-4 rounded-3xl"
-                aria-hidden="true"
-              />
-              <div className="ma-hero-parallax ma-media-placeholder relative mx-auto aspect-square w-full max-w-[560px] overflow-hidden rounded-xl border border-border shadow-sm lg:max-w-none lg:rounded-2xl">
-                <Float amplitude={8} duration={7} rotate={1.5} className="relative size-full">
-                  {heroBanner?.imageUrl ? (
-                    <Image
-                      src={heroBanner.imageUrl}
-                      alt={heroBanner.altText ?? heroBanner.title}
-                      fill
-                      preload
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 560px, 42vw"
-                      className="ma-hero-media scale-[1.04] object-cover object-center dark:brightness-90"
+              <div className="ma-media-placeholder relative mx-auto w-full max-w-[560px] overflow-hidden rounded-xl border border-border shadow-sm lg:max-w-none lg:rounded-2xl">
+                {heroBanner?.imageUrl ? (
+                  <HeroBannerImage
+                    desktopSrc={heroBanner.imageUrl}
+                    mobileSrc={heroBanner.mobileImageUrl}
+                    alt={heroBanner.altText ?? heroBanner.title}
+                  />
+                ) : (
+                  <div className="flex aspect-[4/3] w-full items-center justify-center">
+                    <Gem
+                      className="size-12 text-accent-text/55 dark:text-accent/55"
+                      strokeWidth={1.25}
+                      aria-hidden="true"
                     />
-                  ) : (
-                    <div className="ma-hero-media flex size-full items-center justify-center">
-                      <Gem
-                        className="size-12 text-accent-text/55 dark:text-accent/55"
-                        strokeWidth={1.25}
-                        aria-hidden="true"
-                      />
-                    </div>
-                  )}
-                </Float>
-                <div className="hidden sm:block" aria-hidden="true">
-                  <FloatSparkles />
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -11,7 +11,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     short_name: name,
     description:
       settings?.tagline ??
-      "Moissanite and lab-grown diamond jewelry, handmade to order in 925 sterling silver and 10K–18K solid gold.",
+      "Moissanite and lab-grown diamond jewelry, handmade to order in 925 sterling silver, 9K–18K solid gold and platinum.",
     start_url: "/",
     display: "standalone",
     background_color: BRAND_PALETTE.light.bg,

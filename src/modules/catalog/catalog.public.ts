@@ -1,6 +1,14 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
+import {
+  OPTION_FACETS_SELECT,
+  availableMetals,
+  availableStones,
+  optionAvailabilityWhere,
+  sortMetalBuckets,
+  sortStoneBuckets,
+} from "@/modules/catalog/option-filters";
 import { PAGINATION_PAGE_SIZE } from "@/lib/constants";
 import { getPublishedArticles, type ArticleDTO } from "@/modules/articles/article.service";
 import { getActiveBanners, type BannerDTO } from "@/modules/banners/banner.service";
@@ -540,6 +548,7 @@ function buildFilterBuckets(
     metalType: string | null;
     stoneShape: string | null;
     stoneOrigin: string | null;
+    facetValues: Array<{ option: { value: string } | null }>;
     colorGrade: string | null;
     clarityGrade: string | null;
     certificationLab: string | null;
@@ -580,9 +589,9 @@ function buildFilterBuckets(
   }
 
   return {
-    metals: countMap(rows.map((r) => r.metalType)),
+    metals: sortMetalBuckets(countMap(rows.flatMap((r) => availableMetals(r)))),
     shapes: countMap(rows.map((r) => r.stoneShape)),
-    origins: countMap(rows.map((r) => r.stoneOrigin)),
+    origins: sortStoneBuckets(countMap(rows.flatMap((r) => availableStones(r)))),
     colors: countMap(rows.map((r) => r.colorGrade)),
     clarities: countMap(rows.map((r) => r.clarityGrade)),
     certifications: countMap(rows.map((r) => r.certificationLab)),
@@ -618,6 +627,7 @@ async function getCollectionScopeFacets(categoryIdsKey: string): Promise<Collect
       certificationLab: true,
       basePrice: true,
       caratTotal: true,
+      ...OPTION_FACETS_SELECT,
     },
   });
 
@@ -661,9 +671,8 @@ export async function queryCollectionProducts(
   const where: Prisma.ProductWhereInput = {
     ...scopeWhere,
     ...(input.inStock ? { id: { in: inStockProductIds ?? [] } } : {}),
-    ...(input.metal && input.metal.length > 0 ? { metalType: { in: input.metal } } : {}),
+    AND: optionAvailabilityWhere(input),
     ...(input.shape && input.shape.length > 0 ? { stoneShape: { in: input.shape } } : {}),
-    ...(input.origin && input.origin.length > 0 ? { stoneOrigin: { in: input.origin } } : {}),
     ...(input.color && input.color.length > 0 ? { colorGrade: { in: input.color } } : {}),
     ...(input.clarity && input.clarity.length > 0 ? { clarityGrade: { in: input.clarity } } : {}),
     ...(input.certification && input.certification.length > 0
