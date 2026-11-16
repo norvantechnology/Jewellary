@@ -464,8 +464,12 @@ export function CheckoutClient({ bootstrap, initialRetryOrder = null }: Checkout
       prefill: {
         name: shipping?.fullName || undefined,
         email: form.getValues("email") || undefined,
-        contact: shipping?.phone || undefined,
+        // E.164 without spaces, e.g. "+919870008173", so Razorpay reads the country correctly.
+        contact: shipping?.phone ? shipping.phone.replace(/[^\d+]/g, "") : undefined,
       },
+      // No Razorpay saved-card login: its phone OTP step fails for many international
+      // numbers ("Login Failed") and blocks the card payment itself.
+      remember_customer: false,
       notes: { orderNumber },
       theme: accentColor ? { color: accentColor } : undefined,
       retry: { enabled: true, max_count: 3 },
