@@ -9,7 +9,9 @@ import {
   ArrowLeft,
   ArrowUp,
   Copy,
+  Loader2,
   Plus,
+  RefreshCw,
   Save,
   Sparkles,
   Star,
@@ -20,7 +22,12 @@ import { AdminProductCustomizationTab } from "@/components/admin/AdminProductCus
 import { ProductDeleteDialog } from "@/components/admin/ProductDeleteDialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { FormField } from "@/components/shared/FormField";
-import { ImageUploadField, type UploadedImageResult } from "@/components/shared/ImageUploadField";
+import {
+  ImageUploadField,
+  discardUploadedImages,
+  uploadImageFile,
+  type UploadedImageResult,
+} from "@/components/shared/ImageUploadField";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
@@ -569,7 +576,44 @@ export function ProductEditor({
     }));
   }
 
+  // Images uploaded in this editing session (not saved yet). Removing or replacing one of
+  // these deletes the file right away; saved images are cleaned up by the server on save.
+  const sessionUploadsRef = React.useRef(new Set<string>());
+
+  function discardIfUnsaved(url: string | undefined) {
+    if (url && sessionUploadsRef.current.has(url)) {
+      sessionUploadsRef.current.delete(url);
+      discardUploadedImages([url]);
+    }
+  }
+
+  function replaceImage(index: number, asset: UploadedImageResult) {
+    sessionUploadsRef.current.add(asset.url);
+    discardIfUnsaved(form.images[index]?.url);
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.map((img, idx) =>
+        idx === index
+          ? {
+              ...img,
+              id: undefined,
+              storageKey: asset.storageKey,
+              url: asset.url,
+              thumbUrl: asset.thumbUrl,
+              mediumUrl: asset.mediumUrl,
+              avifUrl: asset.avifUrl ?? null,
+              jpegUrl: asset.jpegUrl ?? null,
+              responsiveVariants: asset.responsiveVariants ?? null,
+              width: asset.width,
+              height: asset.height,
+            }
+          : img,
+      ),
+    }));
+  }
+
   function appendUploadedImage(asset: UploadedImageResult) {
+    sessionUploadsRef.current.add(asset.url);
     setForm((prev) => {
       const viewType = prev.images.length === 0 ? "front" : "detail";
       return {
@@ -623,6 +667,7 @@ export function ProductEditor({
   }
 
   function removeImage(index: number) {
+    discardIfUnsaved(form.images[index]?.url);
     setForm((prev) => {
       const remaining = prev.images.filter((_, idx) => idx !== index);
       if (remaining.length > 0 && !remaining.some((i) => i.isPrimary)) {
@@ -1642,6 +1687,15 @@ export function ProductEditor({
                       </div>
 
                       <div className="flex shrink-0 items-center gap-1 self-end sm:self-center">
+                        <ReplaceImageButton
+                          index={idx}
+                          seoContext={{
+                            slug: form.slug || undefined,
+                            productName: form.name || undefined,
+                            viewType: img.viewType,
+                          }}
+                          onReplaced={(asset) => replaceImage(idx, asset)}
+                        />
                         <Button
                           type="button"
                           variant="ghost"
@@ -2140,5 +2194,64 @@ export function ProductEditor({
 
       {unsavedGuard.dialog}
     </form>
+  );
+}
+
+/** Swaps the photo of one gallery slot; alt text, view type, caption and order stay the same. */
+function ReplaceImageButton({
+  index,
+  seoContext,
+  onReplaced,
+}: {
+  index: number;
+  seoContext: { slug?: string; productName?: string; viewType?: string };
+  onReplaced: (asset: UploadedImageResult) => void;
+}) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = React.useState(false);
+
+  async function handleFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      const asset = await uploadImageFile(file, "products", seoContext);
+      onReplaced(asset);
+      toast.success(`Image ${index + 1} replaced. Save the product to apply it.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/avif"
+        onChange={handleFile}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
+        aria-label={`Replace image ${index + 1}`}
+      >
+        {busy ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <RefreshCw className="size-4" aria-hidden="true" />
+        )}
+        {busy ? "Uploading…" : "Replace"}
+      </Button>
+    </>
   );
 }

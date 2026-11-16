@@ -145,6 +145,7 @@ export interface PublicCategoryNodeDTO {
   path: string;
   description: string | null;
   imageUrl: string | null;
+  thumbnailUrl?: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
   seoKeywords?: string | null;
@@ -165,6 +166,7 @@ export interface PublicCategoryNodeDTO {
     path: string;
     description: string | null;
     imageUrl: string | null;
+    thumbnailUrl?: string | null;
     productCount: number;
   }>;
 }
@@ -373,6 +375,7 @@ async function getAllActiveCategoriesRaw() {
       path: true,
       description: true,
       imageUrl: true,
+      thumbnailUrl: true,
       seoTitle: true,
       seoDescription: true,
       seoKeywords: true,
@@ -422,6 +425,7 @@ export async function getAllActiveCategoriesTree(): Promise<PublicCategoryNodeDT
         path: child.path,
         description: child.description,
         imageUrl: child.imageUrl,
+        thumbnailUrl: child.thumbnailUrl,
         productCount: child._count.products,
       }));
       const childrenTotal = children.reduce((sum, child) => sum + child.productCount, 0);
@@ -433,6 +437,7 @@ export async function getAllActiveCategoriesTree(): Promise<PublicCategoryNodeDT
         path: root.path,
         description: root.description,
         imageUrl: root.imageUrl,
+        thumbnailUrl: root.thumbnailUrl,
         seoTitle: root.seoTitle,
         seoDescription: root.seoDescription,
         parentId: null,
@@ -509,6 +514,7 @@ export async function resolveCategoryByPath(pathStr: string): Promise<CategoryRe
       path: child.path,
       description: child.description,
       imageUrl: child.imageUrl,
+      thumbnailUrl: child.thumbnailUrl,
       productCount: child._count.products,
     }));
 
@@ -523,6 +529,7 @@ export async function resolveCategoryByPath(pathStr: string): Promise<CategoryRe
       path: category.path,
       description: category.description,
       imageUrl: category.imageUrl,
+      thumbnailUrl: category.thumbnailUrl,
       seoTitle: category.seoTitle,
       seoDescription: category.seoDescription,
       seoKeywords: category.seoKeywords,
@@ -1226,7 +1233,7 @@ export async function getHomeShapeTiles(): Promise<HomeShapeTile[]> {
     tiles.push({
       name: shape,
       href: `/collections/${facet.categoryPath}/${facet.facetSlug}`,
-      imageUrl: sample?.images[0]?.thumbUrl ?? sample?.images[0]?.url ?? null,
+      imageUrl: facet.imageUrl ?? sample?.images[0]?.thumbUrl ?? sample?.images[0]?.url ?? null,
       count,
     });
   }

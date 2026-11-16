@@ -38,6 +38,80 @@ interface ImageUploadFieldProps {
   className?: string;
 }
 
+type UploadFolder = ImageUploadFieldProps["folder"];
+
+/** Sign, upload and confirm one image file; returns the optimized asset or throws. */
+export async function uploadImageFile(
+  file: File,
+  folder: UploadFolder,
+  seoContext?: ImageUploadFieldProps["seoContext"],
+): Promise<UploadedImageResult> {
+  const signRes = await fetch("/api/uploads/sign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      folder,
+      mimeType: file.type || "image/jpeg",
+      sizeBytes: file.size,
+    }),
+  });
+
+  const signJson = (await signRes.json()) as {
+    mode?: "s3" | "local";
+    uploadUrl?: string;
+    tempKey?: string;
+    error?: { message: string };
+  };
+
+  if (!signRes.ok || !signJson.uploadUrl || !signJson.tempKey || !signJson.mode) {
+    throw new Error(signJson.error?.message ?? "Could not obtain upload signature.");
+  }
+
+  const putRes = await fetch(signJson.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  if (!putRes.ok) {
+    throw new Error("Image binary upload failed.");
+  }
+
+  const confirmRes = await fetch("/api/uploads/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      tempKey: signJson.tempKey,
+      folder,
+      mode: signJson.mode,
+      ...(seoContext ? { seo: seoContext } : {}),
+    }),
+  });
+
+  const confirmJson = (await confirmRes.json()) as UploadedImageResult & {
+    error?: { message: string };
+  };
+  if (!confirmRes.ok || !confirmJson.url) {
+    throw new Error(confirmJson.error?.message ?? "Image verification failed.");
+  }
+
+  return confirmJson;
+}
+
+/**
+ * Deletes uploads the admin replaced or removed before saving. Fire-and-forget; the server
+ * keeps any file that a saved record still uses.
+ */
+export function discardUploadedImages(urls: Array<string | null | undefined>): void {
+  const list = urls.filter((u): u is string => !!u);
+  if (list.length === 0) return;
+  void fetch("/api/uploads/discard", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ urls: list }),
+    keepalive: true,
+  }).catch(() => undefined);
+}
+
 export function ImageUploadField({
   id,
   folder,
@@ -50,6 +124,7 @@ export function ImageUploadField({
 }: ImageUploadFieldProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = React.useState(false);
+  const lastUploadRef = React.useRef<string | null>(null);
 
   async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -57,54 +132,12 @@ export function ImageUploadField({
 
     setUploading(true);
     try {
-      const signRes = await fetch("/api/uploads/sign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          folder,
-          mimeType: file.type || "image/jpeg",
-          sizeBytes: file.size,
-        }),
-      });
-
-      const signJson = (await signRes.json()) as {
-        mode?: "s3" | "local";
-        uploadUrl?: string;
-        tempKey?: string;
-        error?: { message: string };
-      };
-
-      if (!signRes.ok || !signJson.uploadUrl || !signJson.tempKey || !signJson.mode) {
-        throw new Error(signJson.error?.message ?? "Could not obtain upload signature.");
+      const confirmJson = await uploadImageFile(file, folder, seoContext);
+      // A second upload before saving replaces the first one, which nothing uses yet.
+      if (lastUploadRef.current && lastUploadRef.current !== confirmJson.url) {
+        discardUploadedImages([lastUploadRef.current]);
       }
-
-      const putRes = await fetch(signJson.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
-        body: file,
-      });
-      if (!putRes.ok) {
-        throw new Error("Image binary upload failed.");
-      }
-
-      const confirmRes = await fetch("/api/uploads/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tempKey: signJson.tempKey,
-          folder,
-          mode: signJson.mode,
-          ...(seoContext ? { seo: seoContext } : {}),
-        }),
-      });
-
-      const confirmJson = (await confirmRes.json()) as UploadedImageResult & {
-        error?: { message: string };
-      };
-      if (!confirmRes.ok || !confirmJson.url) {
-        throw new Error(confirmJson.error?.message ?? "Image verification failed.");
-      }
-
+      lastUploadRef.current = confirmJson.url;
       onUploaded(confirmJson);
       if (confirmJson.warnings && confirmJson.warnings.length > 0) {
         toast.warning(confirmJson.warnings[0]);

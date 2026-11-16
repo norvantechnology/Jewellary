@@ -25,6 +25,8 @@ import { CACHE_TAGS } from "@/server/cache-tags";
 import { createAction } from "@/server/create-action";
 import { db } from "@/server/db";
 import { NotFoundError } from "@/server/errors";
+import { deleteImagesIfUnused } from "@/server/image-cleanup";
+import { z } from "zod";
 
 function invalidateTags(tags: string[], paths: string[] = []) {
   if (tags.includes(CACHE_TAGS.redirects)) {
@@ -194,8 +196,44 @@ export const deleteLandingFacetAction = createAction(
     const existing = await db.landingFacet.findUnique({ where: { id } });
     if (!existing) throw new NotFoundError("Landing facet not found.");
     await db.landingFacet.delete({ where: { id } });
+    await deleteImagesIfUnused(
+      [existing.imageUrl, existing.ogImageUrl].filter((u): u is string => !!u),
+    );
     invalidateTags([CACHE_TAGS.landingFacets], [`/collections/${existing.categoryPath}`]);
     return { id };
+  },
+);
+
+/** Sets or clears the "Shop by shape" thumbnail of a landing page; the old file is removed. */
+export const setLandingFacetImageAction = createAction(
+  {
+    name: "seo.landingFacet.setImage",
+    schema: z
+      .object({
+        id: z.string().trim().min(1).max(64),
+        imageUrl: z.string().trim().max(500).nullable(),
+      })
+      .strict(),
+    auth: { permission: "catalog:write" },
+    rateLimit: { tier: "adminWrite" },
+    audit: {
+      action: "SEO_LANDING_FACET_IMAGE",
+      entityType: "LandingFacet",
+      entityId: (input) => input.id,
+    },
+  },
+  async ({ id, imageUrl }) => {
+    const existing = await db.landingFacet.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError("Shape page not found.");
+    await db.landingFacet.update({ where: { id }, data: { imageUrl: imageUrl || null } });
+    if (existing.imageUrl && existing.imageUrl !== imageUrl) {
+      await deleteImagesIfUnused([existing.imageUrl]);
+    }
+    invalidateTags(
+      [CACHE_TAGS.landingFacets],
+      ["/", `/collections/${existing.categoryPath}/${existing.facetSlug}`],
+    );
+    return { id, imageUrl: imageUrl || null };
   },
 );
 

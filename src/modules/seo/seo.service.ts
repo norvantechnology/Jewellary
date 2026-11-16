@@ -39,6 +39,7 @@ export interface LandingFacetDTO {
   ogTitle: string | null;
   ogDescription: string | null;
   ogImageUrl: string | null;
+  imageUrl: string | null;
   canonicalOverride: string | null;
   filterParams: {
     metal?: string[];
@@ -269,6 +270,7 @@ function mapLandingFacetRow(row: {
   ogTitle: string | null;
   ogDescription: string | null;
   ogImageUrl: string | null;
+  imageUrl?: string | null;
   canonicalOverride: string | null;
   filterParams: Prisma.JsonValue;
   isActive: boolean;
@@ -295,6 +297,7 @@ function mapLandingFacetRow(row: {
     ogTitle: row.ogTitle,
     ogDescription: row.ogDescription,
     ogImageUrl: row.ogImageUrl,
+    imageUrl: row.imageUrl ?? null,
     canonicalOverride: row.canonicalOverride,
     filterParams: fp,
     isActive: row.isActive,

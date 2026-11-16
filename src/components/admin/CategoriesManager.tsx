@@ -46,6 +46,7 @@ interface CategoryFormState {
   parentId: string;
   description: string;
   imageUrl: string;
+  thumbnailUrl: string;
   ogImageUrl: string;
   ogTitle: string;
   ogDescription: string;
@@ -68,6 +69,7 @@ const emptyForm = (): CategoryFormState => ({
   parentId: "__none__",
   description: "",
   imageUrl: "",
+  thumbnailUrl: "",
   ogImageUrl: "",
   ogTitle: "",
   ogDescription: "",
@@ -123,6 +125,7 @@ export function CategoriesManager({
       parentId: cat.parentId ?? "__none__",
       description: cat.description ?? "",
       imageUrl: cat.imageUrl ?? "",
+      thumbnailUrl: cat.thumbnailUrl ?? "",
       ogImageUrl: cat.ogImageUrl ?? "",
       ogTitle: cat.ogTitle ?? "",
       ogDescription: cat.ogDescription ?? "",
@@ -156,6 +159,7 @@ export function CategoriesManager({
       parentId: form.parentId === "__none__" ? null : form.parentId,
       description: form.description || null,
       imageUrl: form.imageUrl || null,
+      thumbnailUrl: form.thumbnailUrl || null,
       // Sent back unchanged when not edited, so saving never wipes share settings or FAQs.
       ogImageUrl: form.ogImageUrl || null,
       ogTitle: form.ogTitle || null,
@@ -419,6 +423,25 @@ export function CategoriesManager({
               )}
             </FormField>
 
+            <div className="flex items-start gap-3">
+              <ImagePreview url={form.thumbnailUrl || form.imageUrl} shape="portrait" />
+              <ImageUploadField
+                id="cat-thumbnail"
+                folder="categories"
+                label="Card thumbnail"
+                className="min-w-0 flex-1"
+                currentUrl={form.thumbnailUrl}
+                onUrlChange={(url) => setForm((f) => ({ ...f, thumbnailUrl: url }))}
+                onUploaded={(asset) => setForm((f) => ({ ...f, thumbnailUrl: asset.url }))}
+              />
+            </div>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Shown on the category cards (home page) and sub-category tiles. Square images work
+              best (1200 × 1200 px). Leave empty to use the banner image. Replacing it deletes the
+              old file when you save.
+            </p>
+
+            {form.imageUrl && <ImagePreview url={form.imageUrl} shape="wide" />}
             <ImageUploadField
               id="cat-image"
               folder="categories"
@@ -610,5 +633,27 @@ export function CategoriesManager({
         onConfirm={handleDelete}
       />
     </div>
+  );
+}
+
+function ImagePreview({ url, shape }: { url: string; shape: "portrait" | "wide" }) {
+  if (!url) {
+    return shape === "portrait" ? (
+      <div className="flex aspect-square w-20 shrink-0 items-center justify-center rounded-md border border-dashed border-border text-[10px] text-muted-foreground">
+        No image
+      </div>
+    ) : null;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      className={
+        shape === "portrait"
+          ? "aspect-square w-20 shrink-0 rounded-md border border-border object-cover"
+          : "aspect-[16/5] w-full max-w-md rounded-md border border-border object-cover"
+      }
+    />
   );
 }

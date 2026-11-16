@@ -51,7 +51,7 @@ export async function GET(_request: Request, { params }: SitemapsSegmentContext)
               ...[...home.featuredProducts, ...home.newArrivals, ...home.bestsellers].map(
                 (p) => p.primaryImage?.url,
               ),
-              ...home.categories.map((c) => c.imageUrl),
+              ...home.categories.flatMap((c) => [c.thumbnailUrl, c.imageUrl]),
               ...home.banners.editorial.map((b) => b.imageUrl),
             ].filter((u): u is string => !!u),
           ),

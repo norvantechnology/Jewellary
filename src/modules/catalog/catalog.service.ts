@@ -11,7 +11,8 @@ import {
 } from "@/modules/catalog/catalog.schemas";
 import { db } from "@/server/db";
 import { ConflictError, NotFoundError, ValidationError } from "@/server/errors";
-import { copyImageAsset, deleteImageAssets } from "@/server/storage";
+import { deleteImagesIfUnused, droppedImages, type DisposableImage } from "@/server/image-cleanup";
+import { copyImageAsset } from "@/server/storage";
 
 import { parseSeoFaqs, type SeoFaqItem } from "@/modules/seo/seo.service";
 
@@ -24,6 +25,7 @@ export interface AdminCategoryDTO {
   parentName: string | null;
   description: string | null;
   imageUrl: string | null;
+  thumbnailUrl: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
   seoKeywords: string | null;
@@ -352,6 +354,7 @@ export async function listAdminCategories(): Promise<AdminCategoryDTO[]> {
     parentName: row.parent?.name ?? null,
     description: row.description,
     imageUrl: row.imageUrl,
+    thumbnailUrl: row.thumbnailUrl,
     seoTitle: row.seoTitle,
     seoDescription: row.seoDescription,
     seoKeywords: row.seoKeywords,
@@ -387,7 +390,8 @@ export async function upsertCategory(unsafeInput: CategoryUpsertInput) {
   }
 
   try {
-    return await db.$transaction(async (tx) => {
+    const replacedImages: string[] = [];
+    const saved = await db.$transaction(async (tx) => {
       let parentPath: string | null = null;
       if (rawInput.parentId) {
         const parent = await tx.category.findUnique({ where: { id: rawInput.parentId } });
@@ -426,6 +430,13 @@ export async function upsertCategory(unsafeInput: CategoryUpsertInput) {
         }
 
         const oldPath = existing.path;
+        for (const [before, after] of [
+          [existing.imageUrl, rawInput.imageUrl ?? null],
+          [existing.thumbnailUrl, rawInput.thumbnailUrl ?? null],
+          [existing.ogImageUrl, rawInput.ogImageUrl ?? null],
+        ] as const) {
+          if (before && before !== after) replacedImages.push(before);
+        }
         const updated = await tx.category.update({
           where: { id: rawInput.id },
           data: {
@@ -435,6 +446,7 @@ export async function upsertCategory(unsafeInput: CategoryUpsertInput) {
             parentId: rawInput.parentId ?? null,
             description: rawInput.description ?? null,
             imageUrl: rawInput.imageUrl ?? null,
+            thumbnailUrl: rawInput.thumbnailUrl ?? null,
             seoTitle: rawInput.seoTitle ?? null,
             seoDescription: rawInput.seoDescription ?? null,
             seoKeywords: rawInput.seoKeywords ?? null,
@@ -500,6 +512,7 @@ export async function upsertCategory(unsafeInput: CategoryUpsertInput) {
           parentId: rawInput.parentId ?? null,
           description: rawInput.description ?? null,
           imageUrl: rawInput.imageUrl ?? null,
+          thumbnailUrl: rawInput.thumbnailUrl ?? null,
           seoTitle: rawInput.seoTitle ?? null,
           seoDescription: rawInput.seoDescription ?? null,
           seoKeywords: rawInput.seoKeywords ?? null,
@@ -531,6 +544,8 @@ export async function upsertCategory(unsafeInput: CategoryUpsertInput) {
 
       return { id: created.id, slug: created.slug, path: created.path };
     });
+    if (replacedImages.length > 0) await deleteImagesIfUnused(replacedImages);
+    return saved;
   } catch (error) {
     if (isPrismaUniqueError(error)) {
       throw new ConflictError("A category with that slug or hierarchy path already exists.");
@@ -559,6 +574,9 @@ export async function deleteCategory(id: string) {
   }
 
   await db.category.delete({ where: { id } });
+  await deleteImagesIfUnused(
+    [existing.imageUrl, existing.thumbnailUrl, existing.ogImageUrl].filter((u): u is string => !!u),
+  );
   return { id, path: existing.path };
 }
 
@@ -1062,7 +1080,9 @@ export async function upsertProduct(unsafeInput: ProductUpsertInput, actorId: st
   }));
 
   try {
-    return await db.$transaction(async (tx) => {
+    // Images (and an old share image) this save drops; removed from the bucket after commit.
+    const replacedImages: DisposableImage[] = [];
+    const saved = await db.$transaction(async (tx) => {
       const category = await tx.category.findUnique({ where: { id: rawInput.categoryId } });
       if (!category) {
         throw new NotFoundError("Selected category does not exist.");
@@ -1168,6 +1188,14 @@ export async function upsertProduct(unsafeInput: ProductUpsertInput, actorId: st
           data: scalarData,
         });
 
+        const previousImages = await tx.productImage.findMany({
+          where: { productId: updated.id },
+          select: { storageKey: true, url: true, mediumUrl: true, thumbUrl: true },
+        });
+        replacedImages.push(...droppedImages(previousImages, normalizedImages));
+        if (existing.ogImageUrl && existing.ogImageUrl !== scalarData.ogImageUrl) {
+          replacedImages.push(existing.ogImageUrl);
+        }
         await tx.productImage.deleteMany({ where: { productId: updated.id } });
         if (normalizedImages.length > 0) {
           await tx.productImage.createMany({
@@ -1365,6 +1393,8 @@ export async function upsertProduct(unsafeInput: ProductUpsertInput, actorId: st
 
       return { id: created.id, slug: created.slug, oldSlug: null as string | null };
     });
+    if (replacedImages.length > 0) await deleteImagesIfUnused(replacedImages);
+    return saved;
   } catch (error) {
     if (isPrismaUniqueError(error)) {
       throw new ConflictError(
@@ -1437,7 +1467,7 @@ export async function deleteProduct(id: string) {
     await tx.product.delete({ where: { id: existing.id } });
   });
 
-  await deleteImageAssets(existing.images);
+  await deleteImagesIfUnused(existing.images);
 
   return { id: existing.id, slug: existing.slug };
 }

@@ -649,6 +649,29 @@ export async function copyImageAsset(input: {
   };
 }
 
+/** Storage keys the app created and may delete (admin uploads and imported product photos). */
+export function isDeletableStorageKey(key: string): boolean {
+  return /^(public|products)\//.test(key) && !key.includes("..");
+}
+
+/**
+ * Turns a public image URL back into its storage key, or null when the URL isn't in our bucket.
+ */
+export function storageKeyFromPublicUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const cdn = env.NEXT_PUBLIC_IMAGE_CDN_URL?.replace(/\/$/, "");
+  let key: string | null = null;
+  if (cdn && url.startsWith(`${cdn}/`)) key = url.slice(cdn.length + 1);
+  else {
+    const m = /\/storage\/v1\/object\/public\/[^/]+\/(.+)$/.exec(url);
+    if (m) key = m[1]!;
+  }
+  if (!key) return null;
+  key = decodeURIComponent(key.split("?")[0]!);
+  // Point at the master file even when given a -med/-thumb/avif/jpg URL.
+  return key.replace(/(-med|-thumb)?\.(webp|avif|jpe?g|png)$/i, ".webp");
+}
+
 /**
  * Deletes uploaded product assets from local storage or S3 (preserving shared /images/seed assets).
  */
@@ -669,7 +692,14 @@ export async function deleteImageAssets(
 
   for (const asset of assets) {
     // Remove own local uploads (never delete shared /images/seed/ demo fixtures)
-    for (const candidateUrl of [asset.url, asset.mediumUrl, asset.thumbUrl]) {
+    const localBase = asset.url.startsWith("/uploads/") ? asset.url.replace(/\.webp$/i, "") : null;
+    const localCandidates = [
+      asset.url,
+      asset.mediumUrl,
+      asset.thumbUrl,
+      ...(localBase ? [`${localBase}.avif`, `${localBase}.jpg`] : []),
+    ];
+    for (const candidateUrl of localCandidates) {
       if (!candidateUrl || !candidateUrl.startsWith("/uploads/")) continue;
       const diskPath = resolvePublicRelativePath(candidateUrl);
       if (diskPath) {
@@ -681,10 +711,11 @@ export async function deleteImageAssets(
       }
     }
 
-    if (s3 && s3Enabled && asset.storageKey && asset.storageKey.startsWith("public/")) {
+    // Admin uploads live under public/, imported catalogue photos under products/.
+    if (s3 && s3Enabled && asset.storageKey && isDeletableStorageKey(asset.storageKey)) {
       const safeKey = assertSafeKey(asset.storageKey);
       const base = safeKey.replace(/\.webp$/i, "");
-      s3Keys.push(safeKey, `${base}-med.webp`, `${base}-thumb.webp`);
+      s3Keys.push(safeKey, `${base}-med.webp`, `${base}-thumb.webp`, `${base}.avif`, `${base}.jpg`);
     }
   }
 

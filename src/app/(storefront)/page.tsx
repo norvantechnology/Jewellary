@@ -230,26 +230,26 @@ export default async function HomePage() {
               </Link>
             </Reveal>
 
-            <RevealStagger className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
+            <RevealStagger className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4 lg:gap-6">
               {featuredCategories.map((category) => (
                 <Link
                   key={category.id}
                   href={`/collections/${category.path}`}
-                  className="ma-card-elevate group transition-ui flex flex-col rounded-xl border border-border bg-surface shadow-sm hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99] dark:hover:bg-surface-2"
+                  className="group flex flex-col overflow-hidden rounded-2xl bg-surface shadow-[0_1px_2px_rgb(0_0_0/0.05),0_10px_28px_-14px_rgb(0_0_0/0.22)] ring-1 ring-black/5 transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_2px_4px_rgb(0_0_0/0.06),0_22px_44px_-18px_rgb(0_0_0/0.32)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99] motion-reduce:transition-none motion-reduce:hover:translate-y-0 dark:ring-white/10"
                 >
-                  <div className="ma-media-placeholder relative aspect-[4/3] w-full overflow-hidden rounded-t-xl">
-                    {category.imageUrl ? (
+                  <div className="relative aspect-square w-full overflow-hidden bg-surface-2">
+                    {(category.thumbnailUrl ?? category.imageUrl) ? (
                       <Image
-                        src={category.imageUrl}
-                        alt={category.name}
+                        src={(category.thumbnailUrl ?? category.imageUrl)!}
+                        alt=""
                         fill
                         sizes="(max-width: 1024px) 50vw, 25vw"
-                        className="ma-collection-img object-cover object-center dark:brightness-90"
+                        className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100 dark:brightness-90"
                       />
                     ) : (
-                      <div className="flex size-full items-center justify-center">
+                      <div className="ma-media-placeholder flex size-full items-center justify-center">
                         <Gem
-                          className="ma-collection-img size-7 text-accent-text/55 sm:size-8 dark:text-accent/55"
+                          className="size-8 text-accent-text/55 dark:text-accent/55"
                           strokeWidth={1.25}
                           aria-hidden="true"
                         />
@@ -257,28 +257,21 @@ export default async function HomePage() {
                     )}
                   </div>
 
-                  <div className="flex flex-1 flex-col gap-1 p-3 sm:gap-1.5 sm:p-4 md:p-5">
-                    <h3 className="line-clamp-2 text-sm leading-[1.35] font-medium text-text sm:text-base">
-                      {category.name}
-                    </h3>
-
-                    <div className="mt-auto flex items-center justify-between gap-2 pt-1 text-xs">
-                      {category.productCount > 0 ? (
-                        <span className="tabular-nums-price text-text-muted">
-                          {category.productCount} {category.productCount === 1 ? "piece" : "pieces"}
-                        </span>
-                      ) : (
-                        <span className="text-text-muted">Collection</span>
-                      )}
-                      <span className="inline-flex items-center gap-1 font-medium text-accent-text opacity-100 transition-opacity duration-150 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
-                        <span className="hidden sm:inline">Discover</span>
-                        <ArrowRight
-                          className="size-3.5 transition-transform duration-200 ease-out group-hover:translate-x-1 sm:size-4"
-                          strokeWidth={1.5}
-                          aria-hidden="true"
-                        />
-                      </span>
+                  <div className="flex flex-1 items-center justify-between gap-2 border-t border-border/60 px-3 py-3 sm:px-5 sm:py-4">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-display text-base leading-tight font-medium text-text sm:text-xl">
+                        {category.name}
+                      </h3>
+                      <p className="tabular-nums-price mt-0.5 text-xs text-text-muted sm:text-sm">
+                        {category.productCount > 0
+                          ? `${category.productCount} ${category.productCount === 1 ? "piece" : "pieces"}`
+                          : "Collection"}
+                      </p>
                     </div>
+                    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-text transition-colors duration-300 group-hover:border-primary group-hover:bg-primary group-hover:text-on-primary sm:size-9">
+                      <ArrowRight className="size-4" strokeWidth={1.75} aria-hidden="true" />
+                      <span className="sr-only">Shop {category.name}</span>
+                    </span>
                   </div>
                 </Link>
               ))}

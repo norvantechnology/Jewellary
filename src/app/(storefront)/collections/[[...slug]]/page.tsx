@@ -543,13 +543,19 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
   const activeFacet = target.kind === "facet" ? target.facet : null;
   const categoryPathForQuery = resolvedCategory?.path ?? null;
 
-  let rootCategories: Array<{ name: string; path: string; productCount: number }> = [];
+  let rootCategories: Array<{
+    name: string;
+    path: string;
+    productCount: number;
+    thumbnailUrl: string | null;
+  }> = [];
   if (!resolvedCategory) {
     const tree = await getAllActiveCategoriesTree();
     rootCategories = tree.map((c) => ({
       name: c.name,
       path: c.path,
       productCount: c.productCount,
+      thumbnailUrl: c.thumbnailUrl ?? null,
     }));
   }
 
@@ -654,6 +660,7 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
         name: c.name,
         path: c.path,
         productCount: c.productCount,
+        thumbnailUrl: c.thumbnailUrl ?? null,
       }))
     : rootCategories;
 
@@ -723,6 +730,15 @@ async function CollectionsBody({ params, searchParams }: CollectionsPageProps) {
                           : "transition-ui inline-flex min-h-11 max-w-[180px] shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium text-foreground shadow-sm hover:border-border-strong hover:bg-muted sm:min-h-9"
                       }
                     >
+                      {sub.thumbnailUrl && (
+                        <Image
+                          src={sub.thumbnailUrl}
+                          alt=""
+                          width={28}
+                          height={28}
+                          className="-ml-2 size-7 shrink-0 rounded-full object-cover ring-1 ring-border sm:size-6"
+                        />
+                      )}
                       <span className="min-w-0 truncate">{sub.name}</span>
                       <span
                         className={

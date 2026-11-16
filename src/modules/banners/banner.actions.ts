@@ -1,5 +1,6 @@
 "use server";
 
+import { deleteImagesIfUnused } from "@/server/image-cleanup";
 import { revalidateTag, updateTag } from "next/cache";
 import { bannerUpsertSchema, deleteBannerSchema } from "@/modules/banners/banner.schemas";
 import { CACHE_TAGS } from "@/server/cache-tags";
@@ -20,6 +21,12 @@ export const upsertBannerAction = createAction(
     },
   },
   async (input) => {
+    const previous = input.id
+      ? await db.banner.findUnique({
+          where: { id: input.id },
+          select: { imageUrl: true, mobileImageUrl: true },
+        })
+      : null;
     const data = {
       title: input.title,
       subtitle: input.subtitle || null,
@@ -38,6 +45,13 @@ export const upsertBannerAction = createAction(
     const banner = input.id
       ? await db.banner.update({ where: { id: input.id }, data })
       : await db.banner.create({ data });
+    if (previous) {
+      await deleteImagesIfUnused(
+        [previous.imageUrl, previous.mobileImageUrl].filter(
+          (u): u is string => !!u && u !== banner.imageUrl && u !== banner.mobileImageUrl,
+        ),
+      );
+    }
 
     updateTag(CACHE_TAGS.banners);
     revalidateTag(CACHE_TAGS.banners, "max");
@@ -62,6 +76,9 @@ export const deleteBannerAction = createAction(
     const existing = await db.banner.findUnique({ where: { id } });
     if (!existing) throw new NotFoundError("Banner not found.");
     await db.banner.delete({ where: { id } });
+    await deleteImagesIfUnused(
+      [existing.imageUrl, existing.mobileImageUrl].filter((u): u is string => !!u),
+    );
 
     updateTag(CACHE_TAGS.banners);
     revalidateTag(CACHE_TAGS.banners, "max");

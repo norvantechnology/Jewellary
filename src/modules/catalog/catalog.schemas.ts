@@ -62,6 +62,7 @@ export const categoryUpsertSchema = z
     parentId: optionalCleanText(64),
     description: optionalCleanText(2000),
     imageUrl: optionalCleanText(500),
+    thumbnailUrl: optionalCleanText(500),
     seoTitle: optionalCleanText(120),
     seoDescription: optionalCleanText(320),
     seoKeywords: optionalCleanText(300),
