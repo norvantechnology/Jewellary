@@ -30,6 +30,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { fill } from "@/lib/fill-text";
 import { buildFaqPageJsonLd, buildJewelryStoreJsonLd } from "@/lib/seo/jsonld";
+import { toAbsoluteUrl } from "@/lib/seo/site";
 import { getHomeShapeTiles, getHomepagePayload } from "@/modules/catalog/catalog.public";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 import { buildPageMetadata, getSiteContent } from "@/modules/site-content/site-content.service";
@@ -59,6 +60,23 @@ export default async function HomePage() {
     .filter((item, idx, arr) => arr.findIndex((p) => p.id === item.id) === idx)
     .slice(0, 8);
 
+  // Featured pieces with their photos, so search engines see the product images on the home page.
+  const homeItemListJsonLd =
+    arrivalPieces.length > 0
+      ? {
+          "@context": "https://schema.org" as const,
+          "@type": "ItemList" as const,
+          name: `${settings.storeName} featured jewellery`,
+          itemListElement: arrivalPieces.map((p, i) => ({
+            "@type": "ListItem" as const,
+            position: i + 1,
+            url: toAbsoluteUrl(`/products/${p.slug}`),
+            name: p.name,
+            ...(p.primaryImage ? { image: toAbsoluteUrl(p.primaryImage.url) } : {}),
+          })),
+        }
+      : null;
+
   const heroHeadline = heroBanner?.title ?? home.hero.headline;
   const heroWords = heroHeadline.split(/\s+/).filter(Boolean);
   const populatedCategories = payload.categories.filter((c) => c.productCount > 0);
@@ -70,6 +88,7 @@ export default async function HomePage() {
     <>
       {jewelryStoreJsonLd && <JsonLd data={jewelryStoreJsonLd} />}
       {faqJsonLd && <JsonLd data={faqJsonLd} />}
+      {homeItemListJsonLd && <JsonLd data={homeItemListJsonLd} />}
       {/* Hero & Instant Product Discovery */}
       <Section className="overflow-x-clip border-b border-border bg-bg py-8 sm:py-12 lg:py-16">
         <Container variant="wide">

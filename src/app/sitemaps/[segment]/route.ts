@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { getEditorialLastModified } from "@/lib/content";
 import { SITEMAP_CHUNK_SIZE, createXmlResponseHeaders, renderUrlSetXml } from "@/lib/seo/sitemap";
 import { getPublishedArticles } from "@/modules/articles/article.service";
-import { getSitemapCategories, getSitemapProducts } from "@/modules/catalog/catalog.public";
+import {
+  getHomepagePayload,
+  getSitemapCategories,
+  getSitemapProducts,
+} from "@/modules/catalog/catalog.public";
 import { listAllStaticPageSeos, listSitemapLandingFacets } from "@/modules/seo/seo.service";
 import { getPublicStoreSettings } from "@/modules/settings/settings.service";
 
@@ -37,11 +41,28 @@ export async function GET(_request: Request, { params }: SitemapsSegmentContext)
       getEditorialLastModified("terms"),
     ]);
 
+    // Home page images (banner, featured pieces, categories) so Google can show them for the site.
+    const home = await getHomepagePayload().catch(() => null);
+    const homeImages = home
+      ? Array.from(
+          new Set(
+            [
+              ...home.banners.hero.flatMap((b) => [b.imageUrl, b.mobileImageUrl]),
+              ...[...home.featuredProducts, ...home.newArrivals, ...home.bestsellers].map(
+                (p) => p.primaryImage?.url,
+              ),
+              ...home.categories.map((c) => c.imageUrl),
+              ...home.banners.editorial.map((b) => b.imageUrl),
+            ].filter((u): u is string => !!u),
+          ),
+        ).slice(0, 1000)
+      : [];
+
     const noindexSet = new Set(staticOverrides.filter((s) => s.noindex).map((s) => s.slug));
     const siteUpdated = new Date(settings.updatedAt ?? aboutMtime);
 
     const candidates = [
-      { url: "/", lastModified: siteUpdated },
+      { url: "/", lastModified: siteUpdated, images: homeImages },
       { url: "/collections", lastModified: siteUpdated },
       { url: "/guides", lastModified: siteUpdated },
       { url: "/contact", lastModified: siteUpdated },

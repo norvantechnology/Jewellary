@@ -19,6 +19,8 @@ interface ProductCardProps {
   priority?: boolean;
   preload?: boolean;
   className?: string;
+  /** Metal filter in use; when the listed metal isn't one of them, the card says the piece is available in the chosen metal. */
+  selectedMetals?: string[];
 }
 
 interface CardBadgeMeta {
@@ -51,6 +53,7 @@ export const ProductCard = React.memo(function ProductCard({
   priority = false,
   preload = false,
   className,
+  selectedMetals,
 }: ProductCardProps) {
   const ui = useUiText();
   const href = `/products/${product.slug}`;
@@ -58,7 +61,13 @@ export const ProductCard = React.memo(function ProductCard({
   const secondary = product.secondaryImage;
 
   const primaryMetaParts: string[] = [];
+  const madeToOrderMetal =
+    selectedMetals && selectedMetals.length > 0 && !selectedMetals.includes(product.metalType ?? "")
+      ? selectedMetals.join(" / ")
+      : null;
+  // The price shown is for the listed metal; other metals are quoted through Customize.
   if (product.metalType) primaryMetaParts.push(product.metalType);
+  if (madeToOrderMetal) primaryMetaParts.push(`${madeToOrderMetal} on request`);
   if (product.caratTotal) primaryMetaParts.push(`${Number(product.caratTotal).toFixed(2)} ct`);
   const primaryMeta = primaryMetaParts.join(" · ");
   const fullMetaTitle = [primaryMeta, product.certificationLab].filter(Boolean).join(" · ");

@@ -366,12 +366,14 @@ async function CollectionsProductGrid({
   rawSearch,
   basePath,
   currency,
+  activeMetals = [],
 }: {
   result: CollectionQueryResult;
   resolvedCategoryName: string | null;
   rawSearch: RawSearchParams;
   basePath: string;
   currency: string;
+  activeMetals?: string[];
 }) {
   const hasFilters = Object.keys(rawSearch).length > 0;
   const copy = (await getSiteContent()).pages.collections;
@@ -402,6 +404,7 @@ async function CollectionsProductGrid({
             headingLevel="h3"
             priority={idx < 3}
             preload={idx === 0}
+            selectedMetals={activeMetals}
           />
         ))}
       </RevealStagger>
@@ -508,6 +511,7 @@ async function CollectionsFilteredView({
         rawSearch={rawSearch}
         basePath={basePath}
         currency={currency}
+        activeMetals={facetOverrides.metal ?? parsedFilters.metal ?? []}
       />
     </CollectionFilters>
   );

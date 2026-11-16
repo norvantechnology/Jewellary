@@ -1989,7 +1989,7 @@
         "sort": "Sort",
         "_comment": "Filter sidebar (desktop) and Filters sheet (mobile) on /collections.",
         "groupLabels": {
-          "metal": "Metal",
+          "metal": "Metal (available in)",
           "certification": "Certification",
           "shape": "Stone shape",
           "origin": "Stone type",
